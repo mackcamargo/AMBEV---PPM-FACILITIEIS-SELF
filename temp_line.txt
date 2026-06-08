@@ -1,0 +1,9 @@
+150:            const newSpent = editedImpactPerTeam[e.nome] || 0;
+151:            const originalSpent = originalImpactPerTeam[e.nome] || 0;
+157:              equipe: e.nome,
+608:                        const newImpact = editedImpactPerTeam[e.nome] || 0;
+613:                            return m?.equipe === e.nome;
+623:                            <p className="text-[9px] font-black text-black uppercase tracking-tight truncate">{e.nome}</p>
+662:                           onClick={() => setShareTeam(e.nome)}
+664:                              shareTeam === e.nome 
+669:                           {e.nom                        ))}

@@ -1,0 +1,6 @@
+{
+  "name": "PPM Self Control",
+  "description": "Centro de Inteligência Facilities - Sistema de gestão de materiais, orçamentos e reuniões operacionais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

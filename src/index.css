@@ -1,0 +1,154 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-brand-light: #F8FAFC;
+  --color-brand-dark: #0F172A;
+  --color-brand-border: #E2E8F0;
+  --color-brand-text: #334155;
+  --color-brand-accent: #3B82F6;
+  
+  --color-status-ok: #10B981;
+  --color-status-low: #F59E0B;
+  --color-status-zero: #EF4444;
+}
+
+@layer base {
+  body {
+    @apply font-sans text-brand-text bg-brand-light antialiased;
+    font-size: 12px;
+  }
+}
+
+@layer components {
+  .sidebar-item {
+    @apply flex items-center gap-2.5 px-5 py-2 text-[12px] transition-all cursor-pointer border-l-2 border-transparent text-slate-400 hover:text-white hover:bg-white/5;
+  }
+  
+  .sidebar-item.active {
+    @apply text-brand-accent bg-brand-accent/10 border-brand-accent;
+  }
+  
+  .card {
+    @apply bg-white border border-brand-border rounded-md shadow-none p-3;
+  }
+  
+  .table-header {
+    @apply text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-4 py-2.5 bg-slate-50 border-b border-brand-border;
+  }
+  
+  .table-row {
+    @apply hover:bg-slate-50/50 transition-colors text-[12px];
+  }
+  
+  .table-row td {
+    @apply border-b border-slate-100;
+  }
+  
+  .input-field {
+    @apply w-full h-8 px-2 text-[12px] bg-white border border-brand-border rounded focus:outline-none focus:ring-1 focus:ring-brand-accent transition-all;
+  }
+  
+  .btn-primary {
+    @apply h-8 px-4 bg-brand-dark text-white text-[12px] font-medium rounded hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-secondary {
+    @apply h-8 px-4 border border-brand-border bg-white text-slate-700 text-[12px] font-medium rounded hover:bg-slate-50 transition-colors;
+  }
+
+  .status-pill {
+    @apply px-2 py-0.5 rounded-full text-[10px] font-bold uppercase;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .pill-ok {
+    @apply bg-emerald-100/80 text-emerald-700;
+  }
+  
+  .pill-warn {
+    @apply bg-amber-100/80 text-amber-700;
+  }
+  
+  .pill-crit {
+    @apply bg-red-100/80 text-red-700;
+  }
+}
+
+/* Animations for floating cards */
+@keyframes floating-1 {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(0.4deg);
+  }
+}
+@keyframes floating-2 {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(4px) rotate(-0.3deg);
+  }
+}
+@keyframes floating-3 {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-0.4deg);
+  }
+}
+@keyframes floating-4 {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(5px) rotate(0.3deg);
+  }
+}
+
+.animate-floating-1 {
+  animation: floating-1 6.5s ease-in-out infinite;
+}
+.animate-floating-2 {
+  animation: floating-2 7.5s ease-in-out infinite;
+}
+.animate-floating-3 {
+  animation: floating-3 8.5s ease-in-out infinite;
+}
+.animate-floating-4 {
+  animation: floating-4 7s ease-in-out infinite;
+}
+
+@keyframes custom-blink {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    color: #0f172a;
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1.05);
+    color: #10b981;
+  }
+}
+
+.animate-custom-blink {
+  animation: custom-blink 1.5s ease-in-out infinite;
+  display: inline-block;
+  transform-origin: center;
+}
+
+
