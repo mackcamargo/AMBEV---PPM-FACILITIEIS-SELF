@@ -6,7 +6,15 @@ import { motion, AnimatePresence } from 'motion/react';
 import { playNotificationSound } from '../lib/audio';
 
 export const StockView: React.FC = () => {
-  const { materiais, updateMaterial, deleteMaterial, equipes, deletionPassword, isDeletionPasswordEnabled } = useApp();
+  const { 
+    materiais, 
+    updateMaterial, 
+    deleteMaterial, 
+    equipes, 
+    deletionPassword, 
+    isDeletionPasswordEnabled,
+    fornecedores 
+  } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [deletionPasswordInput, setDeletionPasswordInput] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -47,8 +55,6 @@ export const StockView: React.FC = () => {
   
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
-
-  const { fornecedores } = useApp();
 
   // Filter materials based on search term, active team, and stock status
   const filtered = useMemo(() => {
@@ -638,7 +644,7 @@ export const StockView: React.FC = () => {
                     </td>
                     <td className="px-3 py-2 font-mono text-slate-500">{m.sap}</td>
                     <td className="px-3 py-2 text-slate-400 font-medium text-[10px]">
-                      {useApp().fornecedores.find(f => f.id === m.fornecedorId)?.nomeFantasia || m.codigoFornecedor || '-'}
+                      {fornecedores.find(f => f.id === m.fornecedorId)?.nomeFantasia || m.codigoFornecedor || '-'}
                     </td>
                     <td className="px-3 py-3">
                       <p className="font-semibold text-brand-dark">{m.descricao}</p>
@@ -832,7 +838,7 @@ export const StockView: React.FC = () => {
                     onChange={(e) => setEditFormData({ ...editFormData, fornecedorId: e.target.value })}
                   >
                     <option value="">Selecione o Fornecedor...</option>
-                    {useApp().fornecedores.map(f => (
+                    {fornecedores.map(f => (
                       <option key={f.id} value={f.id}>{f.nomeFantasia}</option>
                     ))}
                   </select>
