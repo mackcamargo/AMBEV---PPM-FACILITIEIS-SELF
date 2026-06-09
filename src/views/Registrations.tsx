@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../lib/store';
+import { generateId } from '../lib/idUtils';
 import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye } from 'lucide-react';
 import { Material } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -58,7 +59,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   };
 
   const addToast = (title: string, message: string, toastType: 'success' | 'info' | 'error' | 'delete' = 'success', extra?: { sap?: string; equipe?: string }) => {
-    const id = Math.random().toString(36).substr(2, 9);
+    const id = generateId();
     setToasts(prev => [...prev, { id, title, message, type: toastType === 'delete' ? 'info' : toastType as any, ...extra }]);
 
     // Play sound based on toast type
@@ -1039,7 +1040,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
             </tr>
           ) : (
             filteredData.map((item, idx) => (
-                <tr key={idx} className="table-row group">
+                <tr key={item.id || `reg-${idx}`} className="table-row group">
                   <td className="px-3 py-2 text-center border-b border-slate-50">
                     <input 
                       type="checkbox"

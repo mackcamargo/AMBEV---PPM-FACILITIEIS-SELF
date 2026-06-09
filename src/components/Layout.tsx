@@ -18,13 +18,15 @@ import {
   ChevronLeft,
   X,
   RotateCw,
-  Home
+  Home,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { ViewState } from '../types';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { view, setView, setHasEntered } = useApp();
+    const { view, setView, setHasEntered, isSyncing, user, signOut } = useApp();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -62,6 +64,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   return (
     <div className="flex h-screen bg-brand-light overflow-hidden">
+      {/* Syncing Indicator (Floating Overlay) */}
+      {isSyncing && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-brand-dark/95 backdrop-blur-sm text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+           <span className="text-[10px] font-bold uppercase tracking-wider">Sincronizando com Supabase...</span>
+        </div>
+      )}
       {/* Backdrop (Backdrop de fundo para fechar o menu ao tocar fora no mobile) */}
       {isMobileOpen && (
         <div 
@@ -141,6 +150,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
+              {user && (
+                <div className="hidden lg:flex items-center gap-2 mr-2 px-3 py-1 bg-slate-50 border border-slate-100 rounded-lg text-slate-500">
+                  <UserIcon className="w-3 h-3" />
+                  <span className="text-[10px] font-medium truncate max-w-[150px]">{user.email}</span>
+                </div>
+              )}
               <button
                 onClick={() => setHasEntered(false)}
                 className="flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-slate-600 hover:text-slate-900 transition-all font-bold text-[9px] uppercase tracking-wider cursor-pointer select-none active:scale-95 h-8 shadow-xs"
@@ -158,6 +173,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               >
                 <RotateCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`} />
                 <span>Atualizar</span>
+              </button>
+
+              <button
+                onClick={signOut}
+                className="flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-100 hover:border-red-200 text-red-600 hover:text-red-700 rounded-lg transition-all font-bold text-[9px] uppercase tracking-wider cursor-pointer select-none active:scale-95 h-8 shadow-xs"
+                title="Sair do Aplicativo"
+              >
+                <LogOut className="w-3 h-3" />
+                <span className="hidden sm:inline">Sair</span>
               </button>
             </div>
           </div>

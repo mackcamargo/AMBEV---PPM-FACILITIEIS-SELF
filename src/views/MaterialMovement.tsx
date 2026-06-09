@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Rocket, Trash2, Search, CheckCircle2, AlertTriangle, X, ArrowUpRight, ArrowDownLeft, FileSpreadsheet } from 'lucide-react';
 import { useApp } from '../lib/store';
+import { generateId } from '../lib/idUtils';
 import { Material, ItemLote, Movimentacao, formatUnit } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { playNotificationSound } from '../lib/audio';
@@ -66,7 +67,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
   }, [showStockWarning]);
 
   const showToast = (message: string, toastType: 'Entrada' | 'Retirada', soundType: 'success' | 'warning' = 'success') => {
-    const id = Math.random().toString(36).substr(2, 9);
+    const id = generateId();
     setToasts(prev => [...prev, { id, message, type: toastType }]);
     
     // Play sound based on soundType
@@ -185,7 +186,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
     const movementDate = finalDate.toISOString();
 
     const movimento: Movimentacao = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: generateId(),
       data: movementDate,
       tipo: type,
       materialId: selectedMaterialId,
@@ -271,7 +272,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
     const itemDate = finalDate.toISOString();
     
     const newItem: ItemLote = {
-      tempId: Math.random().toString(36).substr(2, 9),
+      tempId: generateId(),
       materialId: selectedMaterialId,
       materialDesc: selectedMaterial?.descricao || '',
       quantidade: finalQuantidade,
@@ -302,7 +303,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
 
     batchItems.forEach(item => {
       const movimento: Movimentacao = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: generateId(),
         data: item.data || new Date().toISOString(),
         tipo: type,
         materialId: item.materialId,
@@ -740,8 +741,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                       // Update material stock: In this app's "simulated" behavior for this request, 
                       // if they say "Sim" to "register entrance" for a 0-stock item,
                       // we simulate adding 1 to it so it's not zerado anymore,
-                      // and then redirect to Entrada view.
-                      setView('entrada-materiais');
+                      // and then keep on the current view instead of redirecting
                     }}
                     className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-emerald-200"
                   >

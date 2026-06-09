@@ -282,6 +282,52 @@ ALTER TABLE public.fornecedores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.materiais ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.movimentacoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.atas_reuniao ENABLE ROW LEVEL SECURITY;
+
+-- 10. POLÍTICAS DE ACESSO (POLICIES)
+-- Estas políticas permitem que o aplicativo funcione com a chave 'anon'.
+-- Para segurança máxima, considere implementar Supabase Auth e restringir para 'authenticated'.
+
+-- Políticas para EQUIPES
+CREATE POLICY "Allow public read on equipes" ON public.equipes FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on equipes" ON public.equipes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on equipes" ON public.equipes FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete on equipes" ON public.equipes FOR DELETE USING (true);
+
+-- Políticas para COLABORADORES
+CREATE POLICY "Allow public read on colaboradores" ON public.colaboradores FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on colaboradores" ON public.colaboradores FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on colaboradores" ON public.colaboradores FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete on colaboradores" ON public.colaboradores FOR DELETE USING (true);
+
+-- Políticas para EMPRESAS
+CREATE POLICY "Allow public read on empresas" ON public.empresas FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on empresas" ON public.empresas FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on empresas" ON public.empresas FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete on empresas" ON public.empresas FOR DELETE USING (true);
+
+-- Políticas para FORNECEDORES
+CREATE POLICY "Allow public read on fornecedores" ON public.fornecedores FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on fornecedores" ON public.fornecedores FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on fornecedores" ON public.fornecedores FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete on fornecedores" ON public.fornecedores FOR DELETE USING (true);
+
+-- Políticas para MATERIAIS
+CREATE POLICY "Allow public read on materiais" ON public.materiais FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on materiais" ON public.materiais FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on materiais" ON public.materiais FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete on materiais" ON public.materiais FOR DELETE USING (true);
+
+-- Políticas para MOVIMENTACOES
+CREATE POLICY "Allow public read on movimentacoes" ON public.movimentacoes FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on movimentacoes" ON public.movimentacoes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on movimentacoes" ON public.movimentacoes FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete on movimentacoes" ON public.movimentacoes FOR DELETE USING (true);
+
+-- Políticas para ATAS_REUNIAO
+CREATE POLICY "Allow public read on atas_reuniao" ON public.atas_reuniao FOR SELECT USING (true);
+CREATE POLICY "Allow public insert on atas_reuniao" ON public.atas_reuniao FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on atas_reuniao" ON public.atas_reuniao FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR DELETE USING (true);
 `
       }
     };
@@ -362,6 +408,187 @@ ALTER TABLE public.atas_reuniao ENABLE ROW LEVEL SECURITY;
             </button>
             <p className="text-[10px] text-slate-400">Verifique se as credenciais do Supabase no ambiente estão operantes.</p>
           </div>
+        </div>
+      </div>
+
+      <div className="card p-6 mb-6">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-800 uppercase tracking-tight mb-2">Configuração SQL Supabase</h2>
+            <p className="text-slate-500 text-xs leading-relaxed">
+              Copie e execute o script abaixo no <strong>SQL Editor</strong> do seu projeto Supabase para configurar as tabelas e políticas de segurança (RLS). 
+              Isto é necessário para resolver erros de permissão ao inserir ou excluir dados.
+            </p>
+          </div>
+        </div>
+        <div className="relative">
+          <textarea 
+            readOnly
+            className="w-full h-48 bg-slate-900 text-slate-300 font-mono text-[10px] p-4 rounded-xl border border-slate-800 focus:outline-none"
+            value={`-- 0. LIMPEZA (OPCIONAL - Garantir que a estrutura nova seja aplicada)
+DROP TABLE IF EXISTS public.movimentacoes CASCADE;
+DROP TABLE IF EXISTS public.materiais CASCADE;
+DROP TABLE IF EXISTS public.equipes CASCADE;
+DROP TABLE IF EXISTS public.colaboradores CASCADE;
+DROP TABLE IF EXISTS public.empresas CASCADE;
+DROP TABLE IF EXISTS public.fornecedores CASCADE;
+DROP TABLE IF EXISTS public.atas_reuniao CASCADE;
+
+-- 1. EXTENSÕES
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 2. TABELAS
+CREATE TABLE public.equipes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    codigo_equipe VARCHAR(50),
+    nome VARCHAR(100) NOT NULL UNIQUE,
+    centro_custo VARCHAR(50) NOT NULL,
+    gestor VARCHAR(100) NOT NULL,
+    cor VARCHAR(20) DEFAULT '#000000',
+    verba_destinada NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    saldo_atualizado NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE public.colaboradores (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nome VARCHAR(150) NOT NULL,
+    matricula VARCHAR(50) UNIQUE NOT NULL,
+    empresa VARCHAR(150) NOT NULL,
+    cargo VARCHAR(100) NOT NULL,
+    equipe VARCHAR(50) NOT NULL,
+    contato VARCHAR(50),
+    status VARCHAR(20) NOT NULL DEFAULT 'Ativo' CHECK (status IN ('Ativo', 'Inativo')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE public.empresas (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    razao_social VARCHAR(200) NOT NULL,
+    cnpj VARCHAR(20) UNIQUE NOT NULL,
+    num_contrato VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'Ativo' CHECK (status IN ('Ativo', 'Inativo')),
+    area_atuacao VARCHAR(150),
+    email_comercial VARCHAR(150),
+    detalhes TEXT,
+    codigo_empresa VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE public.fornecedores (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nome_fantasia VARCHAR(200) NOT NULL,
+    cnpj VARCHAR(20) UNIQUE NOT NULL,
+    telefone VARCHAR(50),
+    email VARCHAR(150),
+    categoria VARCHAR(100),
+    codigo_fornecedor VARCHAR(50),
+    detalhes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE public.materiais (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sap VARCHAR(50) UNIQUE NOT NULL,
+    codigo_fornecedor VARCHAR(50),
+    fornecedor_id UUID REFERENCES public.fornecedores(id) ON DELETE SET NULL,
+    descricao VARCHAR(255) NOT NULL,
+    unidade VARCHAR(10) NOT NULL,
+    estoque_minimo NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    estoque_ideal NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    estoque_atual NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    preco_unitario NUMERIC(15, 4) NOT NULL DEFAULT 0.0000,
+    equipe VARCHAR(50) NOT NULL REFERENCES public.equipes(nome) ON UPDATE CASCADE,
+    localizacao VARCHAR(100),
+    ultima_movimentacao TIMESTAMP WITH TIME ZONE,
+    detalhes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE public.movimentacoes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    data TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('Entrada', 'Retirada')),
+    material_id UUID REFERENCES public.materiais(id) ON DELETE CASCADE,
+    material_desc VARCHAR(255) NOT NULL,
+    quantidade NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    colaborador VARCHAR(150),
+    os VARCHAR(50),
+    nf VARCHAR(50),
+    pedido_compra VARCHAR(50),
+    pedido_sap VARCHAR(50),
+    fornecedor VARCHAR(200),
+    conferente VARCHAR(150),
+    liberador VARCHAR(150),
+    observacoes TEXT,
+    preco_unitario NUMERIC(15, 4),
+    empresa VARCHAR(150),
+    equipe VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE public.atas_reuniao (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    data TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    descricao TEXT NOT NULL,
+    orcamentos_snapshot JSONB NOT NULL,
+    itens_comprados JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 3. HABILITAR RLS (Row Level Security)
+ALTER TABLE public.equipes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.colaboradores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.empresas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fornecedores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.materiais ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.movimentacoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.atas_reuniao ENABLE ROW LEVEL SECURITY;
+
+-- 4. PERMISSÕES DE ACESSO (GRANT) PARA PAPEL ANONIMO
+-- Nota: 'anon' é usado quando não há login. Para maior segurança, use Supabase Auth e o papel 'authenticated'.
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon;
+
+-- 5. POLÍTICAS DE ACESSO (POLICIES) - ACESSO PÚBLICO CONTROLADO
+-- Este script habilita o acesso total para o papel anon (ideal para o protótipo atual).
+DO $$
+DECLARE
+    t text;
+BEGIN
+    FOR t IN SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' 
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS "Public Select" ON public.%I', t);
+        EXECUTE format('DROP POLICY IF EXISTS "Public Insert" ON public.%I', t);
+        EXECUTE format('DROP POLICY IF EXISTS "Public Update" ON public.%I', t);
+        EXECUTE format('DROP POLICY IF EXISTS "Public Delete" ON public.%I', t);
+        
+        EXECUTE format('CREATE POLICY "Public Select" ON public.%I FOR SELECT TO anon USING (true)', t);
+        EXECUTE format('CREATE POLICY "Public Insert" ON public.%I FOR INSERT TO anon WITH CHECK (true)', t);
+        EXECUTE format('CREATE POLICY "Public Update" ON public.%I FOR UPDATE TO anon USING (true)', t);
+        EXECUTE format('CREATE POLICY "Public Delete" ON public.%I FOR DELETE TO anon USING (true)', t);
+    END LOOP;
+END $$;
+
+-- 6. DICA DE SEGURANÇA (ENDURECIMENTO)
+-- Para restringir a exclusão apenas a usuários autenticados (se você habilitar Auth futuramente):
+-- DROP POLICY "Public Delete" ON public.materiais;
+-- CREATE POLICY "Only Auth Delete" ON public.materiais FOR DELETE TO authenticated USING (true);
+`}
+          />
+          <button 
+            onClick={() => {
+              const el = document.querySelector('textarea');
+              if (el) {
+                navigator.clipboard.writeText(el.value);
+                alert('Script copiado para a área de transferência! Cole no SQL Editor do Supabase.');
+              }
+            }}
+            className="absolute top-2 right-2 bg-slate-800 text-slate-400 hover:text-white px-2 py-1 rounded text-[9px] font-bold uppercase transition-colors"
+          >
+            Copiar Script
+          </button>
         </div>
       </div>
 

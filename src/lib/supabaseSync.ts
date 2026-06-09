@@ -1,8 +1,11 @@
 import { supabase } from './supabase';
 import { Material, Colaborador, Empresa, Equipe, Fornecedor, Movimentacao, AtaReuniao } from '../types';
 
+const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+
 export const syncToSupabase = {
   async insertMaterial(m: Material) {
+    if (!isUUID(m.id)) return;
     const { error } = await supabase.from('materiais').insert({
       id: m.id,
       sap: m.sap,
@@ -19,6 +22,7 @@ export const syncToSupabase = {
     if (error) console.error("Error inserting material:", error.message);
   },
   async updateMaterial(id: string, m: Partial<Material>) {
+    if (!isUUID(id)) return;
     const payload: any = {};
     if (m.sap !== undefined) payload.sap = m.sap;
     if (m.codigoFornecedor !== undefined) payload.codigo_fornecedor = m.codigoFornecedor;
@@ -35,11 +39,13 @@ export const syncToSupabase = {
     if (error) console.error("Error updating material:", error.message);
   },
   async deleteMaterial(id: string) {
+    if (!isUUID(id)) return;
     const { error } = await supabase.from('materiais').delete().eq('id', id);
     if (error) console.error("Error deleting material:", error.message);
   },
 
   async insertColaborador(c: Colaborador) {
+    if (!isUUID(c.id)) return;
     const { error } = await supabase.from('colaboradores').insert({
       id: c.id,
       matricula: c.matricula,
@@ -53,15 +59,18 @@ export const syncToSupabase = {
     if (error) console.error("Error inserting colaborador:", error.message);
   },
   async updateColaborador(id: string, c: Partial<Colaborador>) {
+    if (!isUUID(id)) return;
     const { error } = await supabase.from('colaboradores').update(c).eq('id', id);
     if (error) console.error("Error updating colaborador:", error.message);
   },
   async deleteColaborador(id: string) {
+    if (!isUUID(id)) return;
     const { error } = await supabase.from('colaboradores').delete().eq('id', id);
     if (error) console.error("Error deleting colaborador:", error.message);
   },
 
   async insertEquipe(e: Equipe) {
+    if (!isUUID(e.id)) return;
     const { error } = await supabase.from('equipes').insert({
       id: e.id,
       nome: e.nome,
@@ -74,6 +83,7 @@ export const syncToSupabase = {
     if (error) console.error("Error inserting equipe:", error.message);
   },
   async updateEquipe(id: string, e: Partial<Equipe>) {
+    if (!isUUID(id)) return;
     const payload: any = {};
     if (e.nome !== undefined) payload.nome = e.nome;
     if (e.centroCusto !== undefined) payload.centro_custo = e.centroCusto;
@@ -86,11 +96,13 @@ export const syncToSupabase = {
     if (error) console.error("Error updating equipe:", error.message);
   },
   async deleteEquipe(id: string) {
+    if (!isUUID(id)) return;
     const { error } = await supabase.from('equipes').delete().eq('id', id);
     if (error) console.error("Error deleting equipe:", error.message);
   },
 
   async insertEmpresa(e: Empresa) {
+    if (!isUUID(e.id)) return;
     const { error } = await supabase.from('empresas').insert({
       id: e.id,
       razao_social: e.razaoSocial,
@@ -105,6 +117,7 @@ export const syncToSupabase = {
     if (error) console.error("Error inserting empresa:", error.message);
   },
   async updateEmpresa(id: string, e: Partial<Empresa>) {
+    if (!isUUID(id)) return;
     const payload: any = {};
     if (e.razaoSocial !== undefined) payload.razao_social = e.razaoSocial;
     if (e.cnpj !== undefined) payload.cnpj = e.cnpj;
@@ -118,11 +131,13 @@ export const syncToSupabase = {
     if (error) console.error("Error updating empresa:", error.message);
   },
   async deleteEmpresa(id: string) {
+    if (!isUUID(id)) return;
     const { error } = await supabase.from('empresas').delete().eq('id', id);
     if (error) console.error("Error deleting empresa:", error.message);
   },
 
   async insertFornecedor(f: Fornecedor) {
+    if (!isUUID(f.id)) return;
     const { error } = await supabase.from('fornecedores').insert({
       id: f.id,
       nome_fantasia: f.nomeFantasia,
@@ -136,6 +151,7 @@ export const syncToSupabase = {
     if (error) console.error("Error inserting fornecedor:", error.message);
   },
   async updateFornecedor(id: string, f: Partial<Fornecedor>) {
+    if (!isUUID(id)) return;
     const payload: any = {};
     if (f.nomeFantasia !== undefined) payload.nome_fantasia = f.nomeFantasia;
     if (f.cnpj !== undefined) payload.cnpj = f.cnpj;
@@ -148,11 +164,13 @@ export const syncToSupabase = {
     if (error) console.error("Error updating fornecedor:", error.message);
   },
   async deleteFornecedor(id: string) {
+    if (!isUUID(id)) return;
     const { error } = await supabase.from('fornecedores').delete().eq('id', id);
     if (error) console.error("Error deleting fornecedor:", error.message);
   },
 
   async insertMovimentacao(m: Movimentacao) {
+    if (!isUUID(m.id)) return;
     const { error } = await supabase.from('movimentacoes').insert({
       id: m.id,
       data: m.data,
@@ -176,10 +194,12 @@ export const syncToSupabase = {
     if (error) console.error("Error inserting movimentacao:", error.message);
   },
   async deleteMovimentacao(id: string) {
+     if (!isUUID(id)) return;
      const { error } = await supabase.from('movimentacoes').delete().eq('id', id);
      if (error) console.error("Error deleting movimentacao:", error.message);
   },
   async updateMovimentacao(id: string, m: Partial<Movimentacao>) {
+    if (!isUUID(id)) return;
     const payload: any = {};
     if (m.data !== undefined) payload.data = m.data;
     if (m.quantidade !== undefined) payload.quantidade = m.quantidade;
@@ -189,13 +209,97 @@ export const syncToSupabase = {
   },
 
   async insertAta(a: AtaReuniao) {
+    if (!isUUID(a.id)) return;
     const { error } = await supabase.from('atas_reuniao').insert({
       id: a.id,
       data: a.data,
       descricao: a.descricao,
-      orcamentos_snapshot: a.orçamentosSnapshot,
+      orcamentos_snapshot: a.orcamentosSnapshot,
       itens_comprados: a.itensComprados
     });
     if (error) console.error("Error inserting ata:", error.message);
+  },
+
+  async fetchAll() {
+    const [
+      { data: materiais },
+      { data: colaboradores },
+      { data: empresas },
+      { data: equipes },
+      { data: fornecedores },
+      { data: movimentacoes },
+      { data: atas }
+    ] = await Promise.all([
+      supabase.from('materiais').select('*'),
+      supabase.from('colaboradores').select('*'),
+      supabase.from('empresas').select('*'),
+      supabase.from('equipes').select('*'),
+      supabase.from('fornecedores').select('*'),
+      supabase.from('movimentacoes').select('*').order('data', { ascending: false }),
+      supabase.from('atas_reuniao').select('*').order('data', { ascending: false })
+    ]);
+
+    return {
+      materiais: materiais?.map(m => ({
+        id: m.id,
+        sap: m.sap,
+        codigoFornecedor: m.codigo_fornecedor,
+        descricao: m.descricao,
+        unidade: m.unidade,
+        estoqueMinimo: Number(m.estoque_minimo),
+        estoqueIdeal: Number(m.estoque_ideal),
+        estoqueAtual: Number(m.estoque_atual),
+        precoUnitario: Number(m.preco_unitario),
+        equipe: m.equipe,
+        localizacao: m.localizacao,
+        ultimaMovimentacao: m.ultima_movimentacao,
+        detalhes: m.detalhes
+      })) || [],
+      colaboradores: colaboradores || [],
+      empresas: empresas?.map(e => ({
+        id: e.id,
+        razaoSocial: e.razao_social,
+        cnpj: e.cnpj,
+        numContrato: e.num_contrato,
+        status: e.status,
+        areaAtuacao: e.area_atuacao,
+        emailComercial: e.email_comercial,
+        detalhes: e.detalhes,
+        codigoEmpresa: e.codigo_empresa
+      })) || [],
+      equipes: equipes?.map(eq => ({
+        id: eq.id,
+        nome: eq.nome,
+        centroCusto: eq.centro_custo,
+        gestor: eq.gestor,
+        cor: eq.cor,
+        verbaDestinada: Number(eq.verba_destinada),
+        saldoAtualizado: Number(eq.saldo_atualizado)
+      })) || [],
+      fornecedores: fornecedores?.map(f => ({
+        id: f.id,
+        nomeFantasia: f.nome_fantasia,
+        cnpj: f.cnpj,
+        telefone: f.telefone,
+        email: f.email,
+        categoria: f.categoria,
+        codigoFornecedor: f.codigo_fornecedor,
+        detalhes: f.detalhes
+      })) || [],
+      movimentacoes: movimentacoes?.map(mov => ({
+        ...mov,
+        materialId: mov.material_id,
+        materialDesc: mov.material_desc,
+        quantidade: Number(mov.quantidade),
+        precoUnitario: Number(mov.preco_unitario)
+      })) || [],
+      atas: atas?.map(a => ({
+        id: a.id,
+        data: a.data,
+        descricao: a.descricao,
+        orcamentosSnapshot: a.orcamentos_snapshot,
+        itensComprados: a.itens_comprados
+      })) || []
+    };
   }
 };

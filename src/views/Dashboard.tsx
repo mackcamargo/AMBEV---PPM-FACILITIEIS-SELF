@@ -64,9 +64,9 @@ export const Dashboard: React.FC = () => {
     });
   }, [movimentacoes, filterType, startDate, endDate]);
 
-  const totalMateriais = useMemo(() => materiais.reduce((acc, m) => acc + Number(m.estoqueAtual || 0), 0), [materiais]);
-  const estoqueBaixo = materiais.filter(m => m.estoqueAtual < m.estoqueMinimo).length;
-  const estoqueZero = materiais.filter(m => m.estoqueAtual === 0).length;
+  const totalMateriais = useMemo(() => materiais.reduce((acc, m) => acc + Number(m?.estoqueAtual || 0), 0), [materiais]);
+  const estoqueBaixo = materiais.filter(m => (m?.estoqueAtual || 0) < (m?.estoqueMinimo || 0)).length;
+  const estoqueZero = materiais.filter(m => (m?.estoqueAtual || 0) === 0).length;
 
   // Ranking de Retirantes
   const withdrawerRanking = useMemo(() => {
@@ -128,8 +128,8 @@ export const Dashboard: React.FC = () => {
 
   const stats = [
     { label: 'Total Materiais em Self', value: totalMateriais, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { label: 'Entradas (Valor)', value: `R$ ${teamPerformance.reduce((acc, c) => acc + c.entrada, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: ArrowUpRight, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    { label: 'Retiradas (Valor)', value: `R$ ${teamPerformance.reduce((acc, c) => acc + c.retirada, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: ArrowDownLeft, color: 'text-red-500', bg: 'bg-red-50' },
+    { label: 'Entradas (Valor)', value: `R$ ${teamPerformance.reduce((acc, c) => acc + (c?.entrada || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: ArrowUpRight, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { label: 'Retiradas (Valor)', value: `R$ ${teamPerformance.reduce((acc, c) => acc + (c?.retirada || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: ArrowDownLeft, color: 'text-red-500', bg: 'bg-red-50' },
     { label: 'Movimentações', value: filteredMovimentacoes.length, icon: ArrowUpRight, color: 'text-brand-accent', bg: 'bg-slate-50' },
   ];
 

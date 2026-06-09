@@ -16,14 +16,19 @@ import { MeetingHistory } from './views/MeetingHistory';
 import { ReportsView } from './views/Reports';
 import { Settings } from './views/Settings';
 import { WelcomeView } from './views/WelcomeView';
+import { Login } from './views/Login';
 
 function AppContent() {
-  const { view, setView, hasEntered, setHasEntered } = useApp();
+  const { user, view, setView, hasEntered, setHasEntered } = useApp();
 
   const handleEnter = (targetView: 'dashboard' | 'retirada-materiais' | 'reuniao-self') => {
     setView(targetView);
     setHasEntered(true);
   };
+
+  if (!user) {
+    return <Login />;
+  }
 
   if (!hasEntered) {
     return <WelcomeView onEnter={handleEnter} />;

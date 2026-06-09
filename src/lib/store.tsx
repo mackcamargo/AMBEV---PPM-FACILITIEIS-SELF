@@ -1,21 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User } from '@supabase/supabase-js';
+import { supabase } from './supabase';
 import { 
   Material, Colaborador, Empresa, Equipe, Fornecedor, Movimentacao, 
   ViewState, EquipeTecnica, ItemLote, AtaReuniao
 } from '../types';
+import { generateId } from './idUtils';
 import { syncToSupabase } from './supabaseSync';
-
-const generateId = () => {
-  return typeof crypto !== 'undefined' && crypto.randomUUID 
-    ? crypto.randomUUID() 
-    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-      });
-};
 
 
 interface AppContextType {
+  user: User | null;
+  signOut: () => Promise<void>;
   view: ViewState;
   setView: (v: ViewState) => void;
   
@@ -50,6 +46,8 @@ interface AppContextType {
   setDeletionPassword: (p: string) => void;
   isDeletionPasswordEnabled: boolean;
   setIsDeletionPasswordEnabled: (b: boolean) => void;
+  isSyncing: boolean;
+  setIsSyncing: (b: boolean) => void;
   
   addMovimentacao: (m: Movimentacao) => void;
   deleteMovimentacao: (id: string) => void;
@@ -76,59 +74,76 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+
 const INITIAL_MATERIALS: Material[] = [];
 
 const INITIAL_COLABORADORES: Colaborador[] = [
-  { id: 'V-0001', matricula: 'V-0001', nome: 'Arthur Almeida', empresa: 'Vision', equipe: 'Refrigeração', cargo: 'Encarregado', contato: '(11) 99122-0001', status: 'Ativo' },
-  { id: 'V-0002', matricula: 'V-0002', nome: 'Gislaine', empresa: 'Vision', equipe: 'Refrigeração', cargo: 'Técnico de Segurança', contato: '(11) 99122-0002', status: 'Ativo' },
-  { id: 'V-0003', matricula: 'V-0003', nome: 'Wilson', empresa: 'Vision', equipe: 'Refrigeração', cargo: 'Mecânico', contato: '(11) 99122-0003', status: 'Ativo' },
-  { id: 'B-0001', matricula: 'B-0001', nome: 'Arthur dos Reis Rocha', empresa: 'BCM', equipe: 'Civil', cargo: 'Técnico Especialista', status: 'Ativo' },
-  { id: 'COL-1', matricula: 'COL-1780419000921', nome: 'Marco Antônio', empresa: 'BCM', equipe: 'Civil', cargo: 'ADM', status: 'Ativo' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d471', matricula: 'V-0001', nome: 'Arthur Almeida', empresa: 'Vision', equipe: 'Refrigeração', cargo: 'Encarregado', contato: '(11) 99122-0001', status: 'Ativo' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d472', matricula: 'V-0002', nome: 'Gislaine', empresa: 'Vision', equipe: 'Refrigeração', cargo: 'Técnico de Segurança', contato: '(11) 99122-0002', status: 'Ativo' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d473', matricula: 'V-0003', nome: 'Wilson', empresa: 'Vision', equipe: 'Refrigeração', cargo: 'Mecânico', contato: '(11) 99122-0003', status: 'Ativo' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d474', matricula: 'B-0001', nome: 'Arthur dos Reis Rocha', empresa: 'BCM', equipe: 'Civil', cargo: 'Técnico Especialista', status: 'Ativo' },
+  { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d475', matricula: 'COL-1780419000921', nome: 'Marco Antônio', empresa: 'BCM', equipe: 'Civil', cargo: 'ADM', status: 'Ativo' },
 ];
 
 const INITIAL_EQUIPES: Equipe[] = [
-  { id: '1', nome: 'Elétrica', centroCusto: 'CC-001', gestor: 'João Silva', cor: '#3B82F6', verbaDestinada: 15000, saldoAtualizado: 12450.50 },
-  { id: '2', nome: 'Refrigeração', centroCusto: 'CC-002', gestor: 'Arthur Almeida', cor: '#06B6D4', verbaDestinada: 12000, saldoAtualizado: 8700.00 },
-  { id: '3', nome: 'Civil', centroCusto: 'CC-003', gestor: 'Marco Antônio', cor: '#F59E0B', verbaDestinada: 20000, saldoAtualizado: 18200.00 },
-  { id: '4', nome: 'Hidráulica', centroCusto: 'CC-004', gestor: 'Ana Paula', cor: '#10B981', verbaDestinada: 10000, saldoAtualizado: 7500.25 },
-  { id: '5', nome: 'Pintura', centroCusto: 'CC-005', gestor: 'Carlos Souza', cor: '#EC4899', verbaDestinada: 8000, saldoAtualizado: 8000.00 },
+  { id: '85776077-d588-466d-a99f-3d02b2c3d401', nome: 'Elétrica', centroCusto: 'CC-001', gestor: 'João Silva', cor: '#3B82F6', verbaDestinada: 15000, saldoAtualizado: 12450.50 },
+  { id: '85776077-d588-466d-a99f-3d02b2c3d402', nome: 'Refrigeração', centroCusto: 'CC-002', gestor: 'Arthur Almeida', cor: '#06B6D4', verbaDestinada: 12000, saldoAtualizado: 8700.00 },
+  { id: '85776077-d588-466d-a99f-3d02b2c3d403', nome: 'Civil', centroCusto: 'CC-003', gestor: 'Marco Antônio', cor: '#F59E0B', verbaDestinada: 20000, saldoAtualizado: 18200.00 },
+  { id: '85776077-d588-466d-a99f-3d02b2c3d404', nome: 'Hidráulica', centroCusto: 'CC-004', gestor: 'Ana Paula', cor: '#10B981', verbaDestinada: 10000, saldoAtualizado: 7500.25 },
+  { id: '85776077-d588-466d-a99f-3d02b2c3d405', nome: 'Pintura', centroCusto: 'CC-005', gestor: 'Carlos Souza', cor: '#EC4899', verbaDestinada: 8000, saldoAtualizado: 8000.00 },
 ];
 
 const INITIAL_ATAS: AtaReuniao[] = [
   {
-    id: 'ATA-1',
+    id: 'f721d01a-6379-42c2-841f-0a02b2c3d901',
     data: '2026-06-03T10:00:00Z',
     descricao: 'Reunião de Alinhamento Semanal - Junho W1',
-    orçamentosSnapshot: [
+    orcamentosSnapshot: [
       { equipe: 'Refrigeração', saldoAnterior: 10000, saldoNovo: 8700 },
       { equipe: 'Hidráulica', saldoAnterior: 9000, saldoNovo: 7500 },
       { equipe: 'Elétrica', saldoAnterior: 15000, saldoNovo: 12450 },
     ],
     itensComprados: [
-      { materialId: '1', quantidade: 5, custoTotal: 50 },
-      { materialId: '2', quantidade: 10, custoTotal: 150 },
+      { materialId: '85776077-d588-466d-a99f-3d02b2c3d401', quantidade: 5, custoTotal: 50 },
+      { materialId: '85776077-d588-466d-a99f-3d02b2c3d402', quantidade: 10, custoTotal: 150 },
     ],
   }
 ];
 
-const INITIAL_MOVIMENTACOES: Movimentacao[] = [
-  { id: 'm-1', data: '2026-06-03T14:30:00Z', tipo: 'Entrada', materialId: '2', materialDesc: 'RELE E PROTETOR TERMICO 1/5 220V GELADEIRA', quantidade: 20, precoUnitario: 15.0, nf: 'NF-1029', pedidoCompra: 'PC-1029', pedidoSap: 'SAP-5012', fornecedor: 'Refrisul', conferente: 'Arthur Almeida' },
-  { id: 'm-2', data: '2026-06-03T15:00:00Z', tipo: 'Retirada', materialId: '1', materialDesc: 'TORNEIRA COMUM 1/2 BEBEDOURO', quantidade: 2, precoUnitario: 10.0, os: 'OS-8812', colaborador: 'Arthur Almeida', empresa: 'Vision', equipe: 'Refrigeração', liberador: 'Gislaine' },
-  { id: 'm-3', data: '2026-06-04T09:15:00Z', tipo: 'Entrada', materialId: '4', materialDesc: 'PLACA UNIVERSAL', quantidade: 10, precoUnitario: 129.9, nf: 'NF-1033', pedidoCompra: 'PC-1033', pedidoSap: 'SAP-6021', fornecedor: 'Splat Parts', conferente: 'Gislaine' },
-  { id: 'm-4', data: '2026-06-02T11:00:00Z', tipo: 'Entrada', materialId: '6', materialDesc: 'ASSENTO SANITÁRIO', quantidade: 50, precoUnitario: 34.9, nf: 'NF-0982', pedidoCompra: 'PC-0982', pedidoSap: 'SAP-4410', fornecedor: 'Tupan', conferente: 'Marco Antônio' },
-  { id: 'm-5', data: '2026-06-02T13:45:00Z', tipo: 'Retirada', materialId: '6', materialDesc: 'ASSENTO SANITÁRIO', quantidade: 14, precoUnitario: 34.9, os: 'OS-7714', colaborador: 'Arthur dos Reis Rocha', empresa: 'BCM', equipe: 'Civil', liberador: 'Marco Antônio' },
-  { id: 'm-6', data: '2026-06-02T16:20:00Z', tipo: 'Entrada', materialId: '7', materialDesc: 'PLUG FÊMEA 10A', quantidade: 20, precoUnitario: 7.0, nf: 'NF-0991', pedidoCompra: 'PC-0991', pedidoSap: 'SAP-5517', fornecedor: 'Luz & Cia', conferente: 'Arthur Almeida' },
-  { id: 'm-7', data: '2026-06-02T17:00:00Z', tipo: 'Retirada', materialId: '7', materialDesc: 'PLUG FÊMEA 10A', quantidade: 10, precoUnitario: 7.0, os: 'OS-7722', colaborador: 'Wilson', empresa: 'Vision', equipe: 'Refrigeração', liberador: 'Arthur Almeida' },
-  { id: 'm-8', data: '2026-06-02T08:30:00Z', tipo: 'Entrada', materialId: '8', materialDesc: 'ARGAMASSA', quantidade: 15, precoUnitario: 47.9, nf: 'NF-0922', pedidoCompra: 'PC-0922', pedidoSap: 'SAP-3310', fornecedor: 'Votorantim', conferente: 'Marco Antônio' },
-  { id: 'm-9', data: '2026-06-02T10:10:00Z', tipo: 'Retirada', materialId: '8', materialDesc: 'ARGAMASSA', quantidade: 5, precoUnitario: 47.9, os: 'OS-7711', colaborador: 'Arthur dos Reis Rocha', empresa: 'BCM', equipe: 'Civil', liberador: 'Marco Antônio' }
-];
+const INITIAL_MOVIMENTACOES: Movimentacao[] = [];
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    // Check active sessions and subscribe to auth changes
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
+
   const [view, setView] = useState<ViewState>(() => {
     return (localStorage.getItem('ppm_current_view') as ViewState) || 'dashboard';
   });
 
-  const [hasEntered, setHasEntered] = useState(false);
+  const [hasEntered, setHasEntered] = useState<boolean>(() => {
+    return localStorage.getItem('ppm_has_entered') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ppm_has_entered', hasEntered.toString());
+  }, [hasEntered]);
 
   useEffect(() => {
     localStorage.setItem('ppm_current_view', view);
@@ -136,33 +151,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Synchronous State Initializers with LocalStorage Support
   const [materiais, setMateriais] = useState<Material[]>(() => {
-    const saved = localStorage.getItem('ppm_materiais');
-    return saved ? JSON.parse(saved) : INITIAL_MATERIALS;
+    try {
+      const saved = localStorage.getItem('ppm_materiais');
+      const parsed = saved ? JSON.parse(saved) : null;
+      const base = Array.isArray(parsed) ? parsed : INITIAL_MATERIALS;
+      return base.filter(m => !m.descricao?.toUpperCase().includes('TESTE') && !m.equipe?.toUpperCase().includes('TESTE'));
+    } catch { return INITIAL_MATERIALS; }
   });
   const [colaboradores, setColaboradores] = useState<Colaborador[]>(() => {
-    const saved = localStorage.getItem('ppm_colaboradores');
-    return saved ? JSON.parse(saved) : INITIAL_COLABORADORES;
+    try {
+      const saved = localStorage.getItem('ppm_colaboradores');
+      const parsed = saved ? JSON.parse(saved) : null;
+      const base = Array.isArray(parsed) ? parsed : INITIAL_COLABORADORES;
+      // Filter out non-UUIDs from older versions or dev data
+      return base.filter(c => isUUID(c.id) && !c.nome?.toUpperCase().includes('TESTE'));
+    } catch { return INITIAL_COLABORADORES; }
   });
   const [empresas, setEmpresas] = useState<Empresa[]>(() => {
-    const saved = localStorage.getItem('ppm_empresas');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('ppm_empresas');
+      const parsed = saved ? JSON.parse(saved) : null;
+      const base = Array.isArray(parsed) ? parsed : [];
+      return base.filter(e => isUUID(e.id));
+    } catch { return []; }
   });
   const [equipes, setEquipes] = useState<Equipe[]>(() => {
-    const saved = localStorage.getItem('ppm_equipes');
-    return saved ? JSON.parse(saved) : INITIAL_EQUIPES;
+    try {
+      const saved = localStorage.getItem('ppm_equipes');
+      const parsed = saved ? JSON.parse(saved) : null;
+      const base = Array.isArray(parsed) ? parsed : INITIAL_EQUIPES;
+      // Filter out non-UUIDs and TESTE data on load
+      return base.filter(e => isUUID(e.id) && !e.nome?.toUpperCase().includes('TESTE'));
+    } catch { return INITIAL_EQUIPES; }
   });
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(() => {
-    const saved = localStorage.getItem('ppm_fornecedores');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('ppm_fornecedores');
+      const parsed = saved ? JSON.parse(saved) : null;
+      const base = Array.isArray(parsed) ? parsed : [];
+      return base.filter(f => isUUID(f.id));
+    } catch { return []; }
   });
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>(() => {
-    const saved = localStorage.getItem('ppm_movimentacoes');
-    return saved ? JSON.parse(saved) : INITIAL_MOVIMENTACOES;
+    try {
+      const saved = localStorage.getItem('ppm_movimentacoes');
+      const parsed = saved ? JSON.parse(saved) : null;
+      const base = Array.isArray(parsed) ? parsed : INITIAL_MOVIMENTACOES;
+      return base.filter(m => isUUID(m.id));
+    } catch { return INITIAL_MOVIMENTACOES; }
   });
   const [batchState, setBatchState] = useState<ItemLote[]>([]);
   const [atas, setAtas] = useState<AtaReuniao[]>(() => {
-    const saved = localStorage.getItem('ppm_atas');
-    return saved ? JSON.parse(saved) : INITIAL_ATAS;
+    try {
+      const saved = localStorage.getItem('ppm_atas');
+      const parsed = saved ? JSON.parse(saved) : null;
+      const base = Array.isArray(parsed) ? parsed : INITIAL_ATAS;
+      return base.filter(a => isUUID(a.id));
+    } catch { return INITIAL_ATAS; }
   });
   const [deletionPassword, setDeletionPassword] = useState<string>(() => {
     return localStorage.getItem('ppm_deletion_password') || '';
@@ -171,6 +216,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isDeletionPasswordEnabled, setIsDeletionPasswordEnabled] = useState<boolean>(() => {
     return localStorage.getItem('ppm_deletion_password_enabled') !== 'false'; // Defaults to true
   });
+
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // LocalStorage Synchronization Effects
   useEffect(() => {
@@ -208,6 +255,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('ppm_deletion_password_enabled', isDeletionPasswordEnabled.toString());
   }, [isDeletionPasswordEnabled]);
+
+  // Supabase Initial Multi-Fetch
+  useEffect(() => {
+    const loadFromSupabase = async () => {
+      setIsSyncing(true);
+      try {
+        const data = await syncToSupabase.fetchAll();
+        
+        // --- DATA FILTERING ---
+        // Filter out non-UUIDs and development "TESTE" data
+        const cleanMateriais = data.materiais.filter(m => 
+          isUUID(m.id) &&
+          !m.descricao?.toUpperCase().includes('TESTE') && 
+          !m.equipe?.toUpperCase().includes('TESTE')
+        );
+
+        const cleanEquipes = data.equipes.filter(e => 
+          isUUID(e.id) &&
+          !e.nome?.toUpperCase().includes('TESTE')
+        );
+
+        const cleanColaboradores = data.colaboradores.filter(c => 
+          isUUID(c.id) &&
+          !c.nome?.toUpperCase().includes('TESTE')
+        );
+
+        const cleanMovimentacoes = data.movimentacoes.filter(m => 
+          isUUID(m.id) &&
+          !m.materialDesc?.toUpperCase().includes('TESTE') &&
+          !m.equipe?.toUpperCase().includes('TESTE')
+        );
+
+        const cleanEmpresas = data.empresas.filter(e => isUUID(e.id));
+        const cleanFornecedores = data.fornecedores.filter(f => isUUID(f.id));
+        const cleanAtas = data.atas.filter(a => isUUID(a.id));
+
+        // Update state with filtered data
+        if (cleanMateriais.length > 0 || data.materiais.length > 0) setMateriais(cleanMateriais);
+        if (cleanColaboradores.length > 0 || data.colaboradores.length > 0) setColaboradores(cleanColaboradores);
+        if (cleanEmpresas.length > 0 || data.empresas.length > 0) setEmpresas(cleanEmpresas);
+        if (cleanEquipes.length > 0 || data.equipes.length > 0) setEquipes(cleanEquipes);
+        if (cleanFornecedores.length > 0 || data.fornecedores.length > 0) setFornecedores(cleanFornecedores);
+        if (cleanMovimentacoes.length > 0 || data.movimentacoes.length > 0) setMovimentacoes(cleanMovimentacoes);
+        if (cleanAtas.length > 0 || data.atas.length > 0) setAtas(cleanAtas);
+
+      } catch (err) {
+        console.error("Failed to load initial data from Supabase:", err);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    loadFromSupabase();
+  }, []);
 
   // Revert any "REUNIÃO-SELF" movements and restore stocks & budgets automatically on load
   useEffect(() => {
@@ -762,6 +863,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       atas, setAtas,
       deletionPassword, setDeletionPassword,
       isDeletionPasswordEnabled, setIsDeletionPasswordEnabled,
+      isSyncing, setIsSyncing,
       addMovimentacao,
       deleteMovimentacao,
       updateMovimentacao,
@@ -782,7 +884,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addEmpresa,
       deleteEmpresa,
       seedTestData,
-      clearAllData
+      clearAllData,
+      user,
+      signOut
     }}>
       {children}
     </AppContext.Provider>

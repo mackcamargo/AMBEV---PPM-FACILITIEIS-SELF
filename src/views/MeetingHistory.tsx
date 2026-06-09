@@ -179,7 +179,7 @@ export const MeetingHistory: React.FC = () => {
         return {
           ...a,
           descricao: editedDesc,
-          orçamentosSnapshot: equipes.map(e => {
+          orcamentosSnapshot: equipes.map(e => {
             const newSpent = editedImpactPerTeam[e.nome] || 0;
             const originalSpent = originalImpactPerTeam[e.nome] || 0;
             const currentActualBalance = e.saldoAtualizado; // balance after other transactions
@@ -443,14 +443,14 @@ export const MeetingHistory: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
-                  {ata.orçamentosSnapshot.map((snap, idx) => {
-                    const isExceeded = snap.saldoNovo < 0;
+                  {ata.orcamentosSnapshot?.map((snap, sIdx) => {
+                    const isExceeded = (snap.saldoNovo || 0) < 0;
                     return (
-                      <div key={idx} className={`p-2 rounded-xl border transition-all ${isExceeded ? 'bg-red-50/50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
+                      <div key={`${ata.id}-snap-${sIdx}`} className={`p-2 rounded-xl border transition-all ${isExceeded ? 'bg-red-50/50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
                         <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-tight truncate">{snap.equipe}</p>
-                        <p className="text-[9px] text-slate-500 line-through">R$ {snap.saldoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        <p className="text-[9px] text-slate-500 line-through">R$ {snap.saldoAnterior?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         <p className={`text-[10px] font-bold ${isExceeded ? 'text-red-600' : 'text-emerald-600'}`}>
-                          R$ {snap.saldoNovo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R$ {snap.saldoNovo?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                         {isExceeded && (
                           <span className="text-[8.5px] font-black text-red-600 uppercase tracking-wider block mt-0.5" title="Gasto excedeu o limite deste centro de custo">
@@ -464,7 +464,7 @@ export const MeetingHistory: React.FC = () => {
 
                 <div className="mt-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
                    <p className="text-[11px] text-slate-500 font-medium font-semibold">
-                      <span className="font-extrabold text-slate-700">{ata.itensComprados.length}</span> materiais aprovados para compra.
+                      <span className="font-extrabold text-slate-700">{ata.itensComprados?.length || 0}</span> materiais aprovados para compra.
                    </p>
                    <div className="flex flex-wrap gap-2">
                      <button 
@@ -829,17 +829,17 @@ export const MeetingHistory: React.FC = () => {
                   <div className="mb-4">
                      <p className="text-[10px] font-bold text-slate-400 border-b border-slate-100 pb-1 mb-2 uppercase font-mono tracking-wider">Materiais Aprovados</p>
                      <div className="space-y-2">
-                        {selectedAta.itensComprados.map((item, idx) => {
+                        {selectedAta.itensComprados?.map((item, idx) => {
                           const m = materiais.find(mat => mat.id === item.materialId);
                           return (
                             <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
                                <div className="flex flex-col min-w-0">
-                                 <span className="text-xs font-bold text-slate-700 truncate">{m?.descricao}</span>
-                                 <span className="text-[10px] font-mono text-slate-400 font-semibold font-sans">COD SAP: {m?.sap}</span>
+                                 <span className="text-xs font-bold text-slate-700 truncate">{m?.descricao || 'Material não encontrado'}</span>
+                                 <span className="text-[10px] font-mono text-slate-400 font-semibold font-sans">COD SAP: {m?.sap || 'N/A'}</span>
                                </div>
                                <div className="text-right shrink-0">
                                  <span className="text-xs font-bold text-brand-blue block">{item.quantidade} {formatUnit(m?.unidade)}</span>
-                                 <span className="text-[10px] text-slate-500 italic font-mono font-semibold">R$ {item.custoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                 <span className="text-[10px] text-slate-500 italic font-mono font-semibold">R$ {item.custoTotal?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                </div>
                             </div>
                           );
@@ -850,7 +850,7 @@ export const MeetingHistory: React.FC = () => {
                   <div className="bg-slate-900 rounded-xl p-4 text-white flex justify-between items-center shadow-lg shadow-slate-900/10">
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Custo Total da Ata</p>
-                      <p className="text-xl font-bold">R$ {selectedAta.itensComprados.reduce((acc, curr) => acc + curr.custoTotal, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      <p className="text-xl font-bold">R$ {selectedAta.itensComprados?.reduce((acc, curr) => acc + (curr.custoTotal || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     </div>
                     <button 
                       onClick={() => setShowShareOptions(true)}

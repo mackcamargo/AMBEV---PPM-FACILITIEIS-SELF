@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../lib/store';
+import { generateId } from '../lib/idUtils';
 import { Material, Equipe, AtaReuniao, Movimentacao, formatUnit } from '../types';
 import { Save, AlertCircle, ShoppingCart, Plus, Trash2, Download, Mail, Share2 } from 'lucide-react';
 
@@ -107,14 +108,14 @@ export const SelfMeeting: React.FC = () => {
   // Calculate totals per team based on all materials in compras (unfiltered)
   const impactPerTeam = useMemo(() => {
     const impacts: Record<string, number> = {};
-    equipes.forEach(e => {
+    equipes?.forEach(e => {
       impacts[e.nome] = 0;
     });
     
-    materiais.forEach(m => {
-      const q = compras[m.id] || 0;
+    materiais?.forEach(m => {
+      const q = compras?.[m.id] || 0;
       if (q > 0) {
-        const subtotal = q * m.precoUnitario;
+        const subtotal = q * (m.precoUnitario || 0);
         const currentImpact = impacts[m.equipe] || 0;
         impacts[m.equipe] = currentImpact + subtotal;
       }
@@ -123,8 +124,8 @@ export const SelfMeeting: React.FC = () => {
     return impacts;
   }, [compras, materiais, equipes]);
 
-  const totalGeral = Object.values(impactPerTeam).reduce((a, b) => (a as number) + (b as number), 0) as number;
-  const totalSaldoEquipes = useMemo(() => equipes.reduce((acc, e) => acc + e.saldoAtualizado, 0), [equipes]);
+  const totalGeral: number = (Object.values(impactPerTeam) as number[]).reduce((a, b) => a + b, 0);
+  const totalSaldoEquipes: number = useMemo(() => equipes?.reduce((acc, e) => acc + (Number(e.saldoAtualizado) || 0), 0) || 0, [equipes]);
   const totalExibido = selectedTeam ? (impactPerTeam[selectedTeam] || 0) : totalGeral;
 
   const handleUpdateQtd = (id: string, val: string) => {
@@ -159,10 +160,10 @@ export const SelfMeeting: React.FC = () => {
   const handleSaveReuniao = () => {
     // Create Ata
     const novaAta: AtaReuniao = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: generateId(),
       data: new Date().toISOString(),
       descricao: 'Ata de Reunião de Self Service - ' + new Date().toLocaleDateString(),
-      orçamentosSnapshot: equipes.map(e => {
+      orcamentosSnapshot: equipes.map(e => {
         const impact = impactPerTeam[e.nome] || 0;
         const isOverspent = impact > e.saldoAtualizado;
         return {
@@ -423,15 +424,15 @@ export const SelfMeeting: React.FC = () => {
               </div>
             </div>
 
-            {equipes.map(e => {
+            {equipes?.map((e, idx) => {
               const impact = impactPerTeam[e.nome] || 0;
-              const novoSaldo = e.saldoAtualizado - impact;
+              const novoSaldo = (e.saldoAtualizado || 0) - impact;
               const isNegative = novoSaldo < 0;
               const isSelected = selectedTeam === e.nome;
 
               return (
                 <div 
-                  key={e.id} 
+                  key={e.id || `equipe-${idx}`} 
                   onClick={() => setSelectedTeam(isSelected ? null : e.nome)}
                   className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`} 
                   style={{ borderLeftColor: e.cor }}
@@ -448,11 +449,11 @@ export const SelfMeeting: React.FC = () => {
                   <div className="mt-1 flex justify-between items-end">
                     <div>
                       <p className="text-[8px] text-slate-500 uppercase font-bold">Verba Inicial</p>
-                      <p className="text-[11px] font-bold text-slate-700">R$ {e.verbaDestinada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      <p className="text-[11px] font-bold text-slate-700">R$ {e.verbaDestinada?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[8px] text-slate-500 uppercase font-bold">Saldo</p>
-                      <p className={`text-[11px] font-black ${e.saldoAtualizado < 0 ? 'text-red-600' : 'text-emerald-600'}`}>R$ {e.saldoAtualizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      <p className={`text-[11px] font-black ${(e.saldoAtualizado || 0) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>R$ {e.saldoAtualizado?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     </div>
                   </div>
                   <div className="mt-2">

@@ -269,12 +269,12 @@ export const StockView: React.FC = () => {
               </p>
             </div>
           </button>
-          {equipes.map(equipe => {
+          {equipes.map((equipe, idx) => {
             const stats = teamStats[equipe.nome] || { valor: 0, qtd: 0, cor: '#ccc' };
             const isActive = filterEquipe === equipe.nome;
             return (
               <button 
-                key={equipe.id}
+                key={equipe.id || `equipe-${idx}`}
                 onClick={() => setFilterEquipe(equipe.nome)}
                 className={`p-3 rounded-xl border transition-all text-left shrink-0 w-[150px] sm:flex-1 relative group ${
                   isActive
@@ -608,7 +608,7 @@ export const StockView: React.FC = () => {
                     </td>
                   </tr>
                 )}
-                {sorted.map(m => {
+                {sorted.map((m, idx) => {
                 let statusClass = 'pill-ok';
                 let statusLabel = 'OK';
 
@@ -621,7 +621,7 @@ export const StockView: React.FC = () => {
                 }
 
                 return (
-                  <tr key={m.id} className="table-row group">
+                  <tr key={m.id || `mat-${idx}`} className="table-row group">
                     <td className="px-3 py-2 text-center border-b border-slate-50">
                       <input 
                         type="checkbox" 

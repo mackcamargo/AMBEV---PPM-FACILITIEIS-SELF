@@ -103,7 +103,7 @@ export interface AtaReuniao {
   id: string;
   data: string;
   descricao: string;
-  orçamentosSnapshot: {
+  orcamentosSnapshot: {
     equipe: string;
     saldoAnterior: number;
     saldoNovo: number;
