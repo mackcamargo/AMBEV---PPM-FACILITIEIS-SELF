@@ -11,6 +11,7 @@ import { syncToSupabase } from './supabaseSync';
 
 interface AppContextType {
   user: User | null;
+  authLoading: boolean;
   signOut: () => Promise<void>;
   view: ViewState;
   setView: (v: ViewState) => void;
@@ -115,15 +116,26 @@ const INITIAL_MOVIMENTACOES: Movimentacao[] = [];
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     // Check active sessions and subscribe to auth changes
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      setAuthLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      setAuthLoading(false);
+      if (event === 'SIGNED_IN') {
+        // Do not reset hasEntered here, allow the app to keep its state if the user was already signed in or just recovered session
+      }
+      if (event === 'SIGNED_OUT') {
+        setHasEntered(false);
+        localStorage.setItem('ppm_has_entered', 'false');
+        localStorage.removeItem('ppm_current_view');
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -131,10 +143,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setHasEntered(false);
+    localStorage.setItem('ppm_has_entered', 'false');
   };
 
   const [view, setView] = useState<ViewState>(() => {
-    return (localStorage.getItem('ppm_current_view') as ViewState) || 'dashboard';
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('ppm_current_view') as ViewState) || 'dashboard';
+    }
+    return 'dashboard';
   });
 
   const [hasEntered, setHasEntered] = useState<boolean>(() => {

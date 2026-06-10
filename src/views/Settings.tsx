@@ -95,7 +95,7 @@ export const Settings: React.FC = () => {
       tipo: "BACKUP_SISTEMA_INTEGRADO_PPM",
       exportado_em: new Date().toISOString(),
       metadados: {
-        app_name: "PPM Self Control — Centro de Inteligência Facilities (Ambev)",
+        app_name: "AMBEV - PPM CENTRO DE INTELIGÊNCIA",
         applet_id: "d3b620b9-6124-4bd0-bd0b-bc6a8315b52a",
         arquitetura_versao: "2.6.0",
         autor: "Mack Camargo",
@@ -163,7 +163,7 @@ export const Settings: React.FC = () => {
         script_migracao: `
 -- =====================================================================
 -- SCRIPT DE MIGRAÇÃO COMPLETO PARA SUPABASE (POSTGRESQL RELACIONAL)
--- PPM SELF CONTROL — CENTRO DE INTELIGÊNCIA FACILITIES (AMBEV)
+-- PPM CENTRO DE INTELIGÊNCIA (AMBEV)
 -- =====================================================================
 
 -- 1. EXTENSÕES & SEGURANÇA

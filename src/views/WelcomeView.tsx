@@ -31,7 +31,7 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onEnter }) => {
         {/* Header / Logo Area */}
         <div className="flex items-center gap-3 mb-12">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-black tracking-tighter text-white">AmBev</span>
+            <span className="text-2xl font-black tracking-tighter text-white">AMBEV</span>
             <div className="w-8 h-8 border-2 border-white rounded-full flex items-center justify-center p-1">
                <div className="w-full h-full border border-white rounded-sm" />
             </div>

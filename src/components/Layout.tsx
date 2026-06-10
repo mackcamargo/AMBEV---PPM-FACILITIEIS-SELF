@@ -17,7 +17,6 @@ import {
   Bell,
   ChevronLeft,
   X,
-  RotateCw,
   Home,
   LogOut,
   User as UserIcon
@@ -28,14 +27,6 @@ import { ViewState } from '../types';
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { view, setView, setHasEntered, isSyncing, user, signOut } = useApp();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      window.location.reload();
-    }, 400);
-  };
 
   const menuItems = [
     { section: 'PAINEL', items: [
@@ -163,16 +154,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               >
                 <Home className="w-3 h-3 text-blue-600" />
                 <span>Tela Inicial</span>
-              </button>
-
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-slate-600 hover:text-slate-900 transition-all font-bold text-[9px] uppercase tracking-wider cursor-pointer select-none active:scale-95 disabled:opacity-50 h-8 shadow-xs"
-                title="Atualizar Aplicativo"
-              >
-                <RotateCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`} />
-                <span>Atualizar</span>
               </button>
 
               <button

@@ -35,24 +35,19 @@ export const StockView: React.FC = () => {
   const totalGeralQtd = useMemo(() => materiais.reduce((acc, m) => acc + m.estoqueAtual, 0), [materiais]);
   const totalGeralValor = useMemo(() => materiais.reduce((acc, m) => acc + (m.estoqueAtual * m.precoUnitario), 0), [materiais]);
   
-  // Modals state
+  // Filters & State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Material>>({});
-
-  // Filters state
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [filterEquipe, setFilterEquipe] = useState<string>('TODAS');
   const [filterStatus, setFilterStatus] = useState<string>('TODOS');
-  
-  // Sorting state
   const [sortBy, setSortBy] = useState<string>('descricao');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showSharePopup, setShowSharePopup] = useState(false);
   const [copied, setCopied] = useState(false);
-  
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
@@ -594,16 +589,16 @@ export const StockView: React.FC = () => {
                     />
                   </th>
                   <th className="table-header w-20 py-3 border-b border-slate-200">COD SAP</th>
-                  <th className="table-header w-32 py-3 border-b border-slate-200">Fornecedor</th>
-                  <th className="table-header py-3 border-b border-slate-200">Descrição</th>
-                  <th className="table-header py-3 border-b border-slate-200">Equipe</th>
-                  <th className="table-header py-3 border-b border-slate-200 text-center">Mín.</th>
-                  <th className="table-header py-3 border-b border-slate-200 text-center">Ideal</th>
-                  <th className="table-header py-3 border-b border-slate-200 text-center">Estoque</th>
-                  <th className="table-header py-3 border-b border-slate-200">Status</th>
-                  <th className="table-header text-right py-3 border-b border-slate-200">Custo Unit.</th>
-                  <th className="table-header text-right py-3 border-b border-slate-200">Valor Total</th>
-                  <th className="table-header text-center w-24 py-3 border-b border-slate-200">Ações</th>
+                  <th className="table-header w-32 py-3 border-b border-slate-200">FORNECEDOR</th>
+                  <th className="table-header w-24 py-3 border-b border-slate-200">CÓD. FORN.</th>
+                  <th className="table-header py-3 border-b border-slate-200">DESCRIÇÃO COMPLETA</th>
+                  <th className="table-header py-3 border-b border-slate-200">EQUIPE</th>
+                  <th className="table-header py-3 border-b border-slate-200 text-center">EST. ATUAL</th>
+                  <th className="table-header py-3 border-b border-slate-200 text-center">UNID.</th>
+                  <th className="table-header py-3 border-b border-slate-200 text-center">STATUS</th>
+                  <th className="table-header text-right py-3 border-b border-slate-200">VALOR UNIT.</th>
+                  <th className="table-header text-right py-3 border-b border-slate-200">VALOR TOTAL</th>
+                  <th className="table-header text-center w-24 py-3 border-b border-slate-200">AÇÕES</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -643,11 +638,14 @@ export const StockView: React.FC = () => {
                       />
                     </td>
                     <td className="px-3 py-2 font-mono text-slate-500">{m.sap}</td>
+                    <td className="px-3 py-2 text-slate-400 font-medium text-[10px] uppercase">
+                      {fornecedores.find(f => f.id === m.fornecedorId)?.nomeFantasia || '-'}
+                    </td>
                     <td className="px-3 py-2 text-slate-400 font-medium text-[10px]">
-                      {fornecedores.find(f => f.id === m.fornecedorId)?.nomeFantasia || m.codigoFornecedor || '-'}
+                      {m.codigoFornecedor || '-'}
                     </td>
                     <td className="px-3 py-3">
-                      <p className="font-semibold text-brand-dark">{m.descricao}</p>
+                      <p className="font-semibold text-brand-dark leading-tight">{m.descricao}</p>
                       {m.detalhes && <p className="text-[9px] text-slate-400 italic line-clamp-1">{m.detalhes}</p>}
                     </td>
                     <td className="px-3 py-2">
@@ -655,22 +653,17 @@ export const StockView: React.FC = () => {
                         {m.equipe}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-center text-slate-500 tabular-nums text-xs font-semibold">{m.estoqueMinimo}</td>
-                    <td className="px-3 py-2 text-center text-slate-500 tabular-nums text-xs font-semibold">{m.estoqueIdeal}</td>
-                    <td className="px-3 py-2 font-bold text-brand-dark text-center">
-                      <span className="inline-flex items-center gap-1">
-                        {m.estoqueAtual} <span className="font-normal text-slate-400 text-[10px] uppercase">{formatUnit(m.unidade)}</span>
-                      </span>
-                    </td>
+                    <td className="px-3 py-2 font-bold text-brand-dark text-center tabular-nums">{m.estoqueAtual}</td>
+                    <td className="px-3 py-2 text-center text-slate-500 text-[10px] uppercase">{m.unidade}</td>
                     <td className="px-3 py-2">
                       <span className={`status-pill ${statusClass}`}>
                         {statusLabel}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-slate-500 text-right tabular-nums">
+                    <td className="px-3 py-2 text-slate-500 text-right tabular-nums text-[11px]">
                       R$ {m.precoUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="px-3 py-2 text-slate-900 font-semibold text-right tabular-nums">
+                    <td className="px-3 py-2 text-slate-900 font-bold text-right tabular-nums text-[11px]">
                       R$ {(m.estoqueAtual * m.precoUnitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="px-3 py-2">
@@ -831,9 +824,9 @@ export const StockView: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Fornecedor</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">FORNECEDOR</label>
                   <select 
-                    className="input-field"
+                    className="input-field uppercase"
                     value={editFormData.fornecedorId || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, fornecedorId: e.target.value })}
                   >
@@ -844,7 +837,7 @@ export const StockView: React.FC = () => {
                   </select>
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cód. Fornecedor</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">CÓD. FORNECEDOR</label>
                   <input 
                     type="text" 
                     className="input-field" 
@@ -853,7 +846,7 @@ export const StockView: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Unidade</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">UNIDADE</label>
                   <select 
                     className="input-field"
                     value={editFormData.unidade || ''}
@@ -868,7 +861,7 @@ export const StockView: React.FC = () => {
                   </select>
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Equipe</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">EQUIPE</label>
                   <select 
                     className="input-field"
                     value={editFormData.equipe || ''}
@@ -878,7 +871,7 @@ export const StockView: React.FC = () => {
                   </select>
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Estoque Atual</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">ESTOQUE ATUAL</label>
                   <input 
                     type="number" 
                     className="input-field" 
@@ -887,7 +880,7 @@ export const StockView: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Descrição do Material</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">DESCRIÇÃO COMPLETA</label>
                   <input 
                     type="text" 
                     className="input-field" 
@@ -896,7 +889,7 @@ export const StockView: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Estoque Mínimo</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">ESTOQUE MÍNIMO</label>
                   <input 
                     type="number" 
                     className="input-field" 
@@ -905,7 +898,7 @@ export const StockView: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Estoque Ideal</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">ESTOQUE IDEAL</label>
                   <input 
                     type="number" 
                     className="input-field" 
@@ -914,7 +907,7 @@ export const StockView: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Custo Unitário (R$)</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">CUSTO UNITÁRIO (R$)</label>
                   <input 
                     type="number" 
                     step="0.01" 
@@ -924,7 +917,7 @@ export const StockView: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Localização</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">LOCALIZAÇÃO</label>
                   <input 
                     type="text" 
                     className="input-field" 
@@ -932,6 +925,14 @@ export const StockView: React.FC = () => {
                     onChange={(e) => setEditFormData({ ...editFormData, localizacao: e.target.value })}
                   />
                 </div>
+                  <div className="col-span-2">
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">DETALHES / OBSERVAÇÃO</label>
+                    <textarea 
+                      className="input-field min-h-[60px]" 
+                      value={editFormData.detalhes || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, detalhes: e.target.value })}
+                    />
+                  </div>
               </div>
             </div>
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">

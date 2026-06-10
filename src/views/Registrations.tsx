@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
-import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye } from 'lucide-react';
+import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload } from 'lucide-react';
 import { Material } from '../types';
+import { materialsToImport } from '../data/materials';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { playNotificationSound } from '../lib/audio';
@@ -117,8 +118,6 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       if (!formData.sap) { missing.push('COD SAP'); missingKeys.push('sap'); }
       if (!formData.descricao) { missing.push('Descrição'); missingKeys.push('descricao'); }
       if (!formData.unidade) { missing.push('Unidade'); missingKeys.push('unidade'); }
-      if (!formData.equipe) { missing.push('Equipe'); missingKeys.push('equipe'); }
-      if (!formData.fornecedorId) { missing.push('Fornecedor'); missingKeys.push('fornecedorId'); }
       
       if (missing.length > 0) {
         setInvalidFields(missingKeys);
@@ -149,10 +148,10 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           fornecedorId: formData.fornecedorId || '',
           descricao: materialName,
           unidade: formData.unidade || 'un',
-          estoqueMinimo: Number(formData.estoqueMinimo) || 0,
-          estoqueIdeal: Number(formData.estoqueIdeal) || 0,
-          estoqueAtual: Number(formData.estoqueAtual) || 0,
-          precoUnitario: Number(formData.precoUnitario) || 0,
+          estoqueMinimo: Number(String(formData.estoqueMinimo).replace(',', '.')) || 0,
+          estoqueIdeal: Number(String(formData.estoqueIdeal).replace(',', '.')) || 0,
+          estoqueAtual: Number(String(formData.estoqueAtual).replace(',', '.')) || 0,
+          precoUnitario: Number(String(formData.precoUnitario).replace(',', '.')) || 0,
           equipe: equipeName,
           localizacao: formData.localizacao || '',
           detalhes: formData.detalhes || '',
@@ -432,6 +431,311 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     link.click();
   };
 
+  const downloadImportTemplate = () => {
+    const headers = [
+      'SAP', 
+      'FORNECEDOR_NOME', 
+      'COD_FORNECEDOR', 
+      'UNIDADE', 
+      'EQUIPE', 
+      'ESTOQUE_ATUAL', 
+      'DESCRICAO', 
+      'ESTOQUE_MINIMO', 
+      'ESTOQUE_IDEAL', 
+      'PRECO_UNITARIO', 
+      'LOCALIZACAO', 
+      'DETALHES'
+    ];
+    
+    const examples = [
+      ['50104266', 'MACK CAMARGO', '75151212', 'un', 'Equipe A', '10', 'TORNEIRA COMUM 1/2', '5', '15', '45.50', 'Corredor A', 'Observação de teste']
+    ];
+
+    const csvContent = [
+      headers,
+      ...examples
+    ].map(row => row.join(';')).join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Modelo_Importacao_Materiais.csv`;
+    link.click();
+  };
+
+  const importMaterialsFromFiles = () => {
+    let imported = 0;
+    materialsToImport.forEach(material => {
+      const equipeName = material.equipe.trim();
+      // Find the ID for the given equipe name
+      const equipeInfo = store.equipes.find(e => e.nome === equipeName);
+      
+      // If no ID is found, maybe use the name if the DB actually accepts the name
+      // but let's try using the ID from the store if possible, 
+      // or at least ensure we pass the correct team identifier.
+      
+      store.addMaterial({
+        ...material,
+        equipe: equipeInfo ? equipeInfo.id : equipeName, // Try ID, fallback to name
+        id: generateId(),
+        ultimaMovimentacao: new Date().toLocaleDateString('pt-BR')
+      });
+      imported++;
+    });                
+    addToast('Base Importada', `${imported} materiais cadastrados com sucesso.`, 'success');
+  };
+
+  const importFullBase = () => {
+    const rawData = `50201022;;;un;Refrigeração;10;PLACA UNIVERSAL;2;4;129,9;;
+50104266;;;un;Refrigeração;0;FITA SILVER TAPE 45MM X 25M;7;14;10;;
+50370092;;;un;Refrigeração;0;CAPACITOR PARA AC DE 50 X 2,5 CONJUGADO;10;20;63,57;;
+50203028;;;un;Refrigeração;0;TERMOSTATO DE BULBO BEBEDOURO;5;10;29,9;;
+50080557;;;un;Refrigeração;0;FITA PVC DE ISOLAMENTO BRANCA;10;20;22,5;;
+50060279;;;un;Refrigeração;0;FILTRO AP 200;20;40;84,9;;
+50318288;;;un;Refrigeração;0;FILTRO AP 230;20;40;150;;
+50058096;;;un;Refrigeração;6;CORREIA (B-27);7;14;25,1;;
+50025730;;;un;Hidráulica;3;ADAPTADOR 50X1 1/2;5;10;28;;
+50024201;;;un;Hidráulica;4;ADAPTADOR 40 mm X 1 1/4;6;12;5,5;;
+50372423;;;un;Hidráulica;36;ASSENTO SANITRIO;50;100;34,9;;
+50346313;;;un;Hidráulica;0;CHUVEIRO ARTICULADO;15;30;30;;
+50184069;;;un;Hidráulica;2;CURVA 40;3;6;6;;
+50013398;;;un;Hidráulica;9;ESPUDE P/ VASO SANITARIO;10;20;6;;
+50079389;;;un;Hidráulica;5;JOELHO 20 45;5;10;25,48;;
+50184079;;;un;Hidráulica;10;JOELHO 20 90;10;20;31,26;;
+50240646;;;un;Hidráulica;2;JOELHO 25 45;5;10;14,7;;
+50184475;;;un;Hidráulica;21;JOELHO 25 90;30;60;27,89;;
+50287695;;;un;Hidráulica;15;JOELHO 32 90;20;40;55,03;;
+50079924;;;un;Hidráulica;5;JOELHO 40 90;5;10;2;;
+50056617;;;un;Hidráulica;0;JOELHO 50 45;5;10;7,79;;
+50056612;;;un;Hidráulica;0;JOELHO 50 90;5;10;8,19;;
+50311790;;;un;Hidráulica;11;JOELHO 60 45;5;10;28,9;;
+50056612;;;un;Hidráulica;6;JOELHO 60 90;5;10;54,9;;
+50076142;;;un;Hidráulica;0;JOELHO 75 90;5;10;8;;
+50037546;;;un;Hidráulica;4;JOELHO AZUL 20X1/2;5;10;5,13;;
+50079430;;;un;Hidráulica;0;ACABAMENTO VALVULA FLUX;5;10;150;;
+50056062;;;un;Hidráulica;5;LUVA 20;5;10;0,5;;
+50050176;;;un;Hidráulica;11;LUVA 25;20;40;0,5;;
+50050175;;;un;Hidráulica;5;LUVA 32;5;10;1,12;;
+50079312;;;un;Hidráulica;5;LUVA 40;5;10;2,4;;
+50056060;;;un;Hidráulica;10;LUVA 50;5;10;4,56;;
+50046456;;;un;Hidráulica;0;LUVA 60;5;10;16,3;;
+50184083;;;un;Hidráulica;5;LUVA 75;5;10;25,9;;
+50056062;;;un;Hidráulica;15;LUVA DE CORRER 20;5;10;14,9;;
+50037677;;;un;Hidráulica;5;LUVA DE CORRER 32;5;10;31,9;;
+50079312;;;un;Hidráulica;4;LUVA DE CORRER 40;5;10;36,99;;
+50056060;;;un;Hidráulica;7;LUVA DE CORRER 50;5;10;38,4;;
+50079317;;;un;Hidráulica;5;REGISTRO DE ESFERA C/ UNIÃO 25 X 3/4;5;10;28;;
+50060498;;;un;Hidráulica;4;NIPLE 1/2;4;8;14,99;;
+50060499;;;un;Hidráulica;12;NIPLE 3/4;4;8;3,9;;
+50115144;;;un;Hidráulica;1;PISTÃO FLUX FABRIMAR;5;10;156,9;;
+50367639;;;un;Hidráulica;1;RABICHO (ENGATE FLEXVEL PVC CURTO);10;20;30;;
+50037546;;;un;Hidráulica;11;JOELHO DE 90 25 X 1/2;20;40;10,05;;
+50161969;;;un;Hidráulica;8;REPARO P/ VALVULA HYDRA;10;20;35,15;;
+50399315;;;un;Hidráulica;10;ADAPTADOR 20X1/2;10;20;2,86;;
+50279248;;;un;Hidráulica;6;ADAPTADOR SOLDAVEL CURTO 32X1;6;12;6,67;;
+50078062;;;un;Hidráulica;7;SIFÃO;10;20;7,89;;
+50074658;;;un;Hidráulica;1;T 25;5;10;2,99;;
+50371738;;;un;Hidráulica;5;TÃ 32;5;10;5,06;;
+50075581;;;un;Hidráulica;0;TÃ 40;5;10;18,49;;
+50076086;;;un;Hidráulica;3;TÃ 50;5;10;11,9;;
+50287599;;;un;Hidráulica;0;TÃ 75;5;10;64;;
+50079388;;;un;Hidráulica;5;TUBO 20;5;10;12,99;;
+50060509;;;un;Hidráulica;5;TUBO 25;5;10;13,99;;
+50056533;;;un;Hidráulica;2;TUBO 32;5;10;24,25;;
+50046698;;;un;Hidráulica;5;TUBO 40;5;10;32,63;;
+50060514;;;un;Hidráulica;0;TUBO 50;5;10;80,51;;
+50060515;;;un;Hidráulica;0;TUBO 60;2;4;48,55;;
+50115150;;;un;Hidráulica;1;BASE VALVULA DESCARGA HYDRA;3;6;231;;
+50312962;;;un;Hidráulica;19;VALVULA AMERICANA 3 1/2;5;10;18,45;;
+50279248;;;un;Hidráulica;0;ADAPTADOR 32;10;20;10;;
+50218115;;;un;Hidráulica;0;ADAPTADOR 25 X 3/4;10;20;10;;
+50079179;;gl;Pintura;0;TINTA EPOXI VERMELHA 3,6L;5;10;224,99;;
+50078129;;gl;Pintura;7;TINTA PRETA ABSOLUTO FOSCO 18LTS;5;10;259,9;;
+50079017;;gl;Pintura;9;MASSA CORRIDA;5;10;39,3;;
+50004167;;;un;Pintura;0;LATA DE DILUENTE NR 905;20;40;22;;
+50023950;;;un;Pintura;60;PINCEL 2 MÉDIO TIGRE;48;96;14,81;;
+50011913;;;un;Pintura;26;FITA CREPE 24mm X 50m;50;100;26,7;;
+50068975;;;un;Pintura;64;ROLO 09cm ANTIRRESPINGO (L BAIXA);50;100;12;;
+50067578;;gl;Pintura;3;TINTA ACRILICA CROMIO 18L;3;6;351,14;;
+50067578;;gl;Pintura;2;TINTA ACRILICA CINZA ELEFANTE 18L;2;4;351,14;;
+50372026;;;un;Pintura;9;ROLO DE LÃ 15CM;20;40;15;;
+50000098;;;un;Elétrica;0;PAINEL LED QUADRADO SOBREPOR 32W 40x40;20;40;75,4;;
+50374148;;;un;Elétrica;5;PLUG MACHO 2P+T 10A;5;10;10;;
+50069288;;;un;Elétrica;33;PLUG MACHO 2P+T 20A;5;10;9,9;;
+50186130;;;un;Elétrica;28;PAINEL LED SOBREPOR QUADRADO 36W;5;10;29,9;;
+50155999;;;un;Elétrica;50;REFLETORES DE 50W;30;60;37,16;;
+50036830;;;un;Elétrica;42;LAMPADA LED TUBULAR T8 18W 6500K;60;120;7,99;;
+50368629;;;un;Elétrica;1;REFLETORES DE 30W;30;60;27,4;;
+50160530;;;un;Elétrica;42;LAMPADA LED 12W E27 BOLINHA;10;20;7;;
+50079315;;;un;Elétrica;8;LAMPADA LED 9W E27;30;60;31,05;;
+50117955;;;un;Elétrica;0;REFLETOR IP66 200W;15;30;29,49;;
+50036830;;;un;Elétrica;52;LAMPADA LED TUBULAR 9W 60CM 6500K;50;100;12;;
+50028600;;;un;Elétrica;0;LUMINRIA DE ILUMINAO PBLICA 200W 6000K LED IP66;20;40;223,31;;
+50031543;;;un;Elétrica;20;PAINEL REDONDO EMBUTIR 18W 6500K;15;30;198,62;;
+50323753;;;un;Elétrica;25;PAINEL REDONDO EMBUTIR 24W 6500K;15;30;220;;
+50117955;;;un;Elétrica;6;REFLETOR 200W IP65;15;30;93,9;;
+50326259;;;un;Elétrica;26;PAINEL LED QUADRADO SOBREPOR 24W;20;40;279,9;;
+50117031;;;un;Elétrica;20;PLUG FEMEA 2P+T 20A;20;40;5,7;;
+50326259;;;un;Elétrica;26;PAINEL LED QUADRADO EMBUTIR 24W;20;40;252,6;;
+50318479;;;un;Elétrica;20;PAINEL LED QUADRADO SOBREPOR 18W;20;40;125,9;;
+50317802;;;un;Elétrica;4;INTERRUPTOR SIMPLES;10;20;10,54;;
+50318479;;;un;Elétrica;6;PAINEL LED QUADRADO EMBUTIR 18W;10;20;176,75;;
+50036830;;;un;Elétrica;12;LAMPADA LED TUBO T5 115CM 18W 1900LM 3000K QUENTE;40;80;36,9;;
+50036830;;;un;Elétrica;13;LAMPADA TUBULAR T8 9W 3000K;20;40;15,75;;
+50356574;;;un;Elétrica;10;BALIZADOR (PONTO DE ONIBUS);5;10;150;;
+50060037;;;un;Elétrica;20;DISJUNTOR MONOPOLAR 32A;20;40;4,99;;
+50068244;;;un;Elétrica;9;DISJUNTOR MONOPOLAR 20A;20;40;8,38;;
+50069213;;;un;Civil;4;ABRAÇADEIRA COPO 1/2;10;20;10;;
+50237421;;;un;Civil;10;ABRAÇADEIRA COPO 3/4;10;20;10;;
+50188414;;;un;Civil;0;BUCHA COM PARAFUSO N 8;20;40;0,25;;
+50081576;;;un;Civil;-2;ESCOVA DE AÇO;3;6;12;;
+50192931;;;un;Civil;7;MANTA DE FIBRA DE VIDRO;3;6;32;;
+50077105;;;un;Civil;8;BUCHA C/ PARAFUSO SEXT N 10;5;10;3,89;;
+50337134;;;un;Civil;0;MANTA ALUMINIZADA 10,00 X 0,30M;2;4;69,9;;
+50012738;;;un;Civil;0;DISCO DE CORTE SECO;5;10;18,75;;
+50371950;;gl;Civil;10;ARGAMASSA;5;10;47,9;;
+50026166;;;un;Civil;0;ASFALTO FRIO;30;60;89,9;;
+50081390;;sc;Civil;2;CIMENTO;9;18;27,59;;
+50025718;;sc;Civil;9;GESSO EM PÓ;10;20;4,61;;
+50025922;;m²;Civil;0;AREIA LAVADA (m);1;2;5,69;;
+50027172;;m²;Civil;0;BRITA 01 (m);1;2;119,9;;
+50060334;;;un;Civil;0;LIXA 225X275mm G 220;100;200;3,57;;
+50079430;;;un;Hidráulica;0;ACABAMENTO P/ VALVULA DESCARGA BLUKIT;5;10;10;;
+50056062;;;un;Hidráulica;5;LUVA 20;5;10;0,5;;
+50050176;;;un;Hidráulica;11;LUVA 25;20;40;0,5;;
+50050175;;;un;Hidráulica;5;LUVA 32;5;10;1,12;;
+50079312;;;un;Hidráulica;5;LUVA 40;5;10;2,4;;
+50056060;;;un;Hidráulica;10;LUVA 50;5;10;4,56;;
+50046456;;;un;Hidráulica;0;LUVA 60;5;10;16,3;;
+50184083;;;un;Hidráulica;5;LUVA 75;5;10;25,9;;
+50056062;;;un;Hidráulica;15;LUVA DE CORRER 20;5;10;14,9;;
+50037677;;;un;Hidráulica;5;LUVA DE CORRER 32;5;10;31,9;;
+50079312;;;un;Hidráulica;4;LUVA DE CORRER 40;5;10;36,99;;
+50056060;;;un;Hidráulica;7;LUVA DE CORRER 50;5;10;38,4;;`;
+
+    const lines = rawData.split('\n');
+    let imported = 0;
+    
+    lines.forEach(line => {
+      const parts = line.split(';');
+      if (parts.length >= 7) {
+        // [SAP, FORN, COD_F, UN, EQ, EST, DESC, MIN, IDEAL, PRECO, LOC, DET]
+        const sap = parts[0];
+        const equipeRaw = parts[4];
+        
+        // Map equipe to allowed values
+        let equipeName = 'Geral';
+        if (equipeRaw.includes('Refrigera')) equipeName = 'Refrigeração';
+        else if (equipeRaw.includes('Hidr')) equipeName = 'Hidráulica';
+        else if (equipeRaw.includes('El')) equipeName = 'Elétrica';
+        else if (equipeRaw.includes('Civil')) equipeName = 'Civil';
+        else if (equipeRaw.includes('Pint')) equipeName = 'Pintura';
+        
+        const equipeInfo = store.equipes.find(e => e.nome === equipeName);
+        
+        store.addMaterial({
+          sap,
+          descricao: parts[6],
+          unidade: parts[3] || 'un',
+          equipe: equipeInfo ? equipeInfo.id : equipeName,
+          estoqueAtual: Number(parts[5]) || 0,
+          estoqueMinimo: Number(parts[7]) || 0,
+          estoqueIdeal: Number(parts[8]) || 0,
+          precoUnitario: Number(parts[9].replace(',', '.')) || 0,
+          codigoFornecedor: parts[2],
+          localizacao: parts[10],
+          detalhes: parts[11],
+          ultimaMovimentacao: new Date().toLocaleDateString('pt-BR')
+        });
+        imported++;
+      }
+    });                
+    addToast('Base Importada', `${imported} materiais cadastrados na sessão atual.`, 'success');
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      const lines = content.split('\n');
+      
+      if (lines.length <= 1) {
+        addToast('Erro na Planilha', 'O arquivo está vazio ou incompleto.', 'error');
+        return;
+      }
+
+      // Skip header
+      const rows = lines.slice(1).filter(line => line.trim() !== '');
+      let successCount = 0;
+      let errorCount = 0;
+
+      rows.forEach(line => {
+        const columns = line.split(';');
+        if (columns.length >= 7) {
+          try {
+            const sap = columns[0].trim();
+            const fornNome = columns[1].trim();
+            const codForn = columns[2].trim();
+            const unidade = columns[3].trim().toLowerCase();
+            const equipe = columns[4].trim();
+            const estoqueAtual = Number(columns[5].trim()) || 0;
+            const descricao = columns[6].trim();
+            const estoqueMin = Number(columns[7]?.trim()) || 0;
+            const estoqueIdeal = Number(columns[8]?.trim()) || 0;
+            const precoUnit = Number(columns[9]?.trim()) || 0;
+            const localizacao = columns[10]?.trim() || '';
+            const detalhes = columns[11]?.trim() || '';
+
+            if (sap && descricao) {
+              // Try to find fornecedor ID by name
+              const fornecedor = store.fornecedores.find(f => 
+                f.nomeFantasia.toLowerCase() === fornNome.toLowerCase()
+              );
+              
+              store.addMaterial({
+                sap,
+                codigoFornecedor: codForn,
+                fornecedorId: fornecedor?.id || '',
+                descricao,
+                unidade: unidade || 'un',
+                estoqueMinimo: estoqueMin,
+                estoqueIdeal: estoqueIdeal,
+                estoqueAtual: estoqueAtual,
+                precoUnitario: precoUnit,
+                equipe: equipe || (store.equipes[0]?.nome || ''),
+                localizacao,
+                detalhes,
+                ultimaMovimentacao: new Date().toLocaleDateString('pt-BR')
+              });
+              successCount++;
+            } else {
+              errorCount++;
+            }
+          } catch (err) {
+            console.error('Error importing row:', err);
+            errorCount++;
+          }
+        } else {
+          errorCount++;
+        }
+      });
+
+      if (successCount > 0) {
+        addToast('Importação Concluída', `${successCount} materiais importados com sucesso!`, 'success');
+      }
+      if (errorCount > 0) {
+        addToast('Aviso de Importação', `${errorCount} linhas falharam no carregamento.`, 'error');
+      }
+      
+      // Clear input
+      event.target.value = '';
+    };
+    reader.readAsText(file);
+  };
+
   const handleConfirmBulkDelete = () => {
     if (store.isDeletionPasswordEnabled && store.deletionPassword && deletionPasswordInput !== store.deletionPassword) {
       addToast('Senha Incorreta', 'A senha informada para exclusão é inválida.', 'error');
@@ -495,31 +799,28 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2 md:col-span-1">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
-          COD SAP <span className="text-red-500">*</span>
+          COD SAP
         </label>
         <input 
           type="text" 
-          className={`input-field transition-all duration-300 ${invalidFields.includes('sap') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`} 
+          className="input-field transition-all duration-300"
           placeholder="Ex: 50104266" 
           value={formData.sap || ''}
           onChange={(e) => handleInputChange('sap', e.target.value)}
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">Fornecedor <span className="text-red-500">*</span></label>
-        <select 
-          className={`input-field pr-8 transition-all duration-300 ${invalidFields.includes('fornecedorId') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`}
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">FORNECEDOR</label>
+        <input 
+          type="text"
+          className="input-field transition-all duration-300"
+          placeholder="Digite o Fornecedor"
           value={formData.fornecedorId || ''}
           onChange={(e) => handleInputChange('fornecedorId', e.target.value)}
-        >
-          <option value="">Selecione o Fornecedor...</option>
-          {store.fornecedores.map((f, idx) => (
-            <option key={`${f.id}_${idx}`} value={f.id}>{f.nomeFantasia}</option>
-          ))}
-        </select>
+        />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cód. Fornecedor</label>
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">CÓD. FORNECEDOR</label>
         <input 
           type="text" 
           className="input-field" 
@@ -529,57 +830,51 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">Unidade <span className="text-red-500">*</span></label>
-        <select 
-          className={`input-field pr-8 transition-all duration-300 ${invalidFields.includes('unidade') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`}
-          value={formData.unidade || 'un'}
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">UNIDADE</label>
+        <input 
+          type="text"
+          className="input-field transition-all duration-300"
+          placeholder="Ex: UN"
+          value={formData.unidade || ''}
           onChange={(e) => handleInputChange('unidade', e.target.value)}
-        >
-          <option value="un">UN (Unidade)</option>
-          <option value="gl">GL (Galão)</option>
-          <option value="sc">SC (Saco)</option>
-          <option value="m">MT (Metro)</option>
-          <option value="kg">KG (Quilo)</option>
-          <option value="l">LT (Litro)</option>
-        </select>
+        />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">Equipe <span className="text-red-500">*</span></label>
-        <select 
-          className={`input-field pr-8 transition-all duration-300 ${invalidFields.includes('equipe') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`}
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">EQUIPE</label>
+        <input
+          type="text"
+          className="input-field transition-all duration-300"
+          placeholder="Digite a Equipe"
           value={formData.equipe || ''}
           onChange={(e) => handleInputChange('equipe', e.target.value)}
-        >
-          <option value="">Selecione...</option>
-          {store.equipes.map((e, idx) => <option key={`${e.id}_${idx}`} value={e.nome}>{e.nome}</option>)}
-        </select>
+        />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Estoque Atual</label>
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ESTOQUE ATUAL</label>
         <input 
-          type="number" 
+          type="text" 
           className="input-field" 
           placeholder="0" 
           value={formData.estoqueAtual === undefined ? '' : formData.estoqueAtual}
-          onChange={(e) => handleInputChange('estoqueAtual', Number(e.target.value))}
+          onChange={(e) => handleInputChange('estoqueAtual', e.target.value)}
         />
       </div>
       <div className="col-span-2">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
-          Descrição Completa <span className="text-red-500">*</span>
+          DESCRIÇÃO COMPLETA
         </label>
         <input 
           type="text" 
-          className={`input-field transition-all duration-300 ${invalidFields.includes('descricao') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`} 
+          className="input-field transition-all duration-300"
           placeholder="Ex: TORNEIRA COMUM 1/2 BEBEDOURO" 
           value={formData.descricao || ''}
           onChange={(e) => handleInputChange('descricao', e.target.value)}
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Estoque Min.</label>
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ESTOQUE MIN.</label>
         <input 
-          type="number" 
+          type="text" 
           className="input-field" 
           placeholder="5" 
           value={formData.estoqueMinimo || ''}
@@ -587,9 +882,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Estoque Ideal</label>
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ESTOQUE IDEAL</label>
         <input 
-          type="number" 
+          type="text" 
           className="input-field" 
           placeholder="10" 
           value={formData.estoqueIdeal || ''}
@@ -597,10 +892,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Preço Unitário (R$)</label>
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">PREÇO UNITÁRIO (R$)</label>
         <input 
-          type="number" 
-          step="0.01" 
+          type="text" 
           className="input-field" 
           placeholder="0,00" 
           value={formData.precoUnitario || ''}
@@ -608,7 +902,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Localização</label>
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">LOCALIZAÇÃO</label>
         <input 
           type="text" 
           className="input-field" 
@@ -618,7 +912,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         />
       </div>
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Detalhes / Observação</label>
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">DETALHES / OBSERVAÇÃO</label>
         <textarea 
           className="input-field min-h-[60px] py-2" 
           placeholder="Observações adicionais..."
@@ -653,11 +947,11 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       </div>
       <div className="col-span-2">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
-          Nome Completo <span className="text-red-500">*</span>
+          Nome Completo
         </label>
         <input 
           type="text" 
-          className={`input-field transition-all duration-300 ${invalidFields.includes('nome') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`} 
+          className="input-field transition-all duration-300"
           value={formData.nome || ''}
           onChange={(e) => handleInputChange('nome', e.target.value)}
         />
@@ -726,11 +1020,11 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       </div>
       <div className="col-span-2 md:col-span-1">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
-          Razão Social <span className="text-red-500">*</span>
+          Razão Social
         </label>
         <input 
           type="text" 
-          className={`input-field transition-all duration-300 ${invalidFields.includes('razaoSocial') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`} 
+          className="input-field transition-all duration-300"
           value={formData.razaoSocial || ''}
           onChange={(e) => handleInputChange('razaoSocial', e.target.value)}
         />
@@ -811,11 +1105,11 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       </div>
       <div className="col-span-2">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
-          Nome Fantasia <span className="text-red-500">*</span>
+          Nome Fantasia
         </label>
         <input 
           type="text" 
-          className={`input-field transition-all duration-300 ${invalidFields.includes('nomeFantasia') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`} 
+          className="input-field transition-all duration-300"
           value={formData.nomeFantasia || ''}
           onChange={(e) => handleInputChange('nomeFantasia', e.target.value)}
         />
@@ -944,7 +1238,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     switch(type) {
       case 'materiais': 
         data = store.materiais; 
-        headers = ['COD SAP', 'Fornecedor', 'Descrição', 'Equipe', 'Mín.', 'Ideal', 'Estoque', 'Ações'];
+        headers = ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'DESCRIÇÃO COMPLETA', 'EQUIPE', 'EST. ATUAL', 'UNID.', 'LOCALIZAÇÃO', 'AÇÕES'];
         break;
       case 'colaboradores': 
         data = store.colaboradores; 
@@ -1058,11 +1352,21 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                         <td className="px-3 py-2 text-slate-400 font-medium text-[10px]">
                           {store.fornecedores.find(f => f.id === item.fornecedorId)?.nomeFantasia || item.codigoFornecedor || '-'}
                         </td>
-                        <td className="px-3 py-2 font-semibold text-brand-dark">{item.descricao}</td>
-                        <td className="px-3 py-2 text-slate-500">{item.equipe}</td>
-                        <td className="px-3 py-2 text-slate-500 tabular-nums">{item.estoqueMinimo}</td>
-                        <td className="px-3 py-2 text-slate-500 tabular-nums">{item.estoqueIdeal}</td>
-                        <td className="px-3 py-2 font-bold tabular-nums">{item.estoqueAtual}</td>
+                        <td className="px-3 py-2 text-slate-400 font-medium text-[10px]">
+                          {item.codigoFornecedor || '-'}
+                        </td>
+                        <td className="px-3 py-3">
+                          <p className="font-semibold text-brand-dark">{item.descricao}</p>
+                          {item.detalhes && <p className="text-[9px] text-slate-400 italic line-clamp-1">{item.detalhes}</p>}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="text-[10px] px-2 py-0.5 bg-slate-100 rounded border border-slate-100">
+                            {item.equipe}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 font-bold tabular-nums text-center">{item.estoqueAtual}</td>
+                        <td className="px-3 py-2 text-center text-slate-500 text-[10px] uppercase">{item.unidade}</td>
+                        <td className="px-3 py-2 text-slate-400 text-[10px]">{item.localizacao || '-'}</td>
                       </>
                     )}
                     {type === 'equipes' && (
@@ -1143,9 +1447,42 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-1 lg:sticky lg:top-0 z-10">
           <div className="card shadow-md border-brand-primary/10">
-            <h3 className="text-xs font-bold text-slate-700 uppercase mb-4 tracking-wider">
-              Cadastrar {type === 'materiais' ? 'Material' : type === 'empresas' ? 'Empresa' : type === 'fornecedores' ? 'Fornecedor' : type === 'colaboradores' ? 'Colaborador' : 'Equipe'}
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Cadastrar {type === 'materiais' ? 'Material' : type === 'empresas' ? 'Empresa' : type === 'fornecedores' ? 'Fornecedor' : type === 'colaboradores' ? 'Colaborador' : 'Equipe'}
+              </h3>
+              
+              {type === 'materiais' && (
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={downloadImportTemplate}
+                    className="p-1 px-2 flex items-center gap-1.5 text-[9px] font-bold uppercase transition-all bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg group"
+                    title="Baixar Modelo de Planilha"
+                  >
+                    <Download className="w-3 h-3" />
+                    Modelo
+                  </button>
+                  <label className="p-1 px-2 flex items-center gap-1.5 text-[9px] font-bold uppercase transition-all bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-lg cursor-pointer group">
+                    <FileUp className="w-3 h-3" />
+                    Importar
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept=".csv"
+                      onChange={handleFileUpload}
+                    />
+                  </label>
+                  <button 
+                    onClick={importMaterialsFromFiles}
+                    className="p-1 px-2 flex items-center gap-1.5 text-[9px] font-bold uppercase transition-all bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 rounded-lg group"
+                    title="Importar Base Completa"
+                  >
+                    <Database className="w-3 h-3" />
+                    Base Completa
+                  </button>
+                </div>
+              )}
+            </div>
             <form 
               className="space-y-4"
               onSubmit={(e) => {
@@ -1353,7 +1690,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               {type === 'materiais' && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">COD SAP</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">COD SAP</label>
                     <input 
                       type="text" 
                       className="input-field" 
@@ -1362,7 +1699,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Fornecedor</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">FORNECEDOR</label>
                     <select 
                       className="input-field pr-8"
                       value={editFormData.fornecedorId || ''}
@@ -1375,7 +1712,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     </select>
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cód. Fornecedor</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">CÓD. FORNECEDOR</label>
                     <input 
                       type="text" 
                       className="input-field" 
@@ -1384,7 +1721,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Unidade</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">UNIDADE</label>
                     <select 
                       className="input-field pr-8"
                       value={editFormData.unidade || ''}
@@ -1399,7 +1736,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     </select>
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Equipe</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">EQUIPE</label>
                     <select 
                       className="input-field pr-8"
                       value={editFormData.equipe || ''}
@@ -1409,7 +1746,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     </select>
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Estoque Atual</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">ESTOQUE ATUAL</label>
                     <input 
                       type="number" 
                       className="input-field" 
@@ -1418,7 +1755,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Descrição do Material</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">DESCRIÇÃO COMPLETA</label>
                     <input 
                       type="text" 
                       className="input-field" 
@@ -1427,7 +1764,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Estoque Min.</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">ESTOQUE MIN.</label>
                     <input 
                       type="number" 
                       className="input-field" 
@@ -1436,7 +1773,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Estoque Ideal</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">ESTOQUE IDEAL</label>
                     <input 
                       type="number" 
                       className="input-field" 
@@ -1445,7 +1782,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Preço Unitário (R$)</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">PREÇO UNITÁRIO (R$)</label>
                     <input 
                       type="number" 
                       step="0.01" 

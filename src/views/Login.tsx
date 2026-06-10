@@ -19,6 +19,7 @@ export const Login: React.FC = () => {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // The welcome screen logic will be handled by App.tsx detecting user change
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
@@ -48,8 +49,8 @@ export const Login: React.FC = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-4 shadow-lg shadow-blue-500/20">
             <Package2 className="text-white w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">PPM Self Control</h1>
-          <p className="text-slate-400 mt-2">Seu estoque na palma da mão</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">AMBEV - PPM CENTRO DE INTELIGÊNCIA</h1>
+          <p className="text-slate-400 mt-2">Sistema de Gerenciamento e Controle de Peças</p>
         </div>
 
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
@@ -77,7 +78,7 @@ export const Login: React.FC = () => {
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-sans"
                   placeholder="exemplo@email.com"
                   required
                 />
@@ -137,7 +138,7 @@ export const Login: React.FC = () => {
         </div>
 
         <p className="text-center text-slate-500 text-xs mt-8">
-          © 2026 PPM Self Control • Powered by Supabase
+          © 2026 AMBEV - PPM CENTRO DE INTELIGÊNCIA
         </p>
       </motion.div>
     </div>

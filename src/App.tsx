@@ -19,12 +19,20 @@ import { WelcomeView } from './views/WelcomeView';
 import { Login } from './views/Login';
 
 function AppContent() {
-  const { user, view, setView, hasEntered, setHasEntered } = useApp();
+  const { user, authLoading, view, setView, hasEntered, setHasEntered } = useApp();
 
   const handleEnter = (targetView: 'dashboard' | 'retirada-materiais' | 'reuniao-self') => {
     setView(targetView);
     setHasEntered(true);
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <Login />;

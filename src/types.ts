@@ -1,5 +1,5 @@
 /**
- * Types for PPM Self Control
+ * Types for AMBEV - PPM CENTRO DE INTELIGÊNCIA
  */
 
 export type EquipeTecnica = 'Elétrica' | 'Refrigeração' | 'Civil' | 'Hidráulica' | 'Pintura' | 'Geral';
