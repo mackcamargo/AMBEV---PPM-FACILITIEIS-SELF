@@ -307,11 +307,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // while ensuring Supabase data (source of truth) is present
         const mergeWithSupabase = <T extends { id: string }>(supabaseData: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
           if (supabaseData.length > 0) {
-            setFn(prev => {
-              const supabaseIds = new Set(supabaseData.map(item => item.id));
-              const localOnly = prev.filter(item => !supabaseIds.has(item.id));
-              return [...supabaseData, ...localOnly];
-            });
+            setFn(supabaseData);
           }
         };
 
@@ -863,11 +859,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const data = await syncToSupabase.fetchAll();
       const mergeWithSupabase = <T extends { id: string }>(supabaseData: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
         if (supabaseData.length > 0) {
-          setFn(prev => {
-            const supabaseIds = new Set(supabaseData.map(item => item.id));
-            const localOnly = prev.filter(item => !supabaseIds.has(item.id));
-            return [...supabaseData, ...localOnly];
-          });
+          setFn(supabaseData);
         }
       };
 
