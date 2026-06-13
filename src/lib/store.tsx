@@ -50,25 +50,25 @@ interface AppContextType {
   isSyncing: boolean;
   setIsSyncing: (b: boolean) => void;
   
-  addMovimentacao: (m: Movimentacao) => void;
-  deleteMovimentacao: (id: string) => void;
-  updateMovimentacao: (id: string, m: Partial<Movimentacao>) => void;
-  addMaterial: (m: Omit<Material, 'id'>) => void;
-  addColaborador: (c: Omit<Colaborador, 'id'>) => void;
-  addEquipe: (e: Omit<Equipe, 'id'>) => void;
-  addAta: (a: AtaReuniao) => void;
-  updateMaterial: (id: string, m: Partial<Material>) => void;
-  deleteMaterial: (id: string) => void;
-  updateColaborador: (id: string, c: Partial<Colaborador>) => void;
-  deleteColaborador: (id: string) => void;
-  updateEquipe: (id: string, e: Partial<Equipe>) => void;
-  deleteEquipe: (id: string) => void;
-  updateFornecedor: (id: string, f: Partial<Fornecedor>) => void;
-  deleteFornecedor: (id: string) => void;
-  addFornecedor: (f: Omit<Fornecedor, 'id'>) => void;
-  updateEmpresa: (id: string, e: Partial<Empresa>) => void;
-  addEmpresa: (e: Omit<Empresa, 'id'>) => void;
-  deleteEmpresa: (id: string) => void;
+  addMovimentacao: (m: Movimentacao) => Promise<{ success: boolean; error?: string }>;
+  deleteMovimentacao: (id: string) => Promise<{ success: boolean; error?: string }>;
+  updateMovimentacao: (id: string, m: Partial<Movimentacao>) => Promise<{ success: boolean; error?: string }>;
+  addMaterial: (m: Omit<Material, 'id'>) => Promise<{ success: boolean; error?: string }>;
+  addColaborador: (c: Omit<Colaborador, 'id'>) => Promise<{ success: boolean; error?: string }>;
+  addEquipe: (e: Omit<Equipe, 'id'>) => Promise<{ success: boolean; error?: string }>;
+  addAta: (a: AtaReuniao) => Promise<{ success: boolean; error?: string }>;
+  updateMaterial: (id: string, m: Partial<Material>) => Promise<{ success: boolean; error?: string }>;
+  deleteMaterial: (id: string) => Promise<{ success: boolean; error?: string }>;
+  updateColaborador: (id: string, c: Partial<Colaborador>) => Promise<{ success: boolean; error?: string }>;
+  deleteColaborador: (id: string) => Promise<{ success: boolean; error?: string }>;
+  updateEquipe: (id: string, e: Partial<Equipe>) => Promise<{ success: boolean; error?: string }>;
+  deleteEquipe: (id: string) => Promise<{ success: boolean; error?: string }>;
+  updateFornecedor: (id: string, f: Partial<Fornecedor>) => Promise<{ success: boolean; error?: string }>;
+  deleteFornecedor: (id: string) => Promise<{ success: boolean; error?: string }>;
+  addFornecedor: (f: Omit<Fornecedor, 'id'>) => Promise<{ success: boolean; error?: string }>;
+  updateEmpresa: (id: string, e: Partial<Empresa>) => Promise<{ success: boolean; error?: string }>;
+  addEmpresa: (e: Omit<Empresa, 'id'>) => Promise<{ success: boolean; error?: string }>;
+  deleteEmpresa: (id: string) => Promise<{ success: boolean; error?: string }>;
   seedTestData: () => void;
   clearAllData: () => void;
 }
@@ -171,50 +171,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const saved = localStorage.getItem('ppm_materiais');
       const parsed = saved ? JSON.parse(saved) : null;
-      const base = Array.isArray(parsed) ? parsed : INITIAL_MATERIALS;
-      return base.filter(m => !m.descricao?.toUpperCase().includes('TESTE') && !m.equipe?.toUpperCase().includes('TESTE'));
+      return Array.isArray(parsed) ? parsed : INITIAL_MATERIALS;
     } catch { return INITIAL_MATERIALS; }
   });
   const [colaboradores, setColaboradores] = useState<Colaborador[]>(() => {
     try {
       const saved = localStorage.getItem('ppm_colaboradores');
       const parsed = saved ? JSON.parse(saved) : null;
-      const base = Array.isArray(parsed) ? parsed : INITIAL_COLABORADORES;
-      // Filter out non-UUIDs from older versions or dev data
-      return base.filter(c => isUUID(c.id) && !c.nome?.toUpperCase().includes('TESTE'));
+      return Array.isArray(parsed) ? parsed : INITIAL_COLABORADORES;
     } catch { return INITIAL_COLABORADORES; }
   });
   const [empresas, setEmpresas] = useState<Empresa[]>(() => {
     try {
       const saved = localStorage.getItem('ppm_empresas');
       const parsed = saved ? JSON.parse(saved) : null;
-      const base = Array.isArray(parsed) ? parsed : [];
-      return base.filter(e => isUUID(e.id));
+      return Array.isArray(parsed) ? parsed : [];
     } catch { return []; }
   });
   const [equipes, setEquipes] = useState<Equipe[]>(() => {
     try {
       const saved = localStorage.getItem('ppm_equipes');
       const parsed = saved ? JSON.parse(saved) : null;
-      const base = Array.isArray(parsed) ? parsed : INITIAL_EQUIPES;
-      // Filter out non-UUIDs and TESTE data on load
-      return base.filter(e => isUUID(e.id) && !e.nome?.toUpperCase().includes('TESTE'));
+      return Array.isArray(parsed) ? parsed : INITIAL_EQUIPES;
     } catch { return INITIAL_EQUIPES; }
   });
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(() => {
     try {
       const saved = localStorage.getItem('ppm_fornecedores');
       const parsed = saved ? JSON.parse(saved) : null;
-      const base = Array.isArray(parsed) ? parsed : [];
-      return base.filter(f => isUUID(f.id));
+      return Array.isArray(parsed) ? parsed : [];
     } catch { return []; }
   });
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>(() => {
     try {
       const saved = localStorage.getItem('ppm_movimentacoes');
       const parsed = saved ? JSON.parse(saved) : null;
-      const base = Array.isArray(parsed) ? parsed : INITIAL_MOVIMENTACOES;
-      return base.filter(m => isUUID(m.id));
+      return Array.isArray(parsed) ? parsed : INITIAL_MOVIMENTACOES;
     } catch { return INITIAL_MOVIMENTACOES; }
   });
   const [batchState, setBatchState] = useState<ItemLote[]>([]);
@@ -222,8 +214,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const saved = localStorage.getItem('ppm_atas');
       const parsed = saved ? JSON.parse(saved) : null;
-      const base = Array.isArray(parsed) ? parsed : INITIAL_ATAS;
-      return base.filter(a => isUUID(a.id));
+      return Array.isArray(parsed) ? parsed : INITIAL_ATAS;
     } catch { return INITIAL_ATAS; }
   });
   const [deletionPassword, setDeletionPassword] = useState<string>(() => {
@@ -238,31 +229,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // LocalStorage Synchronization Effects
   useEffect(() => {
-    localStorage.setItem('ppm_materiais', JSON.stringify(materiais));
+    try {
+      localStorage.setItem('ppm_materiais', JSON.stringify(materiais));
+    } catch (e) {
+      console.error("LocalStorage error (materiais):", e);
+    }
   }, [materiais]);
 
   useEffect(() => {
-    localStorage.setItem('ppm_colaboradores', JSON.stringify(colaboradores));
+    try {
+      localStorage.setItem('ppm_colaboradores', JSON.stringify(colaboradores));
+    } catch (e) {
+      console.error("LocalStorage error (colaboradores):", e);
+    }
   }, [colaboradores]);
 
   useEffect(() => {
-    localStorage.setItem('ppm_empresas', JSON.stringify(empresas));
+    try {
+      localStorage.setItem('ppm_empresas', JSON.stringify(empresas));
+    } catch (e) {
+      console.error("LocalStorage error (empresas):", e);
+    }
   }, [empresas]);
 
   useEffect(() => {
-    localStorage.setItem('ppm_equipes', JSON.stringify(equipes));
+    try {
+      localStorage.setItem('ppm_equipes', JSON.stringify(equipes));
+    } catch (e) {
+      console.error("LocalStorage error (equipes):", e);
+    }
   }, [equipes]);
 
   useEffect(() => {
-    localStorage.setItem('ppm_fornecedores', JSON.stringify(fornecedores));
+    try {
+      localStorage.setItem('ppm_fornecedores', JSON.stringify(fornecedores));
+    } catch (e) {
+      console.error("LocalStorage error (fornecedores):", e);
+    }
   }, [fornecedores]);
 
   useEffect(() => {
-    localStorage.setItem('ppm_movimentacoes', JSON.stringify(movimentacoes));
+    try {
+      localStorage.setItem('ppm_movimentacoes', JSON.stringify(movimentacoes));
+    } catch (e) {
+      console.error("LocalStorage error (movimentacoes):", e);
+    }
   }, [movimentacoes]);
 
   useEffect(() => {
-    localStorage.setItem('ppm_atas', JSON.stringify(atas));
+    try {
+      localStorage.setItem('ppm_atas', JSON.stringify(atas));
+    } catch (e) {
+      console.error("LocalStorage error (atas):", e);
+    }
   }, [atas]);
 
   useEffect(() => {
@@ -280,42 +299,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const data = await syncToSupabase.fetchAll();
         
-        // --- DATA FILTERING ---
-        // Filter out non-UUIDs and development "TESTE" data
-        const cleanMateriais = data.materiais.filter(m => 
-          isUUID(m.id) &&
-          !m.descricao?.toUpperCase().includes('TESTE') && 
-          !m.equipe?.toUpperCase().includes('TESTE')
-        );
+        // Convert legacy "UM" unit to "UNI" for consistency as requested
+        const sanitizedMaterials = data.materiais.map(m => ({
+          ...m,
+          unidade: m.unidade === 'UM' ? 'UNI' : m.unidade
+        }));
 
-        const cleanEquipes = data.equipes.filter(e => 
-          isUUID(e.id) &&
-          !e.nome?.toUpperCase().includes('TESTE')
-        );
-
-        const cleanColaboradores = data.colaboradores.filter(c => 
-          isUUID(c.id) &&
-          !c.nome?.toUpperCase().includes('TESTE')
-        );
-
-        const cleanMovimentacoes = data.movimentacoes.filter(m => 
-          isUUID(m.id) &&
-          !m.materialDesc?.toUpperCase().includes('TESTE') &&
-          !m.equipe?.toUpperCase().includes('TESTE')
-        );
-
-        const cleanEmpresas = data.empresas.filter(e => isUUID(e.id));
-        const cleanFornecedores = data.fornecedores.filter(f => isUUID(f.id));
-        const cleanAtas = data.atas.filter(a => isUUID(a.id));
-
-        // Update state with filtered data
-        if (cleanMateriais.length > 0 || data.materiais.length > 0) setMateriais(cleanMateriais);
-        if (cleanColaboradores.length > 0 || data.colaboradores.length > 0) setColaboradores(cleanColaboradores);
-        if (cleanEmpresas.length > 0 || data.empresas.length > 0) setEmpresas(cleanEmpresas);
-        if (cleanEquipes.length > 0 || data.equipes.length > 0) setEquipes(cleanEquipes);
-        if (cleanFornecedores.length > 0 || data.fornecedores.length > 0) setFornecedores(cleanFornecedores);
-        if (cleanMovimentacoes.length > 0 || data.movimentacoes.length > 0) setMovimentacoes(cleanMovimentacoes);
-        if (cleanAtas.length > 0 || data.atas.length > 0) setAtas(cleanAtas);
+        // Merge state with fetched data securely
+        if (sanitizedMaterials.length > 0) {
+          setMateriais(prev => {
+            const supabaseIds = new Set(sanitizedMaterials.map(m => m.id));
+            const localOnly = prev.filter(m => !supabaseIds.has(m.id)).map(m => ({
+              ...m,
+              unidade: m.unidade === 'UM' ? 'UNI' : m.unidade
+            }));
+            return [...sanitizedMaterials, ...localOnly];
+          });
+        }
+        if (data.colaboradores.length > 0) {
+          setColaboradores(prev => {
+            const supabaseIds = new Set(data.colaboradores.map(c => c.id));
+            const localOnly = prev.filter(c => !supabaseIds.has(c.id));
+            return [...data.colaboradores, ...localOnly];
+          });
+        }
+        if (data.empresas.length > 0) {
+          setEmpresas(prev => {
+            const supabaseIds = new Set(data.empresas.map(e => e.id));
+            const localOnly = prev.filter(e => !supabaseIds.has(e.id));
+            return [...data.empresas, ...localOnly];
+          });
+        }
+        if (data.equipes.length > 0) {
+          setEquipes(prev => {
+            const supabaseIds = new Set(data.equipes.map(eq => eq.id));
+            const localOnly = prev.filter(eq => !supabaseIds.has(eq.id));
+            return [...data.equipes, ...localOnly];
+          });
+        }
+        if (data.fornecedores.length > 0) {
+          setFornecedores(prev => {
+            const supabaseIds = new Set(data.fornecedores.map(f => f.id));
+            const localOnly = prev.filter(f => !supabaseIds.has(f.id));
+            return [...data.fornecedores, ...localOnly];
+          });
+        }
+        if (data.movimentacoes.length > 0) {
+          setMovimentacoes(prev => {
+            const supabaseIds = new Set(data.movimentacoes.map(m => m.id));
+            const localOnly = prev.filter(m => !supabaseIds.has(m.id));
+            return [...data.movimentacoes, ...localOnly];
+          });
+        }
+        if (data.atas.length > 0) {
+          setAtas(prev => {
+            const supabaseIds = new Set(data.atas.map(a => a.id));
+            const localOnly = prev.filter(a => !supabaseIds.has(a.id));
+            return [...data.atas, ...localOnly];
+          });
+        }
 
       } catch (err) {
         console.error("Failed to load initial data from Supabase:", err);
@@ -392,9 +434,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const addMovimentacao = (m: Movimentacao) => {
+  const addMovimentacao = async (m: Movimentacao): Promise<{ success: boolean; error?: string }> => {
     setMovimentacoes(prev => [m, ...prev]);
-    syncToSupabase.insertMovimentacao(m);
+    const result = await syncToSupabase.insertMovimentacao(m);
     
     // Update material stock with strict numeric conversion and lower bound safety (>= 0)
     setMateriais(prev => prev.map(mat => {
@@ -410,14 +452,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return mat;
     }));
+
+    return result;
   };
 
-  const deleteMovimentacao = (id: string) => {
+  const deleteMovimentacao = async (id: string): Promise<{ success: boolean; error?: string }> => {
     const movToDelete = movimentacoes.find(m => m.id === id);
-    if (!movToDelete) return;
+    if (!movToDelete) return { success: false, error: 'Movimentação não encontrada' };
 
     setMovimentacoes(prev => prev.filter(m => m.id !== id));
-    syncToSupabase.deleteMovimentacao(id);
+    const result = await syncToSupabase.deleteMovimentacao(id);
 
     // Reverse action
     setMateriais(prev => prev.map(mat => {
@@ -446,11 +490,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return eq;
       }));
     }
+    return result;
   };
 
-  const updateMovimentacao = (id: string, updatedFields: Partial<Movimentacao>) => {
+  const updateMovimentacao = async (id: string, updatedFields: Partial<Movimentacao>): Promise<{ success: boolean; error?: string }> => {
     const original = movimentacoes.find(m => m.id === id);
-    if (!original) return;
+    if (!original) return { success: false, error: 'Movimentação não encontrada' };
 
     const oldQty = Number(original.quantidade) || 0;
     const newQty = updatedFields.quantidade !== undefined ? (Number(updatedFields.quantidade) || 0) : oldQty;
@@ -493,29 +538,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setMovimentacoes(prev => prev.map(m => m.id === id ? { ...m, ...updatedFields } : m));
-    syncToSupabase.updateMovimentacao(id, updatedFields);
+    return await syncToSupabase.updateMovimentacao(id, updatedFields);
   };
 
-  const addMaterial = (m: Omit<Material, 'id'>) => {
+  const addMaterial = async (m: Omit<Material, 'id'>): Promise<{ success: boolean; error?: string }> => {
     const newItem: Material = { 
       ...m, 
       id: generateId(),
       estoqueMinimo: Number(m.estoqueMinimo) || 0,
       estoqueIdeal: Number(m.estoqueIdeal) || 0,
       estoqueAtual: Number(m.estoqueAtual) || 0,
-      precoUnitario: Number(m.precoUnitario) || 0
+      precoUnitario: Number(m.precoUnitario) || 0,
+      createdAt: new Date().toISOString()
     };
     setMateriais(prev => [...prev, newItem]);
-    syncToSupabase.insertMaterial(newItem);
+    return await syncToSupabase.insertMaterial(newItem);
   };
 
-  const addColaborador = (c: Omit<Colaborador, 'id'>) => {
+  const addColaborador = async (c: Omit<Colaborador, 'id'>): Promise<{ success: boolean; error?: string }> => {
     const newItem: Colaborador = { ...c, id: generateId() };
     setColaboradores(prev => [...prev, newItem]);
-    syncToSupabase.insertColaborador(newItem);
+    return await syncToSupabase.insertColaborador(newItem);
   };
 
-  const addEquipe = (e: Omit<Equipe, 'id'>) => {
+  const addEquipe = async (e: Omit<Equipe, 'id'>): Promise<{ success: boolean; error?: string }> => {
     const newItem: Equipe = { 
       ...e, 
       id: generateId(),
@@ -523,15 +569,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       saldoAtualizado: Number(e.saldoAtualizado) || 0
     };
     setEquipes(prev => [...prev, newItem]);
-    syncToSupabase.insertEquipe(newItem);
+    return await syncToSupabase.insertEquipe(newItem);
   };
 
-  const addAta = (a: AtaReuniao) => {
+  const addAta = async (a: AtaReuniao): Promise<{ success: boolean; error?: string }> => {
     setAtas(prev => [a, ...prev]);
-    syncToSupabase.insertAta(a);
+    return await syncToSupabase.insertAta(a);
   };
 
-  const updateMaterial = (id: string, m: Partial<Material>) => {
+  const updateMaterial = async (id: string, m: Partial<Material>): Promise<{ success: boolean; error?: string }> => {
     setMateriais(prev => prev.map(item => item.id === id ? { 
       ...item, 
       ...m,
@@ -540,69 +586,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       estoqueAtual: m.estoqueAtual !== undefined ? Number(m.estoqueAtual) || 0 : item.estoqueAtual,
       precoUnitario: m.precoUnitario !== undefined ? Number(m.precoUnitario) || 0 : item.precoUnitario
     } : item));
-    syncToSupabase.updateMaterial(id, m);
+    return await syncToSupabase.updateMaterial(id, m);
   };
 
-  const deleteMaterial = (id: string) => {
+  const deleteMaterial = async (id: string): Promise<{ success: boolean; error?: string }> => {
     setMateriais(prev => prev.filter(item => item.id !== id));
-    syncToSupabase.deleteMaterial(id);
+    return await syncToSupabase.deleteMaterial(id);
   };
 
-  const updateColaborador = (id: string, c: Partial<Colaborador>) => {
+  const updateColaborador = async (id: string, c: Partial<Colaborador>): Promise<{ success: boolean; error?: string }> => {
     setColaboradores(prev => prev.map(item => item.id === id ? { ...item, ...c } : item));
-    syncToSupabase.updateColaborador(id, c);
+    return await syncToSupabase.updateColaborador(id, c);
   };
 
-  const deleteColaborador = (id: string) => {
+  const deleteColaborador = async (id: string): Promise<{ success: boolean; error?: string }> => {
     setColaboradores(prev => prev.filter(item => item.id !== id));
-    syncToSupabase.deleteColaborador(id);
+    return await syncToSupabase.deleteColaborador(id);
   };
 
-  const updateEquipe = (id: string, e: Partial<Equipe>) => {
+  const updateEquipe = async (id: string, e: Partial<Equipe>): Promise<{ success: boolean; error?: string }> => {
     setEquipes(prev => prev.map(item => item.id === id ? { 
       ...item, 
       ...e,
       verbaDestinada: e.verbaDestinada !== undefined ? Number(e.verbaDestinada) || 0 : item.verbaDestinada,
       saldoAtualizado: e.saldoAtualizado !== undefined ? Number(e.saldoAtualizado) || 0 : item.saldoAtualizado
     } : item));
-    syncToSupabase.updateEquipe(id, e);
+    return await syncToSupabase.updateEquipe(id, e);
   };
 
-  const deleteEquipe = (id: string) => {
+  const deleteEquipe = async (id: string): Promise<{ success: boolean; error?: string }> => {
     setEquipes(prev => prev.filter(item => item.id !== id));
-    syncToSupabase.deleteEquipe(id);
+    return await syncToSupabase.deleteEquipe(id);
   };
 
-  const updateFornecedor = (id: string, f: Partial<Fornecedor>) => {
+  const updateFornecedor = async (id: string, f: Partial<Fornecedor>): Promise<{ success: boolean; error?: string }> => {
     setFornecedores(prev => prev.map(item => item.id === id ? { ...item, ...f } : item));
-    syncToSupabase.updateFornecedor(id, f);
+    return await syncToSupabase.updateFornecedor(id, f);
   };
 
-  const deleteFornecedor = (id: string) => {
+  const deleteFornecedor = async (id: string): Promise<{ success: boolean; error?: string }> => {
     setFornecedores(prev => prev.filter(item => item.id !== id));
-    syncToSupabase.deleteFornecedor(id);
+    return await syncToSupabase.deleteFornecedor(id);
   };
 
-  const addFornecedor = (f: Omit<Fornecedor, 'id'>) => {
+  const addFornecedor = async (f: Omit<Fornecedor, 'id'>): Promise<{ success: boolean; error?: string }> => {
     const newItem: Fornecedor = { ...f, id: generateId() };
     setFornecedores(prev => [...prev, newItem]);
-    syncToSupabase.insertFornecedor(newItem);
+    return await syncToSupabase.insertFornecedor(newItem);
   };
 
-  const updateEmpresa = (id: string, e: Partial<Empresa>) => {
+  const updateEmpresa = async (id: string, e: Partial<Empresa>): Promise<{ success: boolean; error?: string }> => {
     setEmpresas(prev => prev.map(item => item.id === id ? { ...item, ...e } : item));
-    syncToSupabase.updateEmpresa(id, e);
+    return await syncToSupabase.updateEmpresa(id, e);
   };
 
-  const addEmpresa = (e: Omit<Empresa, 'id'>) => {
+  const addEmpresa = async (e: Omit<Empresa, 'id'>): Promise<{ success: boolean; error?: string }> => {
     const newItem: Empresa = { ...e, id: generateId() };
     setEmpresas(prev => [...prev, newItem]);
-    syncToSupabase.insertEmpresa(newItem);
+    return await syncToSupabase.insertEmpresa(newItem);
   };
 
-  const deleteEmpresa = (id: string) => {
+  const deleteEmpresa = async (id: string): Promise<{ success: boolean; error?: string }> => {
     setEmpresas(prev => prev.filter(item => item.id !== id));
-    syncToSupabase.deleteEmpresa(id);
+    return await syncToSupabase.deleteEmpresa(id);
   };
 
   const seedTestData = () => {

@@ -23,7 +23,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
   const [precoUnitario, setPrecoUnitario] = useState<number | string>('');
   const [os, setOs] = useState('');
   const [batchItems, setBatchItems] = useState<ItemLote[]>([]);
-  const [toasts, setToasts] = useState<{ id: string; message: string; type: 'Entrada' | 'Retirada' }[]>([]);
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: 'Entrada' | 'Retirada'; severity?: 'success' | 'warning' | 'error' }[]>([]);
   const [showStockWarning, setShowStockWarning] = useState(false);
   const [invalidFields, setInvalidFields] = useState<string[]>([]);
 
@@ -66,16 +66,17 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
     }
   }, [showStockWarning]);
 
-  const showToast = (message: string, toastType: 'Entrada' | 'Retirada', soundType: 'success' | 'warning' = 'success') => {
+  const showToast = (message: string, toastType: 'Entrada' | 'Retirada', severity: 'success' | 'warning' | 'error' = 'success') => {
     const id = generateId();
-    setToasts(prev => [...prev, { id, message, type: toastType }]);
+    setToasts(prev => [...prev, { id, message, type: toastType, severity }]);
     
-    // Play sound based on soundType
-    playNotificationSound(soundType);
+    // Play sound based on severity/type
+    if (severity === 'error') playNotificationSound('delete');
+    else playNotificationSound(severity === 'warning' ? 'warning' : 'success');
 
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4000);
+    }, 5000);
   };
 
   const removeToast = (id: string) => {
@@ -145,7 +146,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
     }
   };
 
-  const handleDirectProcess = () => {
+  const handleDirectProcess = async () => {
     const missing: string[] = [];
     
     if (!selectedMaterialId) missing.push('material');
@@ -196,7 +197,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       ...(type === 'Retirada' ? { os, colaborador, empresa, equipe, liberador, observacoes } : { nf, pedidoCompra, pedidoSap, fornecedor, conferente })
     };
 
-    addMovimentacao(movimento);
+    const result = await addMovimentacao(movimento);
 
     // Update material price if it's an Entrada
     if (type === 'Entrada' && precoUnitario !== '') {
@@ -205,12 +206,20 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
 
     // Show custom Toast notification instead of general alert
     const unitText = formatUnit(selectedMaterial?.unidade) || 'unidade(s)';
-    showToast(
-      type === 'Retirada'
-        ? `Retirada realizada: ${finalQuantidade} ${unitText} de "${selectedMaterial?.descricao || ''}" retirada com sucesso.`
-        : `Material registrado: ${finalQuantidade} ${unitText} de "${selectedMaterial?.descricao || ''}" registrado com sucesso.`,
-      type
-    );
+    if (result.success) {
+      showToast(
+        type === 'Retirada'
+          ? `Retirada realizada: ${finalQuantidade} ${unitText} de "${selectedMaterial?.descricao || ''}" retirada com sucesso.`
+          : `Material registrado: ${finalQuantidade} ${unitText} de "${selectedMaterial?.descricao || ''}" registrado com sucesso.`,
+        type
+      );
+    } else {
+      showToast(
+        `Atenção: Salvo localmente, mas erro ao sincronizar com Supabase: ${result.error}`,
+        type,
+        'error'
+      );
+    }
 
     // Clear item fields
     setSelectedMaterialId('');
@@ -296,12 +305,14 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
     playNotificationSound('delete');
   };
 
-  const handleProcessBatch = () => {
+  const handleProcessBatch = async () => {
     if (batchItems.length === 0) return;
 
     const summaryCount = batchItems.length;
+    let failedSyncs = 0;
+    let lastError = '';
 
-    batchItems.forEach(item => {
+    for (const item of batchItems) {
       const movimento: Movimentacao = {
         id: generateId(),
         data: item.data || new Date().toISOString(),
@@ -312,23 +323,35 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
         precoUnitario: item.precoUnitario,
         ...item.detalhesAdicionais
       };
-      addMovimentacao(movimento);
+      const result = await addMovimentacao(movimento);
+      if (!result.success) {
+        failedSyncs++;
+        lastError = result.error || 'Erro desconhecido';
+      }
 
       // Update material price if it's an Entrada
       if (type === 'Entrada' && item.precoUnitario !== undefined) {
         updateMaterial(item.materialId, { precoUnitario: item.precoUnitario });
       }
-    });
+    }
 
     setBatchItems([]);
 
     // Show custom Toast notification for batch
-    showToast(
-      type === 'Retirada'
-        ? `Lote de retirada concluído: ${summaryCount} material(is) processado(s) com sucesso.`
-        : `Lote de registro concluído: ${summaryCount} material(is) registrado(s) com sucesso.`,
-      type
-    );
+    if (failedSyncs === 0) {
+      showToast(
+        type === 'Retirada'
+          ? `Lote de retirada concluído: ${summaryCount} material(is) processado(s) com sucesso.`
+          : `Lote de registro concluído: ${summaryCount} material(is) registrado(s) com sucesso.`,
+        type
+      );
+    } else {
+      showToast(
+        `Lote processado: ${summaryCount - failedSyncs} OK, ${failedSyncs} erros de sincronização. Último erro: ${lastError}`,
+        type,
+        'error'
+      );
+    }
   };
 
   return (
@@ -378,9 +401,10 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                   .sort((a, b) => a.descricao.localeCompare(b.descricao))
                   .map(m => {
                     const fornName = fornecedores.find(f => f.id === m.fornecedorId)?.nomeFantasia;
+                    const statusEmoji = m.estoqueAtual >= (m.estoqueIdeal || 0) ? '🟢' : m.estoqueAtual === 0 ? '🔴' : '🟡';
                     return (
                       <option key={m.id} value={m.id}>
-                        {m.descricao} {fornName ? `(${fornName})` : ''} - COD SAP: {m.sap} ({m.estoqueAtual} {formatUnit(m.unidade)})
+                        {statusEmoji} {m.descricao} {fornName ? `(${fornName})` : ''} - COD SAP: {m.sap} ({m.estoqueAtual} {formatUnit(m.unidade)})
                       </option>
                     );
                   })}
@@ -428,7 +452,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
               <div>
                 <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Valor Total (R$)</label>
                 <div className={`input-field h-8 flex items-center font-bold ${type === 'Retirada' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                  {type === 'Retirada' ? '- ' : ''}R$ {((Number(quantidade) || 0) * (Number(precoUnitario) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {type === 'Retirada' ? '- ' : ''}R${((Number(quantidade) || 0) * (Number(precoUnitario) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
@@ -476,7 +500,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                   >
                     <option value="">Selecione o retirante</option>
                     {colaboradores
-                      .filter(c => c.status === 'Ativo' && (!equipe || c.equipe === equipe))
+                      .filter(c => c.status === 'Ativo')
                       .sort((a, b) => a.nome.localeCompare(b.nome))
                       .map(c => (
                         <option key={c.id} value={c.nome}>{c.nome}</option>
@@ -489,8 +513,13 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                     <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Equipe</label>
                     <select className="input-field" value={equipe} onChange={(e) => handleEquipeChange(e.target.value)}>
                       <option value="">Selecione</option>
-                      {equipes.map((e, idx) => <option key={`${e.id}_${idx}`} value={e.nome}>{e.nome}</option>)}
+                      {equipes
+                        .slice()
+                        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
+                        .map((e, idx) => <option key={`${e.id}_${idx}`} value={e.nome}>{e.nome}</option>)
+                      }
                     </select>
+
                   </div>
                   <div>
                     <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
@@ -621,7 +650,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                     <td className="px-3 py-2 font-semibold">{item.materialDesc}</td>
                     <td className="px-3 py-2 font-mono">{item.quantidade}</td>
                     <td className={`px-3 py-2 text-right font-mono text-[11px] ${type === 'Retirada' ? 'text-red-500' : 'text-emerald-500'}`}>
-                      {type === 'Retirada' ? '- ' : ''}{item.precoUnitario ? `R$ ${item.precoUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
+                      {type === 'Retirada' ? '- ' : ''}{item.precoUnitario ? `R$${item.precoUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
                     </td>
                     <td className={`px-3 py-2 ${type === 'Retirada' ? 'text-red-400' : 'text-emerald-400'}`}>
                       {type === 'Retirada' ? item.detalhesAdicionais.os : (item.detalhesAdicionais.pedidoSap || item.detalhesAdicionais.nf)}
@@ -677,14 +706,19 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
               className={`pointer-events-auto w-full bg-white rounded-xl shadow-lg border p-4 flex gap-3 items-start transition-all ${
+                t.severity === 'error' ? 'border-l-4 border-l-red-600 border-red-200' :
                 t.type === 'Retirada' 
-                  ? 'border-l-4 border-l-red-500 border-red-100' 
-                  : 'border-l-4 border-l-emerald-500 border-emerald-100'
+                  ? 'border-l-4 border-l-orange-500 border-orange-100' 
+                  : t.severity === 'warning' ? 'border-l-4 border-l-yellow-500 border-yellow-100' : 'border-l-4 border-l-emerald-500 border-emerald-100'
               }`}
             >
               <div className="flex-shrink-0">
-                {t.type === 'Retirada' ? (
-                  <div className="p-1.5 rounded-full bg-red-50 text-red-600">
+                {t.severity === 'error' ? (
+                  <div className="p-1.5 rounded-full bg-red-100 text-red-600">
+                    <X className="w-5 h-5 font-bold" />
+                  </div>
+                ) : t.type === 'Retirada' ? (
+                  <div className="p-1.5 rounded-full bg-orange-50 text-orange-600">
                     <ArrowUpRight className="w-5 h-5" />
                   </div>
                 ) : (
@@ -694,8 +728,11 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                 )}
               </div>
               <div className="flex-1 min-w-0 pr-2">
-                <p className={`text-xs font-bold leading-none ${t.type === 'Retirada' ? 'text-red-700' : 'text-emerald-700'}`}>
-                  {t.type === 'Retirada' ? 'Retirada de Material' : 'Registro de Entrada'}
+                <p className={`text-xs font-bold leading-none ${
+                    t.severity === 'error' ? 'text-red-700' :
+                    t.type === 'Retirada' ? 'text-orange-700' : 'text-emerald-700'
+                  }`}>
+                  {t.severity === 'error' ? 'Erro de Sincronização' : t.type === 'Retirada' ? 'Retirada de Material' : 'Registro de Entrada'}
                 </p>
                 <p className="text-[11px] text-slate-600 mt-1 leading-normal font-semibold">
                   {t.message}

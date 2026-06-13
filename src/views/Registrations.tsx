@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
 import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload } from 'lucide-react';
@@ -28,6 +28,170 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [activeFilters, setActiveFilters] = useState({
+    equipe: '',
+    fornecedorId: '',
+    localizacao: ''
+  });
+
+  const data = useMemo(() => {
+    switch(type) {
+      case 'materiais': return store.materiais;
+      case 'colaboradores': return store.colaboradores;
+      case 'empresas': return store.empresas;
+      case 'fornecedores': return store.fornecedores;
+      case 'equipes': return store.equipes;
+      default: return [];
+    }
+  }, [type, store]);
+
+  const headers = useMemo(() => {
+    switch(type) {
+      case 'materiais': return ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'DESCRIÇÃO COMPLETA', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO', 'AÇÕES'];
+      case 'colaboradores': return ['Matrícula', 'Nome', 'Empresa', 'Cargo', 'Equipe', 'Ações'];
+      case 'empresas': return ['Razão Social', 'CNPJ', 'Contrato', 'Ações'];
+      case 'fornecedores': return ['Cód.', 'Nome Fantasia', 'CNPJ', 'Email', 'Ações'];
+      case 'equipes': return ['Nome', 'Centro Custo', 'Gestor', 'Verba Inicial', 'Saldo Atual', 'Ações'];
+      default: return [];
+    }
+  }, [type]);
+
+  const filteredData = useMemo(() => {
+    const s = searchTerm.toLowerCase().trim();
+    
+    let result = data;
+
+    // Apply specific field filters - Advanced Filtering
+    if (type === 'materiais') {
+      if (activeFilters.equipe) {
+        result = result.filter(item => item.equipe === activeFilters.equipe);
+      }
+      if (activeFilters.fornecedorId) {
+        result = result.filter(item => item.fornecedorId === activeFilters.fornecedorId);
+      }
+      if (activeFilters.localizacao) {
+        result = result.filter(item => item.localizacao?.toLowerCase().includes(activeFilters.localizacao.toLowerCase().trim()));
+      }
+    }
+
+    if (!s) return result;
+    
+    const searchTerms = s.split(/\s+/);
+
+    return result.filter(item => {
+      // Create a unified string of searchable text for this item
+      let searchContent = '';
+      
+      if (type === 'materiais') {
+        const forn = store.fornecedores.find(f => f.id === item.fornecedorId)?.nomeFantasia || '';
+        searchContent = [
+          item.sap,
+          item.descricao,
+          item.equipe,
+          forn,
+          item.codigoFornecedor,
+          item.localizacao,
+          item.unidade,
+          item.detalhes
+        ].join(' ').toLowerCase();
+      } else if (type === 'colaboradores') {
+        searchContent = [
+          item.nome,
+          item.matricula,
+          item.equipe,
+          item.empresa,
+          item.cargo,
+          item.contato,
+          item.status
+        ].join(' ').toLowerCase();
+      } else if (type === 'equipes') {
+        searchContent = [
+          item.nome,
+          item.centroCusto,
+          item.gestor,
+          item.codigoEquipe
+        ].join(' ').toLowerCase();
+      } else if (type === 'fornecedores') {
+        searchContent = [
+          item.nomeFantasia,
+          item.cnpj,
+          item.codigoFornecedor,
+          item.email,
+          item.telefone,
+          item.categoria,
+          item.detalhes
+        ].join(' ').toLowerCase();
+      } else if (type === 'empresas') {
+        searchContent = [
+          item.razaoSocial,
+          item.cnpj,
+          item.numContrato,
+          item.areaAtuacao,
+          item.codigoEmpresa
+        ].join(' ').toLowerCase();
+      }
+
+      // Every search term must be found in the search content (AND logic)
+      return searchTerms.every(term => searchContent.includes(term));
+    });
+  }, [data, searchTerm, type, store.fornecedores, activeFilters]);
+
+  const sortedData = useMemo(() => {
+    // Sort alphabetically based on type as requested
+    return [...filteredData].sort((a, b) => {
+      let nameA = '';
+      let nameB = '';
+
+      switch(type) {
+        case 'materiais':
+          nameA = a.descricao || '';
+          nameB = b.descricao || '';
+          break;
+        case 'colaboradores':
+          nameA = a.nome || '';
+          nameB = b.nome || '';
+          break;
+        case 'empresas':
+          nameA = a.razaoSocial || '';
+          nameB = b.razaoSocial || '';
+          break;
+        case 'fornecedores':
+          nameA = a.nomeFantasia || '';
+          nameB = b.nomeFantasia || '';
+          break;
+        case 'equipes':
+          nameA = a.nome || '';
+          nameB = b.nome || '';
+          break;
+        default:
+          return 0;
+      }
+
+      return nameA.localeCompare(nameB, 'pt-BR', { sensitivity: 'base' });
+    });
+  }, [filteredData, type]);
+
+  const sortedFornecedoresList = useMemo(() => {
+    return [...store.fornecedores].sort((a, b) => 
+      (a.nomeFantasia || '').localeCompare(b.nomeFantasia || '', 'pt-BR', { sensitivity: 'base' })
+    );
+  }, [store.fornecedores]);
+
+  const sortedEquipesList = useMemo(() => {
+    return [...store.equipes].sort((a, b) => 
+      (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })
+    );
+  }, [store.equipes]);
+
+  const sortedEmpresasList = useMemo(() => {
+    return [...store.empresas].sort((a, b) => 
+      (a.razaoSocial || '').localeCompare(b.razaoSocial || '', 'pt-BR', { sensitivity: 'base' })
+    );
+  }, [store.empresas]);
+
 
   // Custom toast notifications list
   const [toasts, setToasts] = useState<{
@@ -43,7 +207,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   React.useEffect(() => {
     setInvalidFields([]);
     if (type === 'materiais') {
-      setFormData({ unidade: 'un' });
+      setFormData({ unidade: 'UNI' });
     } else {
       setFormData({});
     }
@@ -105,127 +269,152 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (Object.keys(formData).length === 0 && type !== 'materiais') {
       addToast('Erro de Cadastro', 'Preencha os campos obrigatórios para continuar.', 'error');
       return;
     }
 
-    // Specific validation per type with sound-enabled notifications
-    if (type === 'materiais') {
-      const missing = [];
-      const missingKeys = [];
-      if (!formData.sap) { missing.push('COD SAP'); missingKeys.push('sap'); }
-      if (!formData.descricao) { missing.push('Descrição'); missingKeys.push('descricao'); }
-      if (!formData.unidade) { missing.push('Unidade'); missingKeys.push('unidade'); }
-      
-      if (missing.length > 0) {
-        setInvalidFields(missingKeys);
-        addToast('Campo(s) Faltando', `Atenção! Faltam os campos: ${missing.join(', ')}`, 'error');
-        return;
-      }
-    } else if (type === 'colaboradores') {
-      if (!formData.nome) { setInvalidFields(['nome']); addToast('Erro', 'Informe o Nome do Colaborador.', 'error'); return; }
-    } else if (type === 'equipes') {
-      if (!formData.nome) { setInvalidFields(['nome']); addToast('Erro', 'Informe o Nome da Equipe.', 'error'); return; }
-    } else if (type === 'empresas') {
-      if (!formData.razaoSocial) { setInvalidFields(['razaoSocial']); addToast('Erro', 'Informe a Razão Social.', 'error'); return; }
-    } else if (type === 'fornecedores') {
-      if (!formData.nomeFantasia) { setInvalidFields(['nomeFantasia']); addToast('Erro', 'Informe o Nome Fantasia.', 'error'); return; }
-    }
+    if (isSaving) return;
+    setIsSaving(true);
     
-    setInvalidFields([]);
-
-    switch(type) {
-      case 'materiais': {
-        const materialName = formData.descricao || 'Novo Material';
-        const sapCode = formData.sap || 'Não informado';
-        const equipeName = formData.equipe || store.equipes[0]?.nome || 'Sem equipe';
+    try {
+      // Specific validation per type with sound-enabled notifications
+      if (type === 'materiais') {
+        const missing = [];
+        const missingKeys = [];
+        // SAP is now optional per user request
+        if (!formData.descricao) { missing.push('Descrição'); missingKeys.push('descricao'); }
+        if (!formData.unidade) { missing.push('Unidade'); missingKeys.push('unidade'); }
         
-        store.addMaterial({
-          sap: formData.sap || '',
-          codigoFornecedor: formData.codigoFornecedor || '',
-          fornecedorId: formData.fornecedorId || '',
-          descricao: materialName,
-          unidade: formData.unidade || 'un',
-          estoqueMinimo: Number(String(formData.estoqueMinimo).replace(',', '.')) || 0,
-          estoqueIdeal: Number(String(formData.estoqueIdeal).replace(',', '.')) || 0,
-          estoqueAtual: Number(String(formData.estoqueAtual).replace(',', '.')) || 0,
-          precoUnitario: Number(String(formData.precoUnitario).replace(',', '.')) || 0,
-          equipe: equipeName,
-          localizacao: formData.localizacao || '',
-          detalhes: formData.detalhes || '',
-          ultimaMovimentacao: new Date().toLocaleDateString('pt-BR')
-        });
+        if (missing.length > 0) {
+          setInvalidFields(missingKeys);
+          addToast('Campo(s) Faltando', `Atenção! Faltam os campos: ${missing.join(', ')}`, 'error');
+          setIsSaving(false);
+          return;
+        }
+      } else if (type === 'colaboradores') {
+        if (!formData.nome) { setInvalidFields(['nome']); addToast('Erro', 'Informe o Nome do Colaborador.', 'error'); setIsSaving(false); return; }
+      } else if (type === 'equipes') {
+        if (!formData.nome) { setInvalidFields(['nome']); addToast('Erro', 'Informe o Nome da Equipe.', 'error'); setIsSaving(false); return; }
+      } else if (type === 'empresas') {
+        if (!formData.razaoSocial) { setInvalidFields(['razaoSocial']); addToast('Erro', 'Informe a Razão Social.', 'error'); setIsSaving(false); return; }
+      } else if (type === 'fornecedores') {
+        if (!formData.nomeFantasia) { setInvalidFields(['nomeFantasia']); addToast('Erro', 'Informe o Nome Fantasia.', 'error'); setIsSaving(false); return; }
+      }
+      
+      setInvalidFields([]);
 
-        addToast(
-          'Material Cadastrado!',
-          materialName,
-          'success',
-          { sap: sapCode, equipe: equipeName }
-        );
-        break;
+      let result: { success: boolean; error?: string } = { success: true };
+      let label = '';
+
+      switch(type) {
+        case 'materiais': {
+          const materialName = (formData.descricao || 'Novo Material').trim();
+          const sapCode = (formData.sap || '').trim();
+          const equipeName = formData.equipe || store.equipes[0]?.nome || 'Sem equipe';
+          
+          result = await store.addMaterial({
+            sap: sapCode,
+            codigoFornecedor: formData.codigoFornecedor || '',
+            fornecedorId: formData.fornecedorId || '',
+            descricao: materialName,
+            unidade: formData.unidade || 'UNI',
+            estoqueMinimo: typeof formData.estoqueMinimo === 'number' ? formData.estoqueMinimo : Number(String(formData.estoqueMinimo || 0).replace(/\./g, '').replace(',', '.')) || 0,
+            estoqueIdeal: typeof formData.estoqueIdeal === 'number' ? formData.estoqueIdeal : Number(String(formData.estoqueIdeal || 0).replace(/\./g, '').replace(',', '.')) || 0,
+            estoqueAtual: typeof formData.estoqueAtual === 'number' ? formData.estoqueAtual : Number(String(formData.estoqueAtual || 0).replace(/\./g, '').replace(',', '.')) || 0,
+            precoUnitario: typeof formData.precoUnitario === 'number' ? formData.precoUnitario : Number(String(formData.precoUnitario || 0).replace(/\./g, '').replace(',', '.')) || 0,
+            equipe: equipeName,
+            localizacao: formData.localizacao || '',
+            detalhes: formData.detalhes || '',
+            ultimaMovimentacao: new Date().toLocaleDateString('pt-BR')
+          });
+
+          label = materialName;
+          if (result.success) {
+            addToast(
+              'Material Cadastrado!',
+              materialName,
+              'success',
+              { sap: sapCode, equipe: equipeName }
+            );
+          }
+          break;
+        }
+        case 'colaboradores': {
+          const nomeColab = formData.nome || 'Novo Colaborador';
+          result = await store.addColaborador({
+            matricula: formData.matricula || '',
+            nome: nomeColab,
+            empresa: formData.empresa || '',
+            equipe: formData.equipe || store.equipes[0]?.nome || '',
+            cargo: formData.cargo || '',
+            contato: formData.contato || '',
+            status: formData.status || 'Ativo'
+          });
+          label = nomeColab;
+          if (result.success) addToast('Colaborador Cadastrado!', nomeColab, 'success');
+          break;
+        }
+        case 'equipes': {
+          const nomeEquipe = formData.nome || 'Nova Equipe';
+          result = await store.addEquipe({
+            codigoEquipe: formData.codigoEquipe || '',
+            nome: nomeEquipe,
+            centroCusto: formData.centroCusto || '',
+            gestor: formData.gestor || '',
+            cor: formData.cor || '#000000',
+            verbaDestinada: Number(formData.verbaDestinada) || 0,
+            saldoAtualizado: Number(formData.saldoAtualizado) || 0
+          });
+          label = nomeEquipe;
+          if (result.success) addToast('Equipe Cadastrada!', nomeEquipe, 'success');
+          break;
+        }
+        case 'empresas': {
+          const razaoSocial = formData.razaoSocial || 'Nova Empresa';
+          result = await store.addEmpresa({
+            razaoSocial,
+            cnpj: formData.cnpj || '00.000.000/0000-00',
+            numContrato: formData.numContrato || '',
+            areaAtuacao: formData.areaAtuacao || '',
+            emailComercial: formData.emailComercial || '',
+            detalhes: formData.detalhes || '',
+            codigoEmpresa: formData.codigoEmpresa || '',
+            status: 'Ativo'
+          });
+          label = razaoSocial;
+          if (result.success) addToast('Empresa Cadastrada!', razaoSocial, 'success');
+          break;
+        }
+        case 'fornecedores': {
+          const nomeFantasia = formData.nomeFantasia || 'Novo Fornecedor';
+          result = await store.addFornecedor({
+            nomeFantasia,
+            cnpj: formData.cnpj || '',
+            email: formData.email || '',
+            telefone: formData.telefone || '',
+            codigoFornecedor: formData.codigoFornecedor || '',
+            categoria: formData.categoria || 'Geral',
+            detalhes: formData.detalhes || ''
+          });
+          label = nomeFantasia;
+          if (result.success) addToast('Fornecedor Cadastrado!', nomeFantasia, 'success');
+          break;
+        }
       }
-      case 'colaboradores': {
-        const nomeColab = formData.nome || 'Novo Colaborador';
-        store.addColaborador({
-          matricula: formData.matricula || '',
-          nome: nomeColab,
-          empresa: formData.empresa || '',
-          equipe: formData.equipe || store.equipes[0]?.nome || '',
-          cargo: formData.cargo || '',
-          contato: formData.contato || '',
-          status: formData.status || 'Ativo'
-        });
-        addToast('Colaborador Cadastrado!', nomeColab, 'success');
-        break;
+
+      if (!result.success) {
+        addToast('Erro ao Sincronizar', `O item "${label}" foi salvo apenas localmente. Verifique sua conexão. (${result.error})`, 'error');
       }
-      case 'equipes': {
-        const nomeEquipe = formData.nome || 'Nova Equipe';
-        store.addEquipe({
-          codigoEquipe: formData.codigoEquipe || '',
-          nome: nomeEquipe,
-          centroCusto: formData.centroCusto || '',
-          gestor: formData.gestor || '',
-          cor: formData.cor || '#000000',
-          verbaDestinada: Number(formData.verbaDestinada) || 0,
-          saldoAtualizado: Number(formData.saldoAtualizado) || 0
-        });
-        addToast('Equipe Cadastrada!', nomeEquipe, 'success');
-        break;
+
+      setFormData({});
+      if (type === 'materiais') {
+        setFormData({ unidade: 'UNI' });
       }
-      case 'empresas': {
-        const razaoSocial = formData.razaoSocial || 'Nova Empresa';
-        store.addEmpresa({
-          razaoSocial,
-          cnpj: formData.cnpj || '00.000.000/0000-00',
-          numContrato: formData.numContrato || '',
-          areaAtuacao: formData.areaAtuacao || '',
-          emailComercial: formData.emailComercial || '',
-          detalhes: formData.detalhes || '',
-          codigoEmpresa: formData.codigoEmpresa || '',
-          status: 'Ativo'
-        });
-        addToast('Empresa Cadastrada!', razaoSocial, 'success');
-        break;
-      }
-      case 'fornecedores': {
-        const nomeFantasia = formData.nomeFantasia || 'Novo Fornecedor';
-        store.addFornecedor({
-          nomeFantasia,
-          cnpj: formData.cnpj || '',
-          email: formData.email || '',
-          telefone: formData.telefone || '',
-          codigoFornecedor: formData.codigoFornecedor || '',
-          categoria: formData.categoria || 'Geral',
-          detalhes: formData.detalhes || ''
-        });
-        addToast('Fornecedor Cadastrado!', nomeFantasia, 'success');
-        break;
-      }
+    } finally {
+      setIsSaving(false);
     }
-
-    setFormData({});
   };
 
   const handleEditClick = (item: any) => {
@@ -245,13 +434,51 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     setIsShareModalOpen(true);
   };
 
+  const exportMaterialsCSV = () => {
+    const headers = ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'DESCRIÇÃO COMPLETA', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO'];
+    const csvHeaders = headers.map(h => `"${h}"`).join(';');
+
+    const rows = store.materiais.map(item => {
+      const fornecedorName = store.fornecedores.find(f => f.id === item.fornecedorId)?.nomeFantasia || item.codigoFornecedor || '-';
+      return [
+        item.sap,
+        fornecedorName,
+        item.codigoFornecedor || '-',
+        item.descricao,
+        item.equipe,
+        item.estoqueAtual.toString(),
+        item.estoqueMinimo.toString(),
+        item.estoqueIdeal.toString(),
+        item.precoUnitario.toFixed(2).replace('.', ','),
+        ((item.estoqueAtual || 0) * (item.precoUnitario || 0)).toFixed(2).replace('.', ','),
+        item.unidade,
+        item.localizacao || '-'
+      ].map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(';');
+    });
+    
+    const csvContent = [csvHeaders, ...rows].join("\r\n");
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Backup_Materiais_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    addToast('Backup Iniciado', 'O download do cadastro de materiais começou.', 'success');
+  };
+
   const handleDeleteClick = (item: any) => {
     setSelectedItem(item);
     setDeletionPasswordInput('');
     setIsDeleteModalOpen(true);
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (selectedItem) {
       // Security check for budget (Verba) changes if applicable
       if (type === 'equipes' && store.isDeletionPasswordEnabled && store.deletionPassword) {
@@ -270,38 +497,58 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         if (!editFormData.sap) missing.push('COD SAP');
         if (!editFormData.descricao) missing.push('Descrição');
         
-        if (missing.length > 0) {
+        if (false) {
           addToast('Campos Pendentes', `Não foi possível salvar. Faltam: ${missing.join(', ')}`, 'error');
           return;
         }
       }
 
+      let result: { success: boolean; error?: string } = { success: true };
       let label = '';
       switch(type) {
-        case 'materiais': 
-          store.updateMaterial(selectedItem.id, editFormData); 
+        case 'materiais': {
+          const parseNumeric = (val: any) => {
+            if (typeof val === 'number') return val;
+            const cleaned = String(val || '0').replace(/\./g, '').replace(',', '.');
+            return Number(cleaned) || 0;
+          };
+
+          const parsedData = { 
+            ...editFormData,
+            estoqueAtual: parseNumeric(editFormData.estoqueAtual),
+            estoqueMinimo: parseNumeric(editFormData.estoqueMinimo),
+            estoqueIdeal: parseNumeric(editFormData.estoqueIdeal),
+            precoUnitario: parseNumeric(editFormData.precoUnitario),
+          };
+          result = await store.updateMaterial(selectedItem.id, parsedData); 
           label = editFormData.descricao || 'Material';
           break;
+        }
         case 'colaboradores': 
-          store.updateColaborador(selectedItem.id, editFormData); 
+          result = await store.updateColaborador(selectedItem.id, editFormData); 
           label = editFormData.nome || 'Colaborador';
           break;
         case 'equipes': 
-          store.updateEquipe(selectedItem.id, editFormData); 
+          result = await store.updateEquipe(selectedItem.id, editFormData); 
           label = editFormData.nome || 'Equipe';
           break;
         case 'fornecedores': 
-          store.updateFornecedor(selectedItem.id, editFormData); 
+          result = await store.updateFornecedor(selectedItem.id, editFormData); 
           label = editFormData.nomeFantasia || 'Fornecedor';
           break;
         case 'empresas': 
-          store.updateEmpresa(selectedItem.id, editFormData); 
+          result = await store.updateEmpresa(selectedItem.id, editFormData); 
           label = editFormData.razaoSocial || 'Empresa';
           break;
       }
-      setIsEditModalOpen(false);
-      setSelectedItem(null);
-      addToast('Cadastro Atualizado!', label, 'success');
+
+      if (result.success) {
+        setIsEditModalOpen(false);
+        setSelectedItem(null);
+        addToast('Cadastro Atualizado!', label, 'success');
+      } else {
+        addToast('Erro ao Sincronizar', `A atualização de "${label}" falhou no Supabase. (${result.error})`, 'error');
+      }
     }
   };
 
@@ -448,7 +695,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     ];
     
     const examples = [
-      ['50104266', 'MACK CAMARGO', '75151212', 'un', 'Equipe A', '10', 'TORNEIRA COMUM 1/2', '5', '15', '45.50', 'Corredor A', 'Observação de teste']
+      ['50104266', 'MACK CAMARGO', '75151212', 'UNI', 'Equipe A', '10', 'TORNEIRA COMUM 1/2', '5', '15', '45.50', 'Corredor A', 'Observação de teste']
     ];
 
     const csvContent = [
@@ -470,13 +717,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       // Find the ID for the given equipe name
       const equipeInfo = store.equipes.find(e => e.nome === equipeName);
       
-      // If no ID is found, maybe use the name if the DB actually accepts the name
-      // but let's try using the ID from the store if possible, 
-      // or at least ensure we pass the correct team identifier.
-      
       store.addMaterial({
         ...material,
-        equipe: equipeInfo ? equipeInfo.id : equipeName, // Try ID, fallback to name
+        equipe: equipeInfo ? equipeInfo.nome : (store.equipes[0]?.nome || equipeName), // Use name, fallback to first team name
         id: generateId(),
         ultimaMovimentacao: new Date().toLocaleDateString('pt-BR')
       });
@@ -485,7 +728,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     addToast('Base Importada', `${imported} materiais cadastrados com sucesso.`, 'success');
   };
 
-  const importFullBase = () => {
+  const importFullBase = async () => {
     const rawData = `50201022;;;un;Refrigeração;10;PLACA UNIVERSAL;2;4;129,9;;
 50104266;;;un;Refrigeração;0;FITA SILVER TAPE 45MM X 25M;7;14;10;;
 50370092;;;un;Refrigeração;0;CAPACITOR PARA AC DE 50 X 2,5 CONJUGADO;10;20;63,57;;
@@ -616,7 +859,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     const lines = rawData.split('\n');
     let imported = 0;
     
-    lines.forEach(line => {
+    for (const line of lines) {
       const parts = line.split(';');
       if (parts.length >= 7) {
         // [SAP, FORN, COD_F, UN, EQ, EST, DESC, MIN, IDEAL, PRECO, LOC, DET]
@@ -631,13 +874,11 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         else if (equipeRaw.includes('Civil')) equipeName = 'Civil';
         else if (equipeRaw.includes('Pint')) equipeName = 'Pintura';
         
-        const equipeInfo = store.equipes.find(e => e.nome === equipeName);
-        
-        store.addMaterial({
+        await store.addMaterial({
           sap,
           descricao: parts[6],
-          unidade: parts[3] || 'un',
-          equipe: equipeInfo ? equipeInfo.id : equipeName,
+          unidade: parts[3] === 'UM' ? 'UNI' : (parts[3] || 'UNI'),
+          equipe: store.equipes.find(e => e.nome === equipeName)?.nome || (store.equipes[0]?.nome || 'Geral'),
           estoqueAtual: Number(parts[5]) || 0,
           estoqueMinimo: Number(parts[7]) || 0,
           estoqueIdeal: Number(parts[8]) || 0,
@@ -649,8 +890,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         });
         imported++;
       }
-    });                
-    addToast('Base Importada', `${imported} materiais cadastrados na sessão atual.`, 'success');
+    }                
+    addToast('Base Importada', `${imported} materiais cadastrados com sucesso no banco de dados.`, 'success');
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -658,7 +899,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const content = e.target?.result as string;
       const lines = content.split('\n');
       
@@ -672,15 +913,16 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       let successCount = 0;
       let errorCount = 0;
 
-      rows.forEach(line => {
+      for (const line of rows) {
         const columns = line.split(';');
         if (columns.length >= 7) {
           try {
             const sap = columns[0].trim();
             const fornNome = columns[1].trim();
             const codForn = columns[2].trim();
-            const unidade = columns[3].trim().toLowerCase();
-            const equipe = columns[4].trim();
+            let unidadeRaw = columns[3] ? columns[3].trim().toUpperCase() : 'UNI';
+            const unidade = (unidadeRaw === 'UN' || unidadeRaw === 'UM') ? 'UNI' : unidadeRaw;
+            const equipeName = columns[4].trim();
             const estoqueAtual = Number(columns[5].trim()) || 0;
             const descricao = columns[6].trim();
             const estoqueMin = Number(columns[7]?.trim()) || 0;
@@ -695,22 +937,24 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                 f.nomeFantasia.toLowerCase() === fornNome.toLowerCase()
               );
               
-              store.addMaterial({
+              const result = await store.addMaterial({
                 sap,
                 codigoFornecedor: codForn,
                 fornecedorId: fornecedor?.id || '',
                 descricao,
-                unidade: unidade || 'un',
+                unidade: unidade || 'UNI',
                 estoqueMinimo: estoqueMin,
                 estoqueIdeal: estoqueIdeal,
                 estoqueAtual: estoqueAtual,
                 precoUnitario: precoUnit,
-                equipe: equipe || (store.equipes[0]?.nome || ''),
+                equipe: store.equipes.find(e => e.nome === equipeName)?.nome || (store.equipes[0]?.nome || 'Geral'),
                 localizacao,
                 detalhes,
                 ultimaMovimentacao: new Date().toLocaleDateString('pt-BR')
               });
-              successCount++;
+              
+              if (result.success) successCount++;
+              else errorCount++;
             } else {
               errorCount++;
             }
@@ -721,7 +965,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         } else {
           errorCount++;
         }
-      });
+      }
 
       if (successCount > 0) {
         addToast('Importação Concluída', `${successCount} materiais importados com sucesso!`, 'success');
@@ -811,13 +1055,15 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       </div>
       <div className="col-span-2 md:col-span-1">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">FORNECEDOR</label>
-        <input 
-          type="text"
-          className="input-field transition-all duration-300"
-          placeholder="Digite o Fornecedor"
+        <select 
+          className="input-field pr-8"
           value={formData.fornecedorId || ''}
           onChange={(e) => handleInputChange('fornecedorId', e.target.value)}
-        />
+        >
+          <option value="">Selecione...</option>
+          {sortedFornecedoresList.map((f, idx) => <option key={`${f.id}_${idx}`} value={f.id}>{f.nomeFantasia}</option>)}
+
+        </select>
       </div>
       <div className="col-span-2 md:col-span-1">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">CÓD. FORNECEDOR</label>
@@ -831,23 +1077,30 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       </div>
       <div className="col-span-2 md:col-span-1">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">UNIDADE</label>
-        <input 
-          type="text"
-          className="input-field transition-all duration-300"
-          placeholder="Ex: UN"
-          value={formData.unidade || ''}
+        <select 
+          className="input-field pr-8"
+          value={formData.unidade || 'UNI'}
           onChange={(e) => handleInputChange('unidade', e.target.value)}
-        />
+        >
+          <option value="GL">GL</option>
+          <option value="GR">GR</option>
+          <option value="KG">KG</option>
+          <option value="M">M</option>
+          <option value="SC">SC</option>
+          <option value="UNI">UNI</option>
+        </select>
       </div>
       <div className="col-span-2 md:col-span-1">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">EQUIPE</label>
-        <input
-          type="text"
-          className="input-field transition-all duration-300"
-          placeholder="Digite a Equipe"
+        <select
+          className="input-field pr-8"
           value={formData.equipe || ''}
           onChange={(e) => handleInputChange('equipe', e.target.value)}
-        />
+        >
+          <option value="">Selecione...</option>
+          {sortedEquipesList.map((e, idx) => <option key={`${e.id}_${idx}`} value={e.nome}>{e.nome}</option>)}
+        </select>
+
       </div>
       <div className="col-span-2 md:col-span-1">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ESTOQUE ATUAL</label>
@@ -855,7 +1108,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           type="text" 
           className="input-field" 
           placeholder="0" 
-          value={formData.estoqueAtual === undefined ? '' : formData.estoqueAtual}
+          value={String(formData.estoqueAtual ?? '').replace('.', ',')}
           onChange={(e) => handleInputChange('estoqueAtual', e.target.value)}
         />
       </div>
@@ -877,7 +1130,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           type="text" 
           className="input-field" 
           placeholder="5" 
-          value={formData.estoqueMinimo || ''}
+          value={String(formData.estoqueMinimo ?? '').replace('.', ',')}
           onChange={(e) => handleInputChange('estoqueMinimo', e.target.value)}
         />
       </div>
@@ -887,7 +1140,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           type="text" 
           className="input-field" 
           placeholder="10" 
-          value={formData.estoqueIdeal || ''}
+          value={String(formData.estoqueIdeal ?? '').replace('.', ',')}
           onChange={(e) => handleInputChange('estoqueIdeal', e.target.value)}
         />
       </div>
@@ -897,7 +1150,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           type="text" 
           className="input-field" 
           placeholder="0,00" 
-          value={formData.precoUnitario || ''}
+          value={String(formData.precoUnitario ?? '').replace('.', ',')}
           onChange={(e) => handleInputChange('precoUnitario', e.target.value)}
         />
       </div>
@@ -942,8 +1195,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           onChange={(e) => handleInputChange('equipe', e.target.value)}
         >
           <option value="">Selecione...</option>
-          {store.equipes.map((e, idx) => <option key={`${e.id}_${idx}`} value={e.nome}>{e.nome}</option>)}
+          {sortedEquipesList.map((e, idx) => <option key={`${e.id}_${idx}`} value={e.nome}>{e.nome}</option>)}
         </select>
+
       </div>
       <div className="col-span-2">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
@@ -964,12 +1218,13 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           onChange={(e) => handleInputChange('empresa', e.target.value)}
         >
           <option value="">Selecione o Parceiro / Empresa...</option>
-          {store.empresas.map((emp, idx) => (
+          {sortedEmpresasList.map((emp, idx) => (
             <option key={`${emp.id}_${idx}`} value={emp.razaoSocial}>
               {emp.razaoSocial}
             </option>
           ))}
         </select>
+
       </div>
       <div className="col-span-2 md:col-span-1">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Contato (Telefone)</label>
@@ -1232,113 +1487,54 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   );
 
   const renderList = () => {
-    let data : any[] = [];
-    let headers: string[] = [];
-
-    switch(type) {
-      case 'materiais': 
-        data = store.materiais; 
-        headers = ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'DESCRIÇÃO COMPLETA', 'EQUIPE', 'EST. ATUAL', 'UNID.', 'LOCALIZAÇÃO', 'AÇÕES'];
-        break;
-      case 'colaboradores': 
-        data = store.colaboradores; 
-        headers = ['Matrícula', 'Nome', 'Empresa', 'Cargo', 'Equipe', 'Ações'];
-        break;
-      case 'empresas': 
-        data = store.empresas; 
-        headers = ['Razão Social', 'CNPJ', 'Contrato', 'Ações'];
-        break;
-      case 'fornecedores': 
-        data = store.fornecedores; 
-        headers = ['Cód.', 'Nome Fantasia', 'CNPJ', 'Email', 'Ações'];
-        break;
-      case 'equipes': 
-        data = store.equipes; 
-        headers = ['Nome', 'Centro Custo', 'Gestor', 'Verba Inicial', 'Saldo Atual', 'Ações'];
-        break;
-    }
-
-    const s = searchTerm.toLowerCase();
-    const filteredData = data.filter(item => {
-      if (!s) return true;
-      if (type === 'materiais') {
-        const forn = store.fornecedores.find(f => f.id === item.fornecedorId)?.nomeFantasia || '';
-        return (item.sap?.toLowerCase().includes(s) || 
-                item.descricao?.toLowerCase().includes(s) || 
-                item.equipe?.toLowerCase().includes(s) ||
-                forn.toLowerCase().includes(s) ||
-                item.codigoFornecedor?.toLowerCase().includes(s));
-      }
-      if (type === 'colaboradores') {
-        return (item.nome?.toLowerCase().includes(s) || 
-                item.matricula?.toLowerCase().includes(s) || 
-                item.equipe?.toLowerCase().includes(s) ||
-                item.empresa?.toLowerCase().includes(s));
-      }
-      if (type === 'equipes') {
-        return (item.nome?.toLowerCase().includes(s) || 
-                item.centroCusto?.toLowerCase().includes(s) || 
-                item.gestor?.toLowerCase().includes(s));
-      }
-      if (type === 'fornecedores') {
-        return (item.nomeFantasia?.toLowerCase().includes(s) || 
-                item.cnpj?.toLowerCase().includes(s) || 
-                item.codigoFornecedor?.toLowerCase().includes(s));
-      }
-      if (type === 'empresas') {
-        return (item.razaoSocial?.toLowerCase().includes(s) || 
-                item.cnpj?.toLowerCase().includes(s) || 
-                item.numContrato?.toLowerCase().includes(s));
-      }
-      return true;
-    }).sort((a, b) => {
-      if (type === 'materiais') return (a.descricao || '').localeCompare(b.descricao || '');
-      if (type === 'colaboradores') return (a.nome || '').localeCompare(b.nome || '');
-      if (type === 'equipes') return (a.nome || '').localeCompare(b.nome || '');
-      if (type === 'fornecedores') return (a.nomeFantasia || '').localeCompare(b.nomeFantasia || '');
-      if (type === 'empresas') return (a.razaoSocial || '').localeCompare(b.razaoSocial || '');
-      return 0;
-    });
-
     return (
-      <table className={`w-full text-left table-auto border-separate border-spacing-0 ${type === 'materiais' || type === 'colaboradores' ? 'min-w-[950px]' : 'min-w-[650px]'}`}>
-        <thead className="sticky top-0 z-20 bg-slate-100">
+      <table className={`w-full text-left table-auto border-separate border-spacing-0`}>
+        <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
           <tr>
-            <th className="px-3 py-2.5 text-[10px] w-10 text-center font-bold text-slate-500 uppercase tracking-wider border-b border-brand-border bg-slate-100">
+            <th className="px-1 py-1 w-6 text-center border-b border-brand-border bg-slate-50/95">
               <input 
                 type="checkbox"
-                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                checked={selectedIds.length === filteredData.length && filteredData.length > 0}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                checked={selectedIds.length === sortedData.length && sortedData.length > 0}
                 onChange={() => {
-                  if (selectedIds.length === filteredData.length) setSelectedIds([]);
-                  else setSelectedIds(filteredData.map((d: any) => d.id));
+                  if (selectedIds.length === sortedData.length) setSelectedIds([]);
+                  else setSelectedIds(sortedData.map((d: any) => d.id));
                 }}
               />
             </th>
-            {headers.map((h, i) => (
-              <th 
-                key={i} 
-                className={`px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-brand-border bg-slate-100 ${h === 'Descrição' ? 'w-[30%]' : h === 'Ações' ? 'w-[100px]' : ''}`}
-              >
-                {h}
-              </th>
-            ))}
+            {headers.map((h, i) => {
+              const isNumeric = ['EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'EST. MÍN'].includes(h);
+              const isCurrency = ['PREÇO UNIT.', 'VALOR TOTAL', 'Verba Inicial', 'Saldo Atual'].includes(h);
+              const isCenter = isNumeric || h === 'UNID.' || h === 'AÇÕES' || h === 'Matrícula';
+              const isRight = isCurrency;
+
+              return (
+                <th 
+                  key={i} 
+                  className={`px-1 py-1 text-[8.5px] whitespace-nowrap font-bold text-slate-500 leading-tight border-b border-brand-border bg-slate-50/95 ${
+                    isCenter ? 'text-center' : isRight ? 'text-right' : 'text-left'
+                  }`}
+                >
+                  {h}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
-          {filteredData.length === 0 ? (
+          {sortedData.length === 0 ? (
             <tr>
               <td colSpan={headers.length + 1} className="py-20 text-center text-slate-300 italic text-[11px]">
                 Nenhum registro encontrado em {type}.
               </td>
             </tr>
           ) : (
-            filteredData.map((item, idx) => (
-                <tr key={item.id || `reg-${idx}`} className="table-row group">
-                  <td className="px-3 py-2 text-center border-b border-slate-50">
+            sortedData.map((item, idx) => (
+                <tr key={item.id || `reg-${idx}`} className="table-row group hover:bg-slate-50/50 transition-colors">
+                  <td className="px-1 py-1 text-center border-b border-slate-100">
                     <input 
                       type="checkbox"
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
                       checked={selectedIds.includes(item.id)}
                       onChange={() => {
                         if (selectedIds.includes(item.id)) setSelectedIds(prev => prev.filter(id => id !== item.id));
@@ -1348,44 +1544,126 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                   </td>
                   {type === 'materiais' && (
                       <>
-                        <td className="px-3 py-2 font-mono text-slate-500">{item.sap}</td>
-                        <td className="px-3 py-2 text-slate-400 font-medium text-[10px]">
-                          {store.fornecedores.find(f => f.id === item.fornecedorId)?.nomeFantasia || item.codigoFornecedor || '-'}
+                        <td className="px-1 py-1 font-mono text-slate-500 text-[9px] border-b border-slate-100 whitespace-nowrap">{item.sap}</td>
+                        <td className="px-1 py-1 border-b border-slate-100">
+                          <select 
+                            className="text-[9px] h-6 px-1 border border-slate-200 rounded font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 focus:border-transparent w-full min-w-[50px] max-w-[80px] shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
+                            value={item.fornecedorId || ''}
+                            onChange={(e) => store.updateMaterial(item.id, { fornecedorId: e.target.value })}
+                          >
+                            <option value="">Selecione...</option>
+                            {sortedFornecedoresList.map(f => <option key={f.id} value={f.id}>{f.nomeFantasia}</option>)}
+                          </select>
                         </td>
-                        <td className="px-3 py-2 text-slate-400 font-medium text-[10px]">
+
+                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-slate-100">
                           {item.codigoFornecedor || '-'}
                         </td>
-                        <td className="px-3 py-3">
-                          <p className="font-semibold text-brand-dark">{item.descricao}</p>
-                          {item.detalhes && <p className="text-[9px] text-slate-400 italic line-clamp-1">{item.detalhes}</p>}
+                        <td className="px-1 py-1 border-b border-slate-100 min-w-[100px] max-w-[140px]">
+                          <p className="font-bold text-slate-800 text-[10px] leading-tight mb-0.5 truncate" title={item.descricao}>{item.descricao}</p>
+                          {item.detalhes && <p className="text-[8px] text-slate-400 italic line-clamp-1">{item.detalhes}</p>}
                         </td>
-                        <td className="px-3 py-2">
-                          <span className="text-[10px] px-2 py-0.5 bg-slate-100 rounded border border-slate-100">
-                            {item.equipe}
-                          </span>
+                        <td className="px-1 py-1 border-b border-slate-100">
+                          <select
+                            className="text-[9px] h-6 px-1 border border-slate-200 rounded font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 focus:border-transparent w-full min-w-[60px] shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
+                            value={item.equipe || ''}
+                            onChange={(e) => store.updateMaterial(item.id, { equipe: e.target.value })}
+                          >
+                            <option value="">Selecione...</option>
+                            {sortedEquipesList.map(e => <option key={e.id} value={e.nome}>{e.nome}</option>)}
+                          </select>
                         </td>
-                        <td className="px-3 py-2 font-bold tabular-nums text-center">{item.estoqueAtual}</td>
-                        <td className="px-3 py-2 text-center text-slate-500 text-[10px] uppercase">{item.unidade}</td>
-                        <td className="px-3 py-2 text-slate-400 text-[10px]">{item.localizacao || '-'}</td>
+
+                        <td className="px-1 py-1 font-bold tabular-nums text-center border-b border-slate-100 w-10">
+                          <input
+                            key={`${item.id}-estoqueAtual-${item.estoqueAtual}`}
+                            type="text"
+                            className={`w-full h-6 text-center border rounded font-bold tabular-nums text-[9.5px] focus:ring-1 focus:outline-none ${
+                              (item.estoqueAtual || 0) >= (item.estoqueIdeal || 0) 
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-700 focus:ring-emerald-500' 
+                              : (item.estoqueAtual || 0) === 0 
+                              ? 'bg-red-50 border-red-200 text-red-700 focus:ring-red-500' 
+                              : 'bg-amber-50 border-amber-200 text-amber-700 focus:ring-amber-500'
+                            }`}
+                            defaultValue={String(item.estoqueAtual ?? '').replace('.', ',')}
+                            onBlur={(e) => {
+                              const cleaned = e.target.value.replace(/\./g, '').replace(',', '.');
+                              const val = cleaned === '' ? 0 : Number(cleaned);
+                              if (!isNaN(val)) {
+                                store.updateMaterial(item.id, { estoqueAtual: val });
+                              }
+                            }}
+                          />
+                        </td>
+                        <td className="px-1 py-1 font-bold tabular-nums text-center border-b border-slate-100 w-10">
+                          <input
+                            key={`${item.id}-estoqueMinimo-${item.estoqueMinimo}`}
+                            type="text"
+                            className="w-full h-6 text-center border border-slate-200 rounded font-bold tabular-nums text-slate-700 text-[9.5px] focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            defaultValue={String(item.estoqueMinimo ?? '').replace('.', ',')}
+                            onBlur={(e) => {
+                              const cleaned = e.target.value.replace(/\./g, '').replace(',', '.');
+                              const val = cleaned === '' ? 0 : Number(cleaned);
+                              if (!isNaN(val)) {
+                                store.updateMaterial(item.id, { estoqueMinimo: val });
+                              }
+                            }}
+                          />
+                        </td>
+                        <td className="px-1 py-1 font-bold tabular-nums text-center border-b border-slate-100 w-10">
+                          <input
+                            key={`${item.id}-estoqueIdeal-${item.estoqueIdeal}`}
+                            type="text"
+                            className="w-full h-6 text-center border border-slate-200 rounded font-bold tabular-nums text-slate-700 text-[9.5px] focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            defaultValue={String(item.estoqueIdeal ?? '').replace('.', ',')}
+                            onBlur={(e) => {
+                              const cleaned = e.target.value.replace(/\./g, '').replace(',', '.');
+                              const val = cleaned === '' ? 0 : Number(cleaned);
+                              if (!isNaN(val)) {
+                                store.updateMaterial(item.id, { estoqueIdeal: val });
+                              }
+                            }}
+                          />
+                        </td>
+                        <td className="px-1 py-1 text-right border-b border-slate-100 w-12">
+                          <input
+                            key={`${item.id}-precoUnitario-${item.precoUnitario}`}
+                            type="text"
+                            className="w-full h-6 text-right border border-slate-200 rounded font-bold tabular-nums text-slate-700 text-[9.5px] focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            defaultValue={String(item.precoUnitario ?? '').replace('.', ',')}
+                            onBlur={(e) => {
+                              const cleaned = e.target.value.replace(/\./g, '').replace(',', '.');
+                              const val = cleaned === '' ? 0 : Number(cleaned);
+                              if (!isNaN(val)) {
+                                store.updateMaterial(item.id, { precoUnitario: val });
+                              }
+                            }}
+                          />
+                        </td>
+                        <td className="px-1 py-1 font-bold tabular-nums text-right text-slate-700 border-b border-slate-100 text-[9px] whitespace-nowrap">
+                          R${((item.estoqueAtual || 0) * (item.precoUnitario || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-1 py-1 text-center text-slate-500 text-[8px] uppercase border-b border-slate-100 w-8">{item.unidade}</td>
+                        <td className="px-1 py-1 text-slate-400 text-[8px] border-b border-slate-100 w-12 truncate min-w-[30px]">{item.localizacao || '-'}</td>
                       </>
                     )}
                     {type === 'equipes' && (
                       <>
-                        <td className="px-3 py-2 font-semibold text-brand-dark">{item.nome}</td>
-                        <td className="px-3 py-2 text-slate-500">{item.centroCusto}</td>
-                        <td className="px-3 py-2 text-slate-500">{item.gestor}</td>
-                        <td className="px-3 py-2 font-bold tabular-nums text-slate-600">R$ {item.verbaDestinada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td className={`px-3 py-2 font-bold tabular-nums ${item.saldoAtualizado < 0 ? 'text-red-600' : 'text-emerald-600'}`}>R$ {item.saldoAtualizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-slate-100">{item.nome}</td>
+                        <td className="px-1 py-1 text-slate-500 text-[9px] border-b border-slate-100">{item.centroCusto}</td>
+                        <td className="px-1 py-1 text-slate-500 text-[9px] border-b border-slate-100">{item.gestor}</td>
+                        <td className="px-1 py-1 font-bold tabular-nums text-slate-600 text-[9px] border-b border-slate-100 whitespace-nowrap">R$ {item.verbaDestinada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td className={`px-1 py-1 font-bold tabular-nums text-[9px] border-b border-slate-100 whitespace-nowrap ${item.saldoAtualizado < 0 ? 'text-red-600' : 'text-emerald-600'}`}>R$ {item.saldoAtualizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                       </>
                     )}
                     {type === 'colaboradores' && (
                       <>
-                        <td className="px-3 py-2 font-mono text-slate-500">{item.matricula}</td>
-                        <td className="px-3 py-2 font-semibold text-brand-dark">{item.nome}</td>
-                        <td className="px-3 py-2 text-slate-500">{item.empresa}</td>
-                        <td className="px-3 py-2 text-slate-500">{item.cargo}</td>
-                        <td className="px-3 py-2">
-                          <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200">
+                        <td className="px-1 py-1 font-mono text-[9px] text-slate-500 border-b border-slate-100">{item.matricula}</td>
+                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-slate-100">{item.nome}</td>
+                        <td className="px-1 py-1 text-[9px] text-slate-500 border-b border-slate-100">{item.empresa}</td>
+                        <td className="px-1 py-1 text-[9px] text-slate-500 border-b border-slate-100">{item.cargo}</td>
+                        <td className="px-1 py-1 border-b border-slate-100">
+                          <span className="text-[8px] px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200">
                             {item.equipe}
                           </span>
                         </td>
@@ -1393,43 +1671,46 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     )}
                     {type === 'empresas' && (
                       <>
-                        <td className="px-3 py-2 font-semibold text-brand-dark">{item.razaoSocial}</td>
-                        <td className="px-3 py-2 text-slate-500 font-mono italic">{item.cnpj}</td>
-                        <td className="px-3 py-2 text-slate-500">{item.numContrato}</td>
+                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-slate-100">{item.razaoSocial}</td>
+                        <td className="px-1 py-1 text-[9px] text-slate-500 font-mono italic border-b border-slate-100">{item.cnpj}</td>
+                        <td className="px-1 py-1 text-[9px] text-slate-500 border-b border-slate-100">{item.numContrato}</td>
                       </>
                     )}
                     {type === 'fornecedores' && (
                       <>
-                        <td className="px-3 py-2 font-mono text-[10px] text-slate-400">{item.codigoFornecedor}</td>
-                        <td className="px-3 py-2 font-semibold text-brand-dark">{item.nomeFantasia}</td>
-                        <td className="px-3 py-2 text-slate-500 font-mono italic">{item.cnpj}</td>
-                        <td className="px-3 py-2 text-blue-600 underline text-[11px]">{item.email}</td>
+                        <td className="px-1 py-1 font-mono text-[8.5px] text-slate-400 border-b border-slate-100">{item.codigoFornecedor}</td>
+                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-slate-100">{item.nomeFantasia}</td>
+                        <td className="px-1 py-1 text-[9px] text-slate-500 font-mono italic border-b border-slate-100">{item.cnpj}</td>
+                        <td className="px-1 py-1 text-blue-600 underline text-[9px] border-b border-slate-100">{item.email}</td>
                       </>
                     )}
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-1 py-1 text-right border-b border-slate-100">
+                      <div className="flex items-center justify-end gap-1.5">
                         {type === 'materiais' && (
                           <button 
+                            tabIndex={-1}
                             onClick={() => handleShareClick(item)}
-                            className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 bg-white border border-slate-200 rounded-lg shadow-sm transition-all"
+                            className="p-1 px-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 bg-white border border-slate-200 rounded transition-all"
                             title="Compartilhar"
                           >
                             <Share2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                         <button 
+                          tabIndex={-1}
                           onClick={() => handleEditClick(item)}
-                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 bg-white border border-slate-200 rounded-lg shadow-sm transition-all"
+                          className="p-1 px-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 bg-white border border-slate-200 rounded transition-all"
                           title="Editar"
                         >
-                          <Edit2 className="w-3.5 h-3.5 text-slate-500 hover:text-blue-600" />
+                          <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button 
+                          tabIndex={-1}
                           onClick={() => handleDeleteClick(item)}
-                          className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700 border border-red-200 hover:border-red-300 rounded-lg shadow-sm transition-all animate-none"
+                          className="p-1 px-1.5 text-slate-400 bg-white hover:bg-red-50 hover:text-red-600 border border-slate-200 hover:border-red-200 rounded transition-all"
                           title="Excluir"
                         >
-                          <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -1454,32 +1735,6 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               
               {type === 'materiais' && (
                 <div className="flex items-center gap-2">
-                  <button 
-                    onClick={downloadImportTemplate}
-                    className="p-1 px-2 flex items-center gap-1.5 text-[9px] font-bold uppercase transition-all bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg group"
-                    title="Baixar Modelo de Planilha"
-                  >
-                    <Download className="w-3 h-3" />
-                    Modelo
-                  </button>
-                  <label className="p-1 px-2 flex items-center gap-1.5 text-[9px] font-bold uppercase transition-all bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-lg cursor-pointer group">
-                    <FileUp className="w-3 h-3" />
-                    Importar
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept=".csv"
-                      onChange={handleFileUpload}
-                    />
-                  </label>
-                  <button 
-                    onClick={importMaterialsFromFiles}
-                    className="p-1 px-2 flex items-center gap-1.5 text-[9px] font-bold uppercase transition-all bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 rounded-lg group"
-                    title="Importar Base Completa"
-                  >
-                    <Database className="w-3 h-3" />
-                    Base Completa
-                  </button>
                 </div>
               )}
             </div>
@@ -1498,21 +1753,43 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
               <button 
                 type="submit"
-                className="btn-primary w-full flex items-center justify-center gap-2 mt-4"
+                disabled={isSaving}
+                className={`btn-primary w-full flex items-center justify-center gap-2 mt-4 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                <Save className="w-4 h-4" />
-                Salvar Cadastro
+                {isSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Salvar Cadastro
+                  </>
+                )}
               </button>
             </form>
           </div>
         </div>
 
-        <div className="lg:col-span-2 h-[700px]">
+        <div className="lg:col-span-2 min-h-[600px] lg:h-[calc(100vh-120px)]">
           <div className="card !p-0 shadow-sm border-slate-200 flex flex-col h-full overflow-hidden">
             {/* Header Title & Search Welded */}
             <div className="flex-none bg-white border-b border-brand-border rounded-t-2xl z-30">
               <div className="h-[60px] px-4 flex items-center justify-between gap-4">
-                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider shrink-0">Listagem de {type}</h3>
+                <div className="flex flex-col">
+                  <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider shrink-0">Listagem de {type}</h3>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-bold text-blue-600 uppercase">
+                      {sortedData.length} {type} {searchTerm ? 'encontrados' : 'cadastrados'}
+                    </span>
+                    {searchTerm && (
+                      <span className="text-[10px] text-slate-400">
+                        (de {data.length} total)
+                      </span>
+                    )}
+                  </div>
+                </div>
                 
                 <div className="flex items-center gap-2 flex-1 justify-end">
                   <button 
@@ -1534,40 +1811,153 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     {selectedIds.length === (store[type as keyof typeof store] as any[]).length && (store[type as keyof typeof store] as any[]).length > 0 ? 'Desmarcar' : 'Selecionar Tudo'}
                   </button>
 
-                  {selectedIds.length > 0 && (
-                    <button 
-                      onClick={() => setIsBulkDeleteModalOpen(true)}
-                      className="p-1.5 px-3 flex items-center gap-1.5 text-[10px] font-bold uppercase transition-all bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg mr-2"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Excluir ({selectedIds.length})
-                    </button>
-                  )}
-
-                  {type === 'materiais' && (
-                    <div className="flex items-center gap-1.5 mr-2 pr-2 border-r border-slate-200">
+                  <div className="flex items-center gap-2">
+                    {selectedIds.length > 0 && (
                       <button 
-                        onClick={handleShareStock}
-                        className="p-1.5 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap"
-                        title="Compartilhar Estoque"
+                        onClick={() => setIsBulkDeleteModalOpen(true)}
+                        className="p-1.5 px-3 flex items-center gap-1.5 text-[10px] font-bold uppercase transition-all bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg mr-2"
                       >
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span className="text-[10px] font-bold">Compartilhar</span>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Excluir ({selectedIds.length})
                       </button>
-                    </div>
-                  )}
+                    )}
 
-                  <div className="relative w-48 shrink-0">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
-                    <input 
-                      type="text" 
-                      className="input-field pl-7 !h-7 !text-[11px]" 
-                      placeholder="Pesquisar..." 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                    {type === 'materiais' && (
+                      <div className="flex items-center gap-1.5 mr-2 pr-2 border-r border-slate-200">
+                        <button 
+                          onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                          className={`p-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${isFiltersOpen || Object.values(activeFilters).some(v => v) ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50'}`}
+                          title="Filtros Avançados"
+                        >
+                          <Search className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold">Filtros</span>
+                        </button>
+                        <button 
+                          onClick={exportMaterialsCSV}
+                          className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap"
+                          title="Baixar Backup (Excel/CSV)"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold">Backup</span>
+                        </button>
+                        <button 
+                          onClick={handleShareStock}
+                          className="p-1.5 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap"
+                          title="Compartilhar Estoque"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold">Compartilhar</span>
+                        </button>
+                      </div>
+                    )}
+
+                    <motion.div 
+                      initial={false}
+                      animate={{ 
+                        width: (isSearchExpanded || searchTerm) ? (window.innerWidth < 640 ? 140 : 220) : 32,
+                        backgroundColor: (isSearchExpanded || searchTerm) ? '#ffffff' : 'transparent'
+                      }}
+                      className="relative h-8 flex items-center rounded-xl border border-transparent focus-within:border-blue-200 focus-within:ring-2 focus-within:ring-blue-100 transition-all overflow-hidden"
+                    >
+                      <button 
+                        onClick={() => {
+                          if (isSearchExpanded && !searchTerm) setIsSearchExpanded(false);
+                          else setIsSearchExpanded(true);
+                        }}
+                        className={`absolute left-0 top-0 w-8 h-8 flex items-center justify-center transition-colors z-10 ${isSearchExpanded || searchTerm ? 'text-slate-400' : 'text-slate-500 hover:text-blue-600 bg-slate-100/50 hover:bg-blue-50 rounded-lg'}`}
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                      </button>
+                      <input 
+                        type="text" 
+                        className={`w-full h-full pl-8 pr-8 bg-transparent text-[11px] font-medium text-slate-700 placeholder:text-slate-400 outline-none transition-opacity duration-300 ${(!isSearchExpanded && !searchTerm) ? 'opacity-0' : 'opacity-100'}`} 
+                        placeholder="Pesquisar materiais, sap, equipes..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onFocus={() => setIsSearchExpanded(true)}
+                        onBlur={() => { if (!searchTerm) setIsSearchExpanded(false); }}
+                      />
+                      {(isSearchExpanded || searchTerm) && searchTerm && (
+                        <button 
+                          onClick={() => { setSearchTerm(''); setIsSearchExpanded(false); }}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-slate-300 hover:text-slate-500 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </motion.div>
                   </div>
                 </div>
+
+                <AnimatePresence>
+                  {(isFiltersOpen && type === 'materiais') && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden border-t border-slate-100"
+                    >
+                      <div className="p-3 bg-slate-50/50 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">Filtrar Equipe</label>
+                          <select 
+                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-medium outline-none focus:border-blue-500 transition-colors"
+                            value={activeFilters.equipe}
+                            onChange={(e) => setActiveFilters({ ...activeFilters, equipe: e.target.value })}
+                          >
+                            <option value="">Todas as Equipes</option>
+                            {sortedEquipesList.map(e => <option key={e.id} value={e.nome}>{e.nome}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">Filtrar Fornecedor</label>
+                          <select 
+                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-medium outline-none focus:border-blue-500 transition-colors"
+                            value={activeFilters.fornecedorId}
+                            onChange={(e) => setActiveFilters({ ...activeFilters, fornecedorId: e.target.value })}
+                          >
+                            <option value="">Todos os Fornecedores</option>
+                            {sortedFornecedoresList.map(f => <option key={f.id} value={f.id}>{f.nomeFantasia}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">Filtrar Localização</label>
+                          <div className="relative">
+                            <input 
+                              type="text" 
+                              placeholder="Ex: Corredor A..."
+                              className="w-full bg-white border border-slate-200 rounded-lg pl-2 pr-7 py-1 text-[10px] font-medium outline-none focus:border-blue-500 transition-colors"
+                              value={activeFilters.localizacao}
+                              onChange={(e) => setActiveFilters({ ...activeFilters, localizacao: e.target.value })}
+                            />
+                            {activeFilters.localizacao && (
+                              <button 
+                                onClick={() => setActiveFilters({ ...activeFilters, localizacao: '' })}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="px-3 pb-3 bg-slate-50/50 flex justify-end items-center gap-4">
+                        <button 
+                          onClick={() => setActiveFilters({ equipe: '', fornecedorId: '', localizacao: '' })}
+                          className="px-3 py-1 text-[9px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest"
+                        >
+                          Limpar Filtros
+                        </button>
+                        <button 
+                          onClick={() => setIsFiltersOpen(false)}
+                          className="px-4 py-1 bg-slate-200 text-slate-600 rounded-full text-[9px] font-bold hover:bg-slate-300 transition-colors uppercase tracking-widest"
+                        >
+                          Fechar
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
             
@@ -1706,7 +2096,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       onChange={(e) => setEditFormData({ ...editFormData, fornecedorId: e.target.value })}
                     >
                       <option value="">Selecione o Fornecedor...</option>
-                      {store.fornecedores.map((f, idx) => (
+                      {sortedFornecedoresList.map((f, idx) => (
                         <option key={`${f.id}_${idx}`} value={f.id}>{f.nomeFantasia}</option>
                       ))}
                     </select>
@@ -1727,12 +2117,12 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       value={editFormData.unidade || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, unidade: e.target.value })}
                     >
-                      <option value="un">UN (Unidade)</option>
-                      <option value="gl">GL (Galão)</option>
-                      <option value="sc">SC (Saco)</option>
-                      <option value="m">MT (Metro)</option>
-                      <option value="kg">KG (Quilo)</option>
-                      <option value="l">LT (Litro)</option>
+                      <option value="GL">GL</option>
+                      <option value="GR">GR</option>
+                      <option value="KG">KG</option>
+                      <option value="M">M</option>
+                      <option value="SC">SC</option>
+                      <option value="UNI">UNI</option>
                     </select>
                   </div>
                   <div className="col-span-2 md:col-span-1">
@@ -1748,10 +2138,10 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                   <div className="col-span-2 md:col-span-1">
                     <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">ESTOQUE ATUAL</label>
                     <input 
-                      type="number" 
+                      type="text" 
                       className="input-field" 
-                      value={editFormData.estoqueAtual === undefined ? '' : editFormData.estoqueAtual}
-                      onChange={(e) => setEditFormData({ ...editFormData, estoqueAtual: Number(e.target.value) })}
+                      value={editFormData.estoqueAtual === undefined ? '' : String(editFormData.estoqueAtual).replace('.', ',')}
+                      onChange={(e) => setEditFormData({ ...editFormData, estoqueAtual: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2">
@@ -1766,29 +2156,28 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                   <div className="col-span-2 md:col-span-1">
                     <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">ESTOQUE MIN.</label>
                     <input 
-                      type="number" 
+                      type="text" 
                       className="input-field" 
-                      value={editFormData.estoqueMinimo || 0}
-                      onChange={(e) => setEditFormData({ ...editFormData, estoqueMinimo: Number(e.target.value) })}
+                      value={editFormData.estoqueMinimo === undefined ? '' : String(editFormData.estoqueMinimo).replace('.', ',')}
+                      onChange={(e) => setEditFormData({ ...editFormData, estoqueMinimo: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
                     <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">ESTOQUE IDEAL</label>
                     <input 
-                      type="number" 
+                      type="text" 
                       className="input-field" 
-                      value={editFormData.estoqueIdeal || 0}
-                      onChange={(e) => setEditFormData({ ...editFormData, estoqueIdeal: Number(e.target.value) })}
+                      value={editFormData.estoqueIdeal === undefined ? '' : String(editFormData.estoqueIdeal).replace('.', ',')}
+                      onChange={(e) => setEditFormData({ ...editFormData, estoqueIdeal: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
                     <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">PREÇO UNITÁRIO (R$)</label>
                     <input 
-                      type="number" 
-                      step="0.01" 
+                      type="text" 
                       className="input-field" 
-                      value={editFormData.precoUnitario || 0}
-                      onChange={(e) => setEditFormData({ ...editFormData, precoUnitario: Number(e.target.value) })}
+                      value={editFormData.precoUnitario === undefined ? '' : String(editFormData.precoUnitario).replace('.', ',')}
+                      onChange={(e) => setEditFormData({ ...editFormData, precoUnitario: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">

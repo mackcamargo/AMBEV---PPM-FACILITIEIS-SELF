@@ -4,25 +4,37 @@ import { Material, Colaborador, Empresa, Equipe, Fornecedor, Movimentacao, AtaRe
 const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 
 export const syncToSupabase = {
-  async insertMaterial(m: Material) {
-    if (!isUUID(m.id)) return;
-    const { error } = await supabase.from('materiais').insert({
-      id: m.id,
-      sap: m.sap,
-      codigo_fornecedor: m.codigoFornecedor,
-      descricao: m.descricao,
-      unidade: m.unidade,
-      estoque_minimo: m.estoqueMinimo || 0,
-      estoque_ideal: m.estoqueIdeal || 0,
-      estoque_atual: m.estoqueAtual || 0,
-      preco_unitario: m.precoUnitario || 0,
-      equipe: m.equipe,
-      localizacao: m.localizacao || null
-    });
-    if (error) console.error("Error inserting material:", error.message);
+  async insertMaterial(m: Material): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(m.id)) return { success: false, error: 'Invalid UUID' };
+    const sapValue = m.sap?.trim() || `T-${Date.now()}-${m.id.slice(0, 4)}`;
+    try {
+      const { error } = await supabase.from('materiais').upsert({
+        id: m.id,
+        sap: sapValue,
+        codigo_fornecedor: m.codigoFornecedor || '',
+        fornecedor_id: isUUID(m.fornecedorId || '') ? m.fornecedorId : null,
+        descricao: m.descricao || 'Material Sem Descrição',
+        unidade: m.unidade || 'UM',
+        estoque_minimo: m.estoqueMinimo || 0,
+        estoque_ideal: m.estoqueIdeal || 0,
+        estoque_atual: m.estoqueAtual || 0,
+        preco_unitario: m.precoUnitario || 0,
+        equipe: m.equipe || 'Geral',
+        localizacao: m.localizacao || null
+      }, { onConflict: 'id' });
+      
+      if (error) {
+        console.error("Supabase Error inserting material:", error.message);
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      console.error("Fetch Error inserting material:", err);
+      return { success: false, error: err.message || 'Network Error' };
+    }
   },
-  async updateMaterial(id: string, m: Partial<Material>) {
-    if (!isUUID(id)) return;
+  async updateMaterial(id: string, m: Partial<Material>): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
     const payload: any = {};
     if (m.sap !== undefined) payload.sap = m.sap;
     if (m.codigoFornecedor !== undefined) payload.codigo_fornecedor = m.codigoFornecedor;
@@ -35,55 +47,89 @@ export const syncToSupabase = {
     if (m.equipe !== undefined) payload.equipe = m.equipe;
     if (m.localizacao !== undefined) payload.localizacao = m.localizacao;
 
-    const { error } = await supabase.from('materiais').update(payload).eq('id', id);
-    if (error) console.error("Error updating material:", error.message);
+    try {
+      const { error } = await supabase.from('materiais').update(payload).eq('id', id);
+      if (error) {
+        console.error("Supabase Error updating material:", error.message);
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      console.error("Fetch Error updating material:", err);
+      return { success: false, error: err.message || 'Network Error' };
+    }
   },
-  async deleteMaterial(id: string) {
-    if (!isUUID(id)) return;
-    const { error } = await supabase.from('materiais').delete().eq('id', id);
-    if (error) console.error("Error deleting material:", error.message);
-  },
-
-  async insertColaborador(c: Colaborador) {
-    if (!isUUID(c.id)) return;
-    const { error } = await supabase.from('colaboradores').insert({
-      id: c.id,
-      matricula: c.matricula,
-      nome: c.nome,
-      empresa: c.empresa,
-      equipe: c.equipe,
-      cargo: c.cargo || null,
-      contato: c.contato || null,
-      status: c.status
-    });
-    if (error) console.error("Error inserting colaborador:", error.message);
-  },
-  async updateColaborador(id: string, c: Partial<Colaborador>) {
-    if (!isUUID(id)) return;
-    const { error } = await supabase.from('colaboradores').update(c).eq('id', id);
-    if (error) console.error("Error updating colaborador:", error.message);
-  },
-  async deleteColaborador(id: string) {
-    if (!isUUID(id)) return;
-    const { error } = await supabase.from('colaboradores').delete().eq('id', id);
-    if (error) console.error("Error deleting colaborador:", error.message);
+  async deleteMaterial(id: string): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('materiais').delete().eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
 
-  async insertEquipe(e: Equipe) {
-    if (!isUUID(e.id)) return;
-    const { error } = await supabase.from('equipes').insert({
-      id: e.id,
-      nome: e.nome,
-      centro_custo: e.centroCusto,
-      gestor: e.gestor,
-      cor: e.cor,
-      verba_destinada: e.verbaDestinada || 0,
-      saldo_atualizado: e.saldoAtualizado || 0
-    });
-    if (error) console.error("Error inserting equipe:", error.message);
+  async insertColaborador(c: Colaborador): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(c.id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('colaboradores').insert({
+        id: c.id,
+        matricula: c.matricula || `MAT-${c.id.split('-')[0]}`,
+        nome: c.nome || 'Colaborador Sem Nome',
+        empresa: c.empresa || 'Não informada',
+        equipe: c.equipe || 'Geral',
+        cargo: c.cargo || null,
+        contato: c.contato || null,
+        status: c.status
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
-  async updateEquipe(id: string, e: Partial<Equipe>) {
-    if (!isUUID(id)) return;
+  async updateColaborador(id: string, c: Partial<Colaborador>): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('colaboradores').update(c).eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  },
+  async deleteColaborador(id: string): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('colaboradores').delete().eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  },
+
+  async insertEquipe(e: Equipe): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(e.id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('equipes').insert({
+        id: e.id,
+        nome: e.nome || `Equipe-${e.id.split('-')[0]}`,
+        centro_custo: e.centroCusto || 'CENTRO-DEFAULT',
+        gestor: e.gestor || 'Não informado',
+        cor: e.cor || '#000000',
+        verba_destinada: e.verbaDestinada || 0,
+        saldo_atualizado: e.saldoAtualizado || 0
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  },
+  async updateEquipe(id: string, e: Partial<Equipe>): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
     const payload: any = {};
     if (e.nome !== undefined) payload.nome = e.nome;
     if (e.centroCusto !== undefined) payload.centro_custo = e.centroCusto;
@@ -92,32 +138,47 @@ export const syncToSupabase = {
     if (e.verbaDestinada !== undefined) payload.verba_destinada = e.verbaDestinada;
     if (e.saldoAtualizado !== undefined) payload.saldo_atualizado = e.saldoAtualizado;
     
-    const { error } = await supabase.from('equipes').update(payload).eq('id', id);
-    if (error) console.error("Error updating equipe:", error.message);
+    try {
+      const { error } = await supabase.from('equipes').update(payload).eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
-  async deleteEquipe(id: string) {
-    if (!isUUID(id)) return;
-    const { error } = await supabase.from('equipes').delete().eq('id', id);
-    if (error) console.error("Error deleting equipe:", error.message);
+  async deleteEquipe(id: string): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('equipes').delete().eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
 
-  async insertEmpresa(e: Empresa) {
-    if (!isUUID(e.id)) return;
-    const { error } = await supabase.from('empresas').insert({
-      id: e.id,
-      razao_social: e.razaoSocial,
-      cnpj: e.cnpj,
-      num_contrato: e.numContrato,
-      status: e.status,
-      area_atuacao: e.areaAtuacao || null,
-      email_comercial: e.emailComercial || null,
-      detalhes: e.detalhes || null,
-      codigo_empresa: e.codigoEmpresa || null
-    });
-    if (error) console.error("Error inserting empresa:", error.message);
+  async insertEmpresa(e: Empresa): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(e.id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('empresas').insert({
+        id: e.id,
+        razao_social: e.razaoSocial || `Empresa-${e.id.split('-')[0]}`,
+        cnpj: e.cnpj || `CNPJ-${e.id.split('-')[0]}`,
+        num_contrato: e.numContrato || 'S/N',
+        status: e.status,
+        area_atuacao: e.areaAtuacao || null,
+        email_comercial: e.emailComercial || null,
+        detalhes: e.detalhes || null,
+        codigo_empresa: e.codigoEmpresa || null
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
-  async updateEmpresa(id: string, e: Partial<Empresa>) {
-    if (!isUUID(id)) return;
+  async updateEmpresa(id: string, e: Partial<Empresa>): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
     const payload: any = {};
     if (e.razaoSocial !== undefined) payload.razao_social = e.razaoSocial;
     if (e.cnpj !== undefined) payload.cnpj = e.cnpj;
@@ -127,31 +188,46 @@ export const syncToSupabase = {
     if (e.emailComercial !== undefined) payload.email_comercial = e.emailComercial;
     if (e.detalhes !== undefined) payload.detalhes = e.detalhes;
     if (e.codigoEmpresa !== undefined) payload.codigo_empresa = e.codigoEmpresa;
-    const { error } = await supabase.from('empresas').update(payload).eq('id', id);
-    if (error) console.error("Error updating empresa:", error.message);
+    try {
+      const { error } = await supabase.from('empresas').update(payload).eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
-  async deleteEmpresa(id: string) {
-    if (!isUUID(id)) return;
-    const { error } = await supabase.from('empresas').delete().eq('id', id);
-    if (error) console.error("Error deleting empresa:", error.message);
+  async deleteEmpresa(id: string): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('empresas').delete().eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
 
-  async insertFornecedor(f: Fornecedor) {
-    if (!isUUID(f.id)) return;
-    const { error } = await supabase.from('fornecedores').insert({
-      id: f.id,
-      nome_fantasia: f.nomeFantasia,
-      cnpj: f.cnpj,
-      telefone: f.telefone || null,
-      email: f.email || null,
-      categoria: f.categoria || null,
-      codigo_fornecedor: f.codigoFornecedor || null,
-      detalhes: f.detalhes || null
-    });
-    if (error) console.error("Error inserting fornecedor:", error.message);
+  async insertFornecedor(f: Fornecedor): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(f.id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('fornecedores').insert({
+        id: f.id,
+        nome_fantasia: f.nomeFantasia || `Fornecedor-${f.id.split('-')[0]}`,
+        cnpj: f.cnpj || `CNPJ-${f.id.split('-')[0]}`,
+        telefone: f.telefone || null,
+        email: f.email || null,
+        categoria: f.categoria || null,
+        codigo_fornecedor: f.codigoFornecedor || null,
+        detalhes: f.detalhes || null
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
-  async updateFornecedor(id: string, f: Partial<Fornecedor>) {
-    if (!isUUID(id)) return;
+  async updateFornecedor(id: string, f: Partial<Fornecedor>): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
     const payload: any = {};
     if (f.nomeFantasia !== undefined) payload.nome_fantasia = f.nomeFantasia;
     if (f.cnpj !== undefined) payload.cnpj = f.cnpj;
@@ -160,64 +236,94 @@ export const syncToSupabase = {
     if (f.categoria !== undefined) payload.categoria = f.categoria;
     if (f.codigoFornecedor !== undefined) payload.codigo_fornecedor = f.codigoFornecedor;
     if (f.detalhes !== undefined) payload.detalhes = f.detalhes;
-    const { error } = await supabase.from('fornecedores').update(payload).eq('id', id);
-    if (error) console.error("Error updating fornecedor:", error.message);
+    try {
+      const { error } = await supabase.from('fornecedores').update(payload).eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
-  async deleteFornecedor(id: string) {
-    if (!isUUID(id)) return;
-    const { error } = await supabase.from('fornecedores').delete().eq('id', id);
-    if (error) console.error("Error deleting fornecedor:", error.message);
+  async deleteFornecedor(id: string): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('fornecedores').delete().eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
 
-  async insertMovimentacao(m: Movimentacao) {
-    if (!isUUID(m.id)) return;
-    const { error } = await supabase.from('movimentacoes').insert({
-      id: m.id,
-      data: m.data,
-      tipo: m.tipo,
-      material_id: m.materialId,
-      material_desc: m.materialDesc,
-      quantidade: m.quantidade || 0,
-      colaborador: m.colaborador || null,
-      os: m.os || null,
-      nf: m.nf || null,
-      pedido_compra: m.pedidoCompra || null,
-      pedido_sap: m.pedidoSap || null,
-      fornecedor: m.fornecedor || null,
-      conferente: m.conferente || null,
-      liberador: m.liberador || null,
-      observacoes: m.observacoes || null,
-      preco_unitario: m.precoUnitario || 0,
-      empresa: m.empresa || null,
-      equipe: m.equipe || null
-    });
-    if (error) console.error("Error inserting movimentacao:", error.message);
+  async insertMovimentacao(m: Movimentacao): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(m.id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('movimentacoes').insert({
+        id: m.id,
+        data: m.data,
+        tipo: m.tipo,
+        material_id: m.materialId,
+        material_desc: m.materialDesc,
+        quantidade: m.quantidade || 0,
+        colaborador: m.colaborador || null,
+        os: m.os || null,
+        nf: m.nf || null,
+        pedido_compra: m.pedidoCompra || null,
+        pedido_sap: m.pedidoSap || null,
+        fornecedor: m.fornecedor || null,
+        conferente: m.conferente || null,
+        liberador: m.liberador || null,
+        observacoes: m.observacoes || null,
+        preco_unitario: m.precoUnitario || 0,
+        empresa: m.empresa || null,
+        equipe: m.equipe || null
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
-  async deleteMovimentacao(id: string) {
-     if (!isUUID(id)) return;
-     const { error } = await supabase.from('movimentacoes').delete().eq('id', id);
-     if (error) console.error("Error deleting movimentacao:", error.message);
+  async deleteMovimentacao(id: string): Promise<{ success: boolean; error?: string }> {
+     if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
+     try {
+       const { error } = await supabase.from('movimentacoes').delete().eq('id', id);
+       if (error) return { success: false, error: error.message };
+       return { success: true };
+     } catch (err: any) {
+       return { success: false, error: err.message };
+     }
   },
-  async updateMovimentacao(id: string, m: Partial<Movimentacao>) {
-    if (!isUUID(id)) return;
+  async updateMovimentacao(id: string, m: Partial<Movimentacao>): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
     const payload: any = {};
     if (m.data !== undefined) payload.data = m.data;
     if (m.quantidade !== undefined) payload.quantidade = m.quantidade;
     if (m.observacoes !== undefined) payload.observacoes = m.observacoes;
-    const { error } = await supabase.from('movimentacoes').update(payload).eq('id', id);
-    if (error) console.error("Error updating movimentacao:", error.message);
+    try {
+      const { error } = await supabase.from('movimentacoes').update(payload).eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
 
-  async insertAta(a: AtaReuniao) {
-    if (!isUUID(a.id)) return;
-    const { error } = await supabase.from('atas_reuniao').insert({
-      id: a.id,
-      data: a.data,
-      descricao: a.descricao,
-      orcamentos_snapshot: a.orcamentosSnapshot,
-      itens_comprados: a.itensComprados
-    });
-    if (error) console.error("Error inserting ata:", error.message);
+  async insertAta(a: AtaReuniao): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(a.id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('atas_reuniao').insert({
+        id: a.id,
+        data: a.data,
+        descricao: a.descricao,
+        orcamentos_snapshot: a.orcamentosSnapshot,
+        itens_comprados: a.itensComprados
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   },
 
   async fetchAll() {
@@ -253,7 +359,8 @@ export const syncToSupabase = {
         equipe: m.equipe,
         localizacao: m.localizacao,
         ultimaMovimentacao: m.ultima_movimentacao,
-        detalhes: m.detalhes
+        detalhes: m.detalhes,
+        createdAt: m.created_at
       })) || [],
       colaboradores: colaboradores || [],
       empresas: empresas?.map(e => ({

@@ -69,9 +69,8 @@ export const StockView: React.FC = () => {
       // Status filter
       if (filterStatus !== 'TODOS') {
         const isZerado = m.estoqueAtual === 0;
-        const isAbaixo = m.estoqueAtual < m.estoqueMinimo && m.estoqueAtual > 0;
-        const isLibera = m.estoqueAtual >= m.estoqueMinimo && m.estoqueAtual > 0;
-        const isOkFilter = m.estoqueAtual >= m.estoqueMinimo && m.estoqueAtual > 0;
+        const isAbaixo = m.estoqueAtual < m.estoqueIdeal && m.estoqueAtual > 0;
+        const isOkFilter = m.estoqueAtual >= m.estoqueIdeal && m.estoqueAtual > 0;
 
         if (filterStatus === 'ZERADO' && !isZerado) return false;
         if (filterStatus === 'ABAIXO' && !isAbaixo) return false;
@@ -252,48 +251,6 @@ export const StockView: React.FC = () => {
     <div className="flex flex-col h-full overflow-hidden p-5 pt-2">
       {/* Fixed Top Section: Stats + Search + Filters */}
       <div className="bg-brand-light space-y-4 pb-4 shrink-0 z-30">
-        {/* Stats Cards */}
-        <div className="flex overflow-x-auto gap-3 pb-3 scrollbar-hide py-1 px-1">
-          <button 
-            onClick={() => setFilterEquipe('TODAS')}
-            className={`p-3 rounded-xl border transition-all text-left shrink-0 w-[150px] sm:flex-1 relative group ${
-              filterEquipe === 'TODAS'
-                ? 'bg-slate-900 text-white border-slate-900 shadow-lg scale-[1.02]'
-                : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
-            }`}
-          >
-            <p className="text-[10px] uppercase font-black opacity-60 tracking-wider">Total de Peças</p>
-            <div className="mt-1">
-              <p className="text-lg font-black leading-tight">{totalGeralQtd}</p>
-              <p className={`text-[10px] font-bold tracking-tight ${filterEquipe === 'TODAS' ? 'opacity-70' : 'text-slate-500'}`}>
-                R$ {totalGeralValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-          </button>
-          {equipes.map((equipe, idx) => {
-            const stats = teamStats[equipe.nome] || { valor: 0, qtd: 0, cor: '#ccc' };
-            const isActive = filterEquipe === equipe.nome;
-            return (
-              <button 
-                key={equipe.id || `equipe-${idx}`}
-                onClick={() => setFilterEquipe(equipe.nome)}
-                className={`p-3 rounded-xl border transition-all text-left shrink-0 w-[150px] sm:flex-1 relative group ${
-                  isActive
-                    ? 'bg-white border-2 shadow-lg scale-[1.02]'
-                    : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
-                }`}
-                style={isActive ? { borderColor: stats.cor } : {}}
-              >
-                <p className="text-[10px] uppercase font-black tracking-wider" style={{ color: stats.cor }}>{equipe.nome}</p>
-                <div className="mt-1">
-                  <p className="text-lg font-black leading-tight">{stats.qtd}</p>
-                  <p className="text-[10px] text-slate-500 font-bold tracking-tight">R$ {stats.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-[250px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -411,7 +368,7 @@ export const StockView: React.FC = () => {
             {selectedIds.length > 0 && (
               <button 
                 onClick={() => setIsBulkDeleteModalOpen(true)}
-                className="btn-danger !h-9 !py-0 px-3 flex items-center gap-2"
+                className="btn-danger !h-9 !py-0 px-3 flex items-center gap-2 border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 flex items-center justify-center rounded-lg h-9 px-3 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span className="text-[10.5px] font-bold uppercase tracking-wider">
@@ -420,6 +377,48 @@ export const StockView: React.FC = () => {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="flex overflow-x-auto gap-3 pb-3 scrollbar-hide py-1 px-1">
+          <button 
+            onClick={() => setFilterEquipe('TODAS')}
+            className={`p-3 rounded-xl border transition-all text-left shrink-0 w-[150px] sm:flex-1 relative group ${
+              filterEquipe === 'TODAS'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-lg scale-[1.02]'
+                : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+            }`}
+          >
+            <p className="text-[10px] uppercase font-black opacity-60 tracking-wider">Total de Peças</p>
+            <div className="mt-1">
+              <p className="text-lg font-black leading-tight">{totalGeralQtd}</p>
+              <p className={`text-[10px] font-bold tracking-tight ${filterEquipe === 'TODAS' ? 'opacity-70' : 'text-slate-500'}`}>
+                R$ {totalGeralValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </button>
+          {[...equipes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })).map((equipe, idx) => {
+            const stats = teamStats[equipe.nome] || { valor: 0, qtd: 0, cor: '#ccc' };
+            const isActive = filterEquipe === equipe.nome;
+            return (
+              <button 
+                key={equipe.id || `equipe-${idx}`}
+                onClick={() => setFilterEquipe(equipe.nome)}
+                className={`p-3 rounded-xl border transition-all text-left shrink-0 w-[150px] sm:flex-1 relative group ${
+                  isActive
+                    ? 'bg-white border-2 shadow-lg scale-[1.02]'
+                    : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+                }`}
+                style={isActive ? { borderColor: stats.cor } : {}}
+              >
+                <p className="text-[10px] uppercase font-black tracking-wider" style={{ color: stats.cor }}>{equipe.nome}</p>
+                <div className="mt-1">
+                  <p className="text-lg font-black leading-tight">{stats.qtd}</p>
+                  <p className="text-[10px] text-slate-500 font-bold tracking-tight">R$ {stats.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         <AnimatePresence>
@@ -616,9 +615,12 @@ export const StockView: React.FC = () => {
                 if (m.estoqueAtual === 0) {
                   statusClass = 'pill-crit';
                   statusLabel = 'ZERADO';
-                } else if (m.estoqueAtual < m.estoqueMinimo) {
+                } else if (m.estoqueAtual < m.estoqueIdeal) {
                   statusClass = 'pill-warn';
                   statusLabel = 'ABAIXO';
+                } else {
+                  statusClass = 'pill-ok';
+                  statusLabel = 'OK';
                 }
 
                 return (
@@ -660,11 +662,11 @@ export const StockView: React.FC = () => {
                         {statusLabel}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-slate-500 text-right tabular-nums text-[11px]">
-                      R$ {m.precoUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    <td className="px-3 py-2 text-slate-500 text-right tabular-nums text-xs">
+                      R${m.precoUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="px-3 py-2 text-slate-900 font-bold text-right tabular-nums text-[11px]">
-                      R$ {(m.estoqueAtual * m.precoUnitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    <td className="px-3 py-2 text-slate-900 font-bold text-right tabular-nums text-xs">
+                      R${(m.estoqueAtual * m.precoUnitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-center gap-2">
@@ -831,7 +833,7 @@ export const StockView: React.FC = () => {
                     onChange={(e) => setEditFormData({ ...editFormData, fornecedorId: e.target.value })}
                   >
                     <option value="">Selecione o Fornecedor...</option>
-                    {fornecedores.map(f => (
+                    {[...fornecedores].sort((a, b) => (a.nomeFantasia || '').localeCompare(b.nomeFantasia || '', 'pt-BR', { sensitivity: 'base' })).map(f => (
                       <option key={f.id} value={f.id}>{f.nomeFantasia}</option>
                     ))}
                   </select>
@@ -852,12 +854,10 @@ export const StockView: React.FC = () => {
                     value={editFormData.unidade || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, unidade: e.target.value })}
                   >
-                    <option value="un">UN (Unidade)</option>
-                    <option value="gl">GL (Galão)</option>
-                    <option value="sc">SC (Saco)</option>
-                    <option value="m">MT (Metro)</option>
-                    <option value="kg">KG (Quilo)</option>
-                    <option value="l">LT (Litro)</option>
+                    <option value="GL">GL</option>
+                    <option value="M3">M3</option>
+                    <option value="SC">SC</option>
+                    <option value="UNI">UNI</option>
                   </select>
                 </div>
                 <div className="col-span-2 md:col-span-1">
@@ -867,8 +867,9 @@ export const StockView: React.FC = () => {
                     value={editFormData.equipe || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, equipe: e.target.value })}
                   >
-                    {equipes.map((e, idx) => <option key={`${e.id}_${idx}`} value={e.nome}>{e.nome}</option>)}
+                    {[...equipes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })).map((e, idx) => <option key={`${e.id}_${idx}`} value={e.nome}>{e.nome}</option>)}
                   </select>
+
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">ESTOQUE ATUAL</label>

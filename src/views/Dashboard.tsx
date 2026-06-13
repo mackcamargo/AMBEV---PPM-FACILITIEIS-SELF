@@ -1,14 +1,77 @@
-import React, { useState, useMemo } from 'react';
-import { Package, ArrowUpRight, ArrowDownLeft, AlertCircle, Calendar, Filter, Search, User, Trophy, Coins } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Package, ArrowUpRight, ArrowDownLeft, AlertCircle, Calendar, Filter, Search, User, Trophy, Coins, History, Play, Pause, RefreshCw } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar
+  BarChart, Bar, LineChart, Line, Legend, LabelList
 } from 'recharts';
 
 export const Dashboard: React.FC = () => {
   const { materiais, movimentacoes, equipes } = useApp();
   const [filterType, setFilterType] = useState<'day' | 'month' | 'custom'>('month');
+
+  // ROTAÇÃO AUTOMÁTICA DAS EQUIPES (ESTILO RELATÓRIOS)
+  const [activeTeamIndex, setActiveTeamIndex] = useState(0);
+  const [isAutoplay, setIsAutoplay] = useState(true);
+
+  useEffect(() => {
+    if (!isAutoplay || equipes.length === 0) return;
+    const interval = setInterval(() => {
+      setActiveTeamIndex((prev) => (prev + 1) % equipes.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [isAutoplay, equipes.length]);
+
+  const activeTeam = useMemo(() => {
+    if (equipes.length === 0) return null;
+    return equipes[activeTeamIndex % equipes.length];
+  }, [equipes, activeTeamIndex]);
+
+  // Timline de Gastos da Equipe Ativa (6 meses)
+  const activeTeamTimeline = useMemo(() => {
+    if (!activeTeam) return [];
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const tracker: Record<string, { name: string; value: number; index: number }> = {};
+    
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mName = months[d.getMonth()];
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      tracker[key] = {
+        name: `${mName}/${String(d.getFullYear()).slice(-2)}`,
+        value: 0,
+        index: d.getTime()
+      };
+    }
+
+    movimentacoes.forEach(m => {
+      if (m.tipo !== 'Retirada') return;
+      const mat = materiais.find(mat => mat.id === m.materialId);
+      if (mat?.equipe !== activeTeam.nome && m.equipe !== activeTeam.nome) return;
+
+      if (!m.data) return;
+      const d = new Date(m.data);
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const val = (Number(m.quantidade) || 0) * (Number(m.precoUnitario) || 0);
+
+      if (tracker[key]) {
+        tracker[key].value += val;
+      }
+    });
+
+    return Object.values(tracker).sort((a, b) => a.index - b.index);
+  }, [activeTeam, movimentacoes, materiais]);
+
+  const currentVsPrev = useMemo(() => {
+    if (activeTeamTimeline.length < 2) return { current: 0, prev: 0, diff: 0, percent: 0 };
+    const current = activeTeamTimeline[activeTeamTimeline.length - 1].value;
+    const prev = activeTeamTimeline[activeTeamTimeline.length - 2].value;
+    const diff = current - prev;
+    const percent = prev > 0 ? (diff / prev) * 100 : 0;
+    return { current, prev, diff, percent };
+  }, [activeTeamTimeline]);
   
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -64,7 +127,8 @@ export const Dashboard: React.FC = () => {
     });
   }, [movimentacoes, filterType, startDate, endDate]);
 
-  const totalMateriais = useMemo(() => materiais.reduce((acc, m) => acc + Number(m?.estoqueAtual || 0), 0), [materiais]);
+  const totalEstoqueUnits = useMemo(() => materiais.reduce((acc, m) => acc + Number(m?.estoqueAtual || 0), 0), [materiais]);
+  const totalMaterialTypes = materiais.length;
   const estoqueBaixo = materiais.filter(m => (m?.estoqueAtual || 0) < (m?.estoqueMinimo || 0)).length;
   const estoqueZero = materiais.filter(m => (m?.estoqueAtual || 0) === 0).length;
 
@@ -126,11 +190,50 @@ export const Dashboard: React.FC = () => {
     });
   }, [filteredMovimentacoes, materiais, equipes]);
 
+  // CÁLCULO DE GASTOS: MÊS ATUAL VS MÊS ANTERIOR POR EQUIPE
+  const spendingComparison = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const prevMonthDate = new Date();
+    prevMonthDate.setMonth(now.getMonth() - 1);
+    const prevMonth = prevMonthDate.getMonth();
+    const prevYear = prevMonthDate.getFullYear();
+
+    return equipes.map(equipe => {
+      const teamMovs = movimentacoes.filter(m => {
+        const material = materiais.find(mat => mat.id === m.materialId);
+        return material?.equipe === equipe.nome && m.tipo === 'Retirada';
+      });
+
+      const currentMonthSpending = teamMovs
+        .filter(m => {
+          const d = new Date(m.data);
+          return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        })
+        .reduce((acc, m) => acc + (Number(m.quantidade) * (Number(m.precoUnitario) || 0)), 0);
+
+      const prevMonthSpending = teamMovs
+        .filter(m => {
+          const d = new Date(m.data);
+          return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+        })
+        .reduce((acc, m) => acc + (Number(m.quantidade) * (Number(m.precoUnitario) || 0)), 0);
+
+      return {
+        name: equipe.nome,
+        atual: currentMonthSpending,
+        passado: prevMonthSpending
+      };
+    });
+  }, [movimentacoes, materiais, equipes]);
+
   const stats = [
-    { label: 'Total Materiais em Self', value: totalMateriais, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Tipos de Materiais', value: totalMaterialTypes, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Total Itens em Estoque', value: totalEstoqueUnits, icon: Coins, color: 'text-amber-500', bg: 'bg-amber-50' },
     { label: 'Entradas (Valor)', value: `R$ ${teamPerformance.reduce((acc, c) => acc + (c?.entrada || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: ArrowUpRight, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    { label: 'Retiradas (Valor)', value: `R$ ${teamPerformance.reduce((acc, c) => acc + (c?.retirada || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: ArrowDownLeft, color: 'text-red-500', bg: 'bg-red-50' },
-    { label: 'Movimentações', value: filteredMovimentacoes.length, icon: ArrowUpRight, color: 'text-brand-accent', bg: 'bg-slate-50' },
+    { label: 'Movimentações', value: filteredMovimentacoes.length, icon: History, color: 'text-brand-accent', bg: 'bg-slate-50' },
   ];
 
   // Cálculo de Estoque valorizado por Equipe e Total (calculado retroativamente conforme o período / data limite)
@@ -264,51 +367,124 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Total de Peças Retiradas por Equipe (Qtd) */}
-        <div className="card flex flex-col">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Peças Retiradas por Equipe (Qtd)</h3>
+        {/* GRÁFICO ROTATIVO: Gastos por Equipe (Linha do Tempo) */}
+        <div className="card flex flex-col relative overflow-hidden group/moving bg-white border border-slate-100 shadow-sm">
+          {/* Progress Indicator line */}
+          {isAutoplay && (
+            <div className="absolute bottom-0 left-0 w-full h-[3px] bg-slate-50 overflow-hidden z-20">
+              <div 
+                key={activeTeamIndex}
+                className="h-full bg-blue-600 animate-in slide-in-from-left duration-[8000ms] ease-linear repeat-infinite fill-mode-forwards"
+                style={{ width: '100%' }}
+              ></div>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${isAutoplay ? 'animate-spin-slow' : ''}`} />
+                <h3 className="text-xs font-black text-slate-700 uppercase tracking-widest">Fluxo de Gastos: <span className="animate-blink-red">{activeTeam?.nome}</span></h3>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Mês Vigente</span>
+                  <span className="text-sm font-black text-slate-800">R$ {currentVsPrev.current.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="h-6 w-px bg-slate-100 mx-1"></div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Variação</span>
+                  <div className={`flex items-center gap-1 text-[11px] font-black ${currentVsPrev.diff >= 0 ? 'text-blue-600' : 'text-emerald-600'}`}>
+                    {currentVsPrev.diff >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
+                    {Math.abs(currentVsPrev.percent).toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="flex flex-wrap gap-1 max-w-[150px] justify-end">
+                {equipes.slice(0, 5).map((eq, idx) => (
+                  <button 
+                    key={eq.id}
+                    onClick={() => {
+                      setActiveTeamIndex(idx);
+                      setIsAutoplay(false);
+                    }}
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${idx === (activeTeamIndex % equipes.length) ? 'bg-blue-600 scale-125 ring-2 ring-blue-100' : 'bg-slate-200 hover:bg-slate-300'}`}
+                  />
+                ))}
+              </div>
+              <button 
+                onClick={() => setIsAutoplay(!isAutoplay)}
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-all"
+              >
+                {isAutoplay ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-slate-400" />}
+              </button>
+            </div>
           </div>
-          <div className="h-48 sm:h-64">
+
+          <div className="h-72 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={teamQuantities} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={activeTeamTimeline} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="colorGasto" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15}/>
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis 
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fill: '#64748B', fontWeight: 700 }} 
+                  tick={{ fontSize: 8, fill: '#64748B', fontWeight: 700 }} 
+                  interval={0}
+                  height={25}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fill: '#94a3b8' }}
-                  tickFormatter={(val) => `${val}`}
+                  tick={{ fontSize: 8, fill: '#94a3b8' }}
+                  tickFormatter={(val) => `R$${val >= 1000 ? (val/1000).toFixed(0)+'k' : val}`}
+                  width={35}
                 />
                 <Tooltip 
-                  cursor={{ fill: '#f8fafc' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
-                  formatter={(value: any) => [`${value} unidades`, 'Quantidade']}
+                  formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor Consumido']}
                 />
-                <Bar 
-                  dataKey="quantidade" 
-                  fill="#3B82F6" 
-                  radius={[4, 4, 0, 0]} 
-                  barSize={28}
-                  label={{ 
-                    position: 'top', 
-                    formatter: (val: any) => `${val}`,
-                    fontSize: 10,
-                    fontWeight: 700,
-                    fill: '#475569'
-                  }}
-                />
-              </BarChart>
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#2563eb" 
+                  strokeWidth={3} 
+                  fillOpacity={1} 
+                  fill="url(#colorGasto)"
+                  dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  animationDuration={1500}
+                >
+                  <LabelList 
+                    dataKey="value" 
+                    position="top" 
+                    offset={15} 
+                    content={(props: any) => {
+                      const { x, y, value } = props;
+                      if (!value || value === 0) return null;
+                      return (
+                        <text x={x} y={y - 12} fill="#1e293b" fontSize={9} fontWeight={900} textAnchor="middle">
+                          R${value >= 1000 ? (value/1000).toFixed(1)+'k' : value}
+                        </text>
+                      );
+                    }}
+                  />
+                </Area>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Withdrawal by Team (Horizontal Bar - Image Reference Style) */}
+        {/* Withdrawal by Team (Horizontal Bar - Gasto R$) */}
         <div className="card flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Retiradas por Equipe (R$)</h3>
@@ -318,7 +494,7 @@ export const Dashboard: React.FC = () => {
               <BarChart 
                 data={[...teamPerformance].sort((a, b) => b.retirada - a.retirada)} 
                 layout="vertical" 
-                margin={{ left: -10, right: 35, top: 0, bottom: 0 }}
+                margin={{ left: 20, right: 35, top: 0, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                 <XAxis type="number" hide />
@@ -328,12 +504,12 @@ export const Dashboard: React.FC = () => {
                   axisLine={false} 
                   tickLine={false} 
                   tick={{ fontSize: 10, fill: '#1e293b', fontWeight: 600 }}
-                  width={70}
+                  width={110}
                 />
                 <Tooltip 
                   cursor={{ fill: '#f1f5f9', opacity: 0.4 }}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
-                  formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Retirado']}
+                  formatter={(value: any) => [`R$${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Retirado']}
                 />
                 <Bar 
                   dataKey="retirada" 
@@ -342,7 +518,7 @@ export const Dashboard: React.FC = () => {
                   barSize={20}
                   label={{ 
                     position: 'right', 
-                    formatter: (val: any) => `R$ ${Math.round(val).toLocaleString('pt-BR')}`,
+                    formatter: (val: any) => `R$${Math.round(val).toLocaleString('pt-BR')}`,
                     fontSize: 10,
                     fontWeight: 700,
                     fill: '#64748B'
@@ -374,7 +550,7 @@ export const Dashboard: React.FC = () => {
               </span>
             </div>
             <span className="text-[14px] font-extrabold text-slate-900 font-mono">
-              R$ {teamValuedStock.globalTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              R${teamValuedStock.globalTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
           
@@ -393,7 +569,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                     <div className="flex flex-col items-end">
                       <span className="text-[11px] font-bold text-slate-800 font-mono">
-                        R$ {team.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R${team.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                       <span className="text-[9px] text-slate-400 font-medium">
                         {team.quantidadeTotal} un ({percentage}%)
@@ -402,51 +578,54 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
                     <div className="h-full rounded-full" style={{ backgroundColor: team.color, width: `${percentage}%` }}></div>
-                  </div>
+                   </div>
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Top Withdrawers Ranking */}
-        <div className="card">
-           <div className="flex items-center justify-between mb-5">
-             <div className="flex items-center gap-2">
-               <Trophy className="w-4 h-4 text-amber-500" />
-               <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Top + Retirantes</h3>
-             </div>
-             <span className="text-[10px] text-slate-400 font-medium font-mono uppercase tracking-tighter">Qtd Peças</span>
-           </div>
-
-           <div className="space-y-3">
-             {withdrawerRanking.length > 0 ? (
-               withdrawerRanking.map((person, idx) => (
-                 <div key={idx} className="flex flex-col gap-1.5">
-                   <div className="flex items-center justify-between">
-                     <div className="flex items-center gap-2">
-                       <span className={`text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold ${idx === 0 ? 'bg-amber-100 text-amber-600' : idx === 1 ? 'bg-slate-100 text-slate-500' : idx === 2 ? 'bg-orange-50 text-orange-600' : 'text-slate-400'}`}>
-                         {idx + 1}
-                       </span>
-                       <span className="text-[11px] font-bold text-slate-700 truncate max-w-[120px]">{person.name}</span>
-                     </div>
-                     <span className="text-[11px] font-bold text-brand-blue tabular-nums">{person.total}</span>
-                   </div>
-                   <div className="w-full h-1 bg-slate-50 rounded-full overflow-hidden">
-                     <div 
-                       className={`h-full transition-all duration-1000 ${idx === 0 ? 'bg-blue-600' : idx < 3 ? 'bg-blue-400' : 'bg-slate-300'}`}
-                       style={{ width: `${(person.total / (withdrawerRanking[0]?.total || 1)) * 100}%` }}
-                     ></div>
-                   </div>
-                 </div>
-               ))
-             ) : (
-               <div className="flex flex-col items-center justify-center py-10 text-slate-300">
-                 <User className="w-8 h-8 mb-2 opacity-20" />
-                 <p className="text-[10px] font-bold uppercase">Sem registros</p>
-               </div>
-             )}
-           </div>
+        {/* Comparativo: Gastos Mensais por Equipe (Linear) [REMOVED AS PER SWAP, REPLACED BY PEÇAS QTD] */}
+        <div className="card flex flex-col scale-in">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col">
+              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Peças Retiradas por Equipe (Qtd)</h3>
+              <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Volume de saída no período</p>
+            </div>
+          </div>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={teamQuantities} margin={{ top: 15, right: 10, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 8, fill: '#64748B', fontWeight: 700 }} 
+                  interval={0}
+                  height={25}
+                />
+                <YAxis hide />
+                <Tooltip 
+                  cursor={{ fill: '#f8fafc' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '11px' }}
+                  formatter={(value: any) => [`${value} unidades`, 'Quantidade']}
+                />
+                <Bar 
+                  dataKey="quantidade" 
+                  fill="#3B82F6" 
+                  radius={[4, 4, 0, 0]} 
+                  barSize={18}
+                  label={{ 
+                    position: 'top', 
+                    fontSize: 10,
+                    fontWeight: 700,
+                    fill: '#475569'
+                  }}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Critical Alerts */}

@@ -19,6 +19,7 @@ export interface Material {
   localizacao?: string;
   ultimaMovimentacao?: string;
   detalhes?: string;
+  createdAt?: string;
 }
 
 export interface Colaborador {
@@ -134,9 +135,11 @@ export type ViewState =
 
 export const formatUnit = (unit: string | undefined | null): string => {
   if (!unit) return '';
-  const u = unit.toLowerCase().trim();
-  if (u === 'm') return 'MT';
-  if (u === 'l') return 'LT';
-  return u.toUpperCase();
+  const u = unit.toUpperCase().trim();
+  if (u === 'UN' || u === 'UM') return 'UNI';
+  if (u === 'GL') return 'GL';
+  if (u === 'SC') return 'SC';
+  if (u === 'M' || u === 'MT') return 'M3'; 
+  return u;
 };
 

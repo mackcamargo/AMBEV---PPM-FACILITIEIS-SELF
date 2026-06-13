@@ -21,6 +21,15 @@ export const ReportsView: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [reportSearchQuery, setReportSearchQuery] = useState('');
 
+  // Details Modal state
+  const [detailFilter, setDetailFilter] = useState<{
+    type: 'material' | 'equipe' | 'fornecedor';
+    id?: string;
+    name?: string;
+    title: string;
+    subtitle: string;
+  } | null>(null);
+
   // 1. Filter Movements based on active filters
   const filteredMovimentacoes = useMemo(() => {
     return movimentacoes.filter(m => {
@@ -358,11 +367,11 @@ export const ReportsView: React.FC = () => {
 
   // Report 3: Curva ABC de Materiais
   const curvaABCData = useMemo(() => {
-    const usage: Record<string, { sap: string; desc: string; valTotal: number; qtdTotal: number }> = {};
+    const usage: Record<string, { id: string; sap: string; desc: string; valTotal: number; qtdTotal: number }> = {};
     
     // Seed with all materials to ensure active tracking
     materiais.forEach(m => {
-      usage[m.id] = { sap: m.sap, desc: m.descricao, valTotal: 0, qtdTotal: 0 };
+      usage[m.id] = { id: m.id, sap: m.sap, desc: m.descricao, valTotal: 0, qtdTotal: 0 };
     });
 
     filteredMovimentacoes.filter(mov => mov.tipo === 'Retirada').forEach(mov => {
@@ -920,7 +929,21 @@ export const ReportsView: React.FC = () => {
                         </tr>
                       ) : (
                         inventarioData.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                          <tr 
+                            key={idx} 
+                            className="hover:bg-slate-50 transition-colors cursor-pointer"
+                            onClick={() => {
+                              const mat = materiais.find(m => m.sap === item.sap);
+                              if (mat) {
+                                setDetailFilter({
+                                  type: 'material',
+                                  id: mat.id,
+                                  title: mat.sap,
+                                  subtitle: mat.descricao
+                                });
+                              }
+                            }}
+                          >
                             <td className="px-4 py-3 font-mono font-medium text-slate-500 whitespace-nowrap">{item.sap}</td>
                             <td className="px-4 py-3 font-semibold text-slate-800">{item.descricao}</td>
                             <td className="px-4 py-3 whitespace-nowrap"><span className="p-1 px-2 text-[10px] font-extrabold uppercase rounded-full bg-slate-100 text-slate-600">{item.equipe}</span></td>
@@ -957,7 +980,16 @@ export const ReportsView: React.FC = () => {
                         </tr>
                       ) : (
                         equipeMovData.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                          <tr 
+                            key={idx} 
+                            className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                            onClick={() => setDetailFilter({
+                              type: 'equipe',
+                              name: item.equipe,
+                              title: `Equipe: ${item.equipe}`,
+                              subtitle: `Gestor: ${item.gestor}`
+                            })}
+                          >
                             <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">{item.equipe}</td>
                             <td className="px-4 py-3 font-mono text-slate-500 whitespace-nowrap">{item.centroCusto}</td>
                             <td className="px-4 py-3 text-slate-600 font-medium whitespace-nowrap">{item.gestor}</td>
@@ -994,7 +1026,16 @@ export const ReportsView: React.FC = () => {
                         </tr>
                       ) : (
                         curvaABCData.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                          <tr 
+                            key={idx} 
+                            className="hover:bg-slate-50 transition-colors cursor-pointer group/row"
+                            onClick={() => setDetailFilter({
+                              type: 'material',
+                              id: item.id,
+                              title: item.sap,
+                              subtitle: item.desc
+                            })}
+                          >
                             <td className="px-4 py-3 text-center whitespace-nowrap">
                               <span className={`inline-flex items-center justify-center font-black rounded-lg w-7 h-7 text-xs ${
                                 item.classe === 'A' ? 'bg-red-50 text-red-600 border border-red-100' :
@@ -1038,7 +1079,16 @@ export const ReportsView: React.FC = () => {
                         </tr>
                       ) : (
                         fornecedorPerformanceData.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                          <tr 
+                            key={idx} 
+                            className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                            onClick={() => setDetailFilter({
+                              type: 'fornecedor',
+                              name: item.nome,
+                              title: `Fornecedor: ${item.nome}`,
+                              subtitle: `Performance Global`
+                            })}
+                          >
                             <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">{item.nome}</td>
                             <td className="px-4 py-3 text-center font-semibold text-slate-600 whitespace-nowrap">{item.entries}</td>
                             <td className="px-4 py-3 text-center font-mono font-semibold text-slate-500 whitespace-nowrap">{item.volume}</td>
@@ -1073,7 +1123,16 @@ export const ReportsView: React.FC = () => {
                         </tr>
                       ) : (
                         auditoriaSaldoData.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                          <tr 
+                            key={idx} 
+                            className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                            onClick={() => setDetailFilter({
+                              type: 'equipe',
+                              name: item.equipe,
+                              title: `Equipe: ${item.equipe}`,
+                              subtitle: `Auditoria de Saldo - Gestor: ${item.gestor}`
+                            })}
+                          >
                             <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">{item.equipe}</td>
                             <td className="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">{item.gestor}</td>
                             <td className="px-4 py-3 text-right font-mono text-slate-500 whitespace-nowrap">R$ {item.verbaDestinada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
@@ -1176,6 +1235,128 @@ export const ReportsView: React.FC = () => {
         </div>
 
       </div>
+      {/* Details Modal */}
+      {detailFilter && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setDetailFilter(null)}></div>
+          <div className="relative bg-white w-full max-w-5xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
+                  <RefreshCw className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Histórico de Movimentações</h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[11px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase">{detailFilter.title}</span>
+                    <span className="text-xs text-slate-400 font-bold uppercase tracking-tight">• {detailFilter.subtitle}</span>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDetailFilter(null)}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-0 scrollbar-thin scrollbar-thumb-slate-200">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-md z-10">
+                  <tr>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-wider">Data/Hora</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-wider">Tipo</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-wider">Material / COD SAP</th>
+                    <th className="px-6 py-4 text-center text-[10px] font-black uppercase text-slate-400 tracking-wider">Qtd</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-wider">P. Unit.</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-wider">Total</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-wider">Colaborador / Equipe</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {movimentacoes
+                    .filter(mov => {
+                      if (detailFilter.type === 'material') {
+                        return mov.materialId === detailFilter.id || materiais.find(m => m.id === detailFilter.id)?.sap === mov.materialId;
+                      }
+                      if (detailFilter.type === 'equipe') {
+                        const mat = materiais.find(m => m.sap === mov.materialId || m.id === mov.materialId);
+                        return mov.equipe === detailFilter.name || mat?.equipe === detailFilter.name;
+                      }
+                      if (detailFilter.type === 'fornecedor') {
+                        return mov.fornecedor === detailFilter.name;
+                      }
+                      return false;
+                    })
+                    .sort((a, b) => new Date(b.data || 0).getTime() - new Date(a.data || 0).getTime())
+                    .map((mov) => {
+                      const total = (Number(mov.quantidade) || 0) * (Number(mov.precoUnitario) || 0);
+                      const mat = materiais.find(m => m.sap === mov.materialId || m.id === mov.materialId);
+                      return (
+                        <tr key={mov.id} className="hover:bg-slate-50 transition-colors group">
+                          <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold text-slate-600">
+                            {mov.data ? new Date(mov.data).toLocaleString('pt-BR') : '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${
+                              mov.tipo === 'Entrada' 
+                                ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+                                : 'bg-blue-50 text-blue-600 border border-blue-100'
+                            }`}>
+                              {mov.tipo}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-xs font-bold text-slate-700">{mat?.descricao || mov.materialDesc || '-'}</span>
+                              <span className="text-[10px] font-mono text-slate-400">{mat?.sap || mov.materialId}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center whitespace-nowrap text-xs font-bold text-slate-700">
+                            {mov.quantidade}
+                          </td>
+                          <td className="px-6 py-4 text-right whitespace-nowrap text-xs font-mono text-slate-500">
+                            R$ {(Number(mov.precoUnitario) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-6 py-4 text-right whitespace-nowrap text-xs font-mono font-bold text-slate-800">
+                            R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-xs font-bold text-slate-700">{mov.colaborador || '-'}</span>
+                              <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">{mov.equipe || mat?.equipe || '-'}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+              {movimentacoes.filter(mov => {
+                if (detailFilter.type === 'material') {
+                  return mov.materialId === detailFilter.id || materiais.find(m => m.id === detailFilter.id)?.sap === mov.materialId;
+                }
+                if (detailFilter.type === 'equipe') {
+                  const mat = materiais.find(m => m.sap === mov.materialId || m.id === mov.materialId);
+                  return mov.equipe === detailFilter.name || mat?.equipe === detailFilter.name;
+                }
+                if (detailFilter.type === 'fornecedor') {
+                  return mov.fornecedor === detailFilter.name;
+                }
+                return false;
+              }).length === 0 && (
+                <div className="py-20 text-center">
+                  <Info className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+                  <p className="text-slate-400 font-bold uppercase tracking-wider text-xs">Nenhuma movimentação histórica encontrada.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

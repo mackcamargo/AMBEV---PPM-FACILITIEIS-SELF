@@ -18,13 +18,13 @@
 @layer base {
   body {
     @apply font-sans text-brand-text bg-brand-light antialiased;
-    font-size: 12px;
+    font-size: 14px;
   }
 }
 
 @layer components {
   .sidebar-item {
-    @apply flex items-center gap-2.5 px-5 py-2 text-[12px] transition-all cursor-pointer border-l-2 border-transparent text-slate-400 hover:text-white hover:bg-white/5;
+    @apply flex items-center gap-2 px-4 py-2.5 text-[13px] transition-all cursor-pointer border-l-2 border-transparent text-slate-400 hover:text-white hover:bg-white/5 whitespace-normal;
   }
   
   .sidebar-item.active {
@@ -32,35 +32,35 @@
   }
   
   .card {
-    @apply bg-white border border-brand-border rounded-md shadow-none p-3;
+    @apply bg-white border border-brand-border rounded-md shadow-none p-4;
   }
   
   .table-header {
-    @apply text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-4 py-2.5 bg-slate-50 border-b border-brand-border;
+    @apply text-[12px] font-bold text-slate-600 uppercase tracking-wider px-4 py-3 bg-slate-50 border-b border-brand-border;
   }
   
   .table-row {
-    @apply hover:bg-slate-50/50 transition-colors text-[12px];
+    @apply hover:bg-slate-50/5 transition-colors text-[13px];
   }
   
   .table-row td {
-    @apply border-b border-slate-100;
+    @apply border-b border-slate-100 py-3;
   }
   
   .input-field {
-    @apply w-full h-8 px-2 text-[12px] bg-white border border-brand-border rounded focus:outline-none focus:ring-1 focus:ring-brand-accent transition-all;
+    @apply w-full h-10 px-3 text-[14px] bg-white border border-brand-border rounded focus:outline-none focus:ring-1 focus:ring-brand-accent transition-all;
   }
   
   .btn-primary {
-    @apply h-8 px-4 bg-brand-dark text-white text-[12px] font-medium rounded hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply h-10 px-5 bg-brand-dark text-white text-[13px] font-bold rounded hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide;
   }
   
   .btn-secondary {
-    @apply h-8 px-4 border border-brand-border bg-white text-slate-700 text-[12px] font-medium rounded hover:bg-slate-50 transition-colors;
+    @apply h-10 px-5 border border-brand-border bg-white text-slate-700 text-[13px] font-bold rounded hover:bg-slate-50 transition-colors uppercase tracking-wide;
   }
 
   .status-pill {
-    @apply px-2 py-0.5 rounded-full text-[10px] font-bold uppercase;
+    @apply px-2.5 py-1 rounded-full text-[11px] font-black uppercase;
   }
   
   .scrollbar-hide::-webkit-scrollbar {
@@ -73,15 +73,15 @@
   }
   
   .pill-ok {
-    @apply bg-emerald-100/80 text-emerald-700;
+    @apply bg-emerald-500 text-white shadow-sm;
   }
   
   .pill-warn {
-    @apply bg-amber-100/80 text-amber-700;
+    @apply bg-amber-500 text-white shadow-sm;
   }
   
   .pill-crit {
-    @apply bg-red-100/80 text-red-700;
+    @apply bg-red-500 text-white shadow-sm;
   }
 }
 
@@ -149,6 +149,34 @@
   animation: custom-blink 1.5s ease-in-out infinite;
   display: inline-block;
   transform-origin: center;
+}
+
+@keyframes intense-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+    filter: brightness(1.2);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+    box-shadow: 0 0 0 12px rgba(37, 99, 235, 0);
+    filter: brightness(1);
+  }
+}
+
+.animate-intense-pulse {
+  animation: intense-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes blink-red {
+  0%, 100% { opacity: 1; color: #dc2626; }
+  50% { opacity: 0.1; color: #dc2626; }
+}
+
+.animate-blink-red {
+  animation: blink-red 1.5s ease-in-out infinite;
 }
 
 

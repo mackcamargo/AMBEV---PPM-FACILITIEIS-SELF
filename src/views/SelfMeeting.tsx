@@ -5,7 +5,7 @@ import { Material, Equipe, AtaReuniao, Movimentacao, formatUnit } from '../types
 import { Save, AlertCircle, ShoppingCart, Plus, Trash2, Download, Mail, Share2 } from 'lucide-react';
 
 export const SelfMeeting: React.FC = () => {
-  const { materiais, equipes, setEquipes, setAtas, addMovimentacao, colaboradores, updateMaterial } = useApp();
+  const { materiais, equipes, setEquipes, setAtas, addMovimentacao, colaboradores, updateMaterial, updateEquipe } = useApp();
   
   // Local state for shopping list items: { materialId: quantity }
   const [compras, setCompras] = useState<Record<string, number>>(() => {
@@ -21,6 +21,7 @@ export const SelfMeeting: React.FC = () => {
 
   // Inline editing for Min/Ideal values
   const [editingStock, setEditingStock] = useState<{ id: string, field: 'min' | 'ideal' | 'atual', value: string } | null>(null);
+  const [editingBudget, setEditingBudget] = useState<{ id: string, value: string } | null>(null);
   
   // New Timer State
   const [elapsed, setElapsed] = useState(0);
@@ -62,7 +63,22 @@ export const SelfMeeting: React.FC = () => {
   
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const tableContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleShortcut = (e: KeyboardEvent) => {
+      // Check if user is not already in an input/textarea
+      const isInput = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '');
+      
+      if (e.shiftKey && e.key.toLowerCase() === 'f' && !isInput) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, []);
 
   // Reset scroll position to top when selected team changes
   useEffect(() => {
@@ -104,6 +120,17 @@ export const SelfMeeting: React.FC = () => {
       qtdComprar: compras[m.id] || 0,
       subtotal: (compras[m.id] || 0) * m.precoUnitario
     }));
+
+  // Auto-focus first item when team is selected
+  useEffect(() => {
+    if (selectedTeam && tableData.length > 0) {
+      const firstItem = tableData[0];
+      setActiveRowId(firstItem.id);
+      setTimeout(() => {
+        buttonRefs.current[firstItem.id]?.focus();
+      }, 100);
+    }
+  }, [selectedTeam]);
 
   // Calculate totals per team based on all materials in compras (unfiltered)
   const impactPerTeam = useMemo(() => {
@@ -276,6 +303,7 @@ export const SelfMeeting: React.FC = () => {
         const m = materiais.find(mat => mat.id === id);
         return {
           COD_SAP: m?.sap,
+          Equipe: m?.equipe,
           Descricao: m?.descricao,
           Quantidade: q,
           Unidade: formatUnit(m?.unidade),
@@ -284,20 +312,20 @@ export const SelfMeeting: React.FC = () => {
         };
       });
 
-    const headers = ['COD SAP', 'Descrição', 'Quantidade', 'Unidade', 'Preço Unit.', 'Subtotal'];
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade', 'Preço Unit.', 'Subtotal'];
     const csvRows = [
       headers.join(';'),
-      ...items.flatMap(row => [
+      ...items.map(row => 
         [
           row.COD_SAP,
+          row.Equipe,
           `"${row.Descricao}"`,
           row.Quantidade,
           row.Unidade,
           row.PrecoUnit?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
           row.Subtotal?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-        ].join(';'),
-        '' // Pula uma linha entre registros
-      ])
+        ].join(';')
+      )
     ];
 
     const csvContent = "\uFEFF" + csvRows.join('\n');
@@ -338,16 +366,19 @@ export const SelfMeeting: React.FC = () => {
       e.preventDefault();
       const nextItem = tableData[index + 1];
       if (nextItem) {
+        setActiveRowId(nextItem.id);
         buttonRefs.current[nextItem.id]?.focus();
       }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       const prevItem = tableData[index - 1];
       if (prevItem) {
+        setActiveRowId(prevItem.id);
         buttonRefs.current[prevItem.id]?.focus();
       }
     } else if (e.key === 'Enter') {
       e.preventDefault();
+      setActiveRowId(id);
       // Ensure it's marked as SIM (autofill) if it's currently at 0
       if (item.qtdComprar === 0) {
         const needed = Math.max(1, (item.estoqueIdeal || 0) - item.estoqueAtual);
@@ -369,12 +400,31 @@ export const SelfMeeting: React.FC = () => {
       e.preventDefault();
       const nextItem = tableData[index + 1];
       if (nextItem) {
+        setActiveRowId(nextItem.id);
         buttonRefs.current[nextItem.id]?.focus();
       }
     }
   };
 
   const isInvalid = equipes.some(e => (e.saldoAtualizado - (impactPerTeam[e.nome] || 0)) < 0);
+
+  // Row highlighting state
+  const [activeRowId, setActiveRowId] = useState<string | null>(null);
+
+  const handleBudgetUpdate = (id: string, newVerbaStr: string) => {
+    const equipe = equipes.find(eq => eq.id === id);
+    if (!equipe) return;
+    
+    const newVerba = Number(newVerbaStr) || 0;
+    const delta = newVerba - (equipe.verbaDestinada || 0);
+    const newSaldo = (equipe.saldoAtualizado || 0) + delta;
+    
+    updateEquipe(id, { 
+      verbaDestinada: newVerba,
+      saldoAtualizado: newSaldo
+    });
+    setEditingBudget(null);
+  };
 
   const handleOuterClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -391,251 +441,284 @@ export const SelfMeeting: React.FC = () => {
       <div className="flex flex-col h-full overflow-hidden p-5" onClick={handleOuterClick}>
         {/* Fixed Header Content (Sticky) */}
         <div className="bg-slate-50 shrink-0 z-20 pb-1 space-y-4">
-          {/* Budget Grid */}
-          <div className="flex overflow-x-auto sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 pb-2 sm:pb-0 shrink-0 snap-x scrollbar-hide">
-            {/* Todas as Equipes Card */}
-            <div 
-              onClick={() => setSelectedTeam(null)}
-              className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${selectedTeam === null ? 'ring-2 ring-slate-800 ring-offset-2 bg-slate-50/50' : 'bg-white'}`} 
-              style={{ borderLeftColor: '#475569' }}
-            >
-              <div className="flex justify-between items-center bg-transparent">
-                <p className="text-[10px] font-extrabold text-black uppercase tracking-wider">Todas as Equipes</p>
-                {selectedTeam === null && <div className="w-2.5 h-2.5 rounded-full bg-slate-600 animate-pulse" />}
-              </div>
-              <div className="mt-1">
+        {/* Budget Grid */}
+        <div className="flex overflow-x-auto sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 pb-2 sm:pb-0 shrink-0 snap-x scrollbar-hide">
+          {/* Todas as Equipes Card */}
+          <div 
+            onClick={() => setSelectedTeam(null)}
+            className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${selectedTeam === null ? 'ring-2 ring-slate-800 ring-offset-2 bg-slate-50/50' : 'bg-white'}`} 
+            style={{ borderLeftColor: '#475569' }}
+          >
+            <div className="flex justify-between items-center bg-transparent">
+              <p className="text-[10px] font-extrabold text-black uppercase tracking-wider">Todas as Equipes</p>
+              {selectedTeam === null && <div className="w-2.5 h-2.5 rounded-full bg-slate-600 animate-pulse" />}
+            </div>
+            <div className="mt-1 flex justify-between items-end">
+              <div>
                 <p className="text-[9px] text-slate-500 uppercase">Verba Inicial</p>
-                <p className="text-sm font-bold text-slate-800">R$ {totalSaldoEquipes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm font-bold text-slate-800">R${totalSaldoEquipes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
               </div>
-              <div className="mt-2">
-                <p className="text-[9px] text-slate-500 uppercase">Gasto Previsto</p>
-                <p className={`text-sm font-semibold ${totalGeral > 0 ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
-                   R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              <div className="text-right">
+                <p className="text-[9px] text-slate-500 uppercase font-bold">Saldo</p>
+                <p className={`text-sm font-black ${(totalSaldoEquipes - totalGeral) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                  R${(totalSaldoEquipes - totalGeral).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                {/* Barra de progresso geral */}
-                <div className="w-full h-1.5 bg-slate-100/80 rounded-full mt-2 overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-500 rounded-full ${(totalSaldoEquipes - totalGeral) < 0 ? 'bg-red-500' : ((totalGeral / (totalSaldoEquipes || 1)) >= 0.8 ? 'bg-orange-500' : 'bg-emerald-500')}`}
-                    style={{ 
-                      width: `${totalGeral > 0 ? Math.max(12, Math.min(100, (totalGeral / (totalSaldoEquipes || 1)) * 100)) : 0}%`
-                    }}
-                  />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-[9px] text-slate-500 uppercase">Gasto Previsto</p>
+              <p className={`text-sm font-semibold ${totalGeral > 0 ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
+                 R${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              {/* Barra de progresso geral */}
+              <div className="w-full h-1.5 bg-slate-100/80 rounded-full mt-2 overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-500 rounded-full ${(totalSaldoEquipes - totalGeral) < 0 ? 'bg-red-500' : ((totalGeral / (totalSaldoEquipes || 1)) >= 0.8 ? 'bg-orange-500' : 'bg-emerald-500')}`}
+                  style={{ 
+                    width: `${totalGeral > 0 ? Math.max(12, Math.min(100, (totalGeral / (totalSaldoEquipes || 1)) * 100)) : 0}%`
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {equipes?.map((e, idx) => {
+            const impact = impactPerTeam[e.nome] || 0;
+            const novoSaldo = (e.saldoAtualizado || 0) - impact;
+            const isNegative = novoSaldo < 0;
+            const isSelected = selectedTeam === e.nome;
+
+            return (
+              <div 
+                key={e.id || `equipe-${idx}`} 
+                onClick={() => setSelectedTeam(isSelected ? null : e.nome)}
+                className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`} 
+                style={{ borderLeftColor: e.cor }}
+              >
+                <div className="flex justify-between items-center bg-transparent">
+                  <p className="text-[9px] font-extrabold text-black uppercase tracking-wider">{e.nome}</p>
+                  {e.nome === 'Pintura' && isTimerRunning && (
+                    <div className="text-[9px] text-emerald-600 font-extrabold animate-pulse">
+                      {formatTime(elapsed)}
+                    </div>
+                  )}
+                  {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />}
                 </div>
+                <div className="mt-1 flex justify-between items-end">
+                  <div>
+                    <p className="text-[8px] text-slate-500 uppercase font-bold">Verba Inicial</p>
+                    {editingBudget?.id === e.id ? (
+                      <input
+                        autoFocus
+                        type="number"
+                        className="w-full text-[11px] font-bold text-slate-700 bg-white border border-blue-500 rounded px-1 outline-none mt-1"
+                        value={editingBudget.value}
+                        onChange={(ev) => setEditingBudget({ ...editingBudget, value: ev.target.value })}
+                        onBlur={() => handleBudgetUpdate(e.id, editingBudget.value)}
+                        onKeyDown={(ev) => {
+                          if (ev.key === 'Enter') handleBudgetUpdate(e.id, editingBudget.value);
+                          if (ev.key === 'Escape') setEditingBudget(null);
+                        }}
+                        onClick={(ev) => ev.stopPropagation()}
+                      />
+                    ) : (
+                      <p 
+                        className="text-[11px] font-bold text-slate-700 cursor-edit hover:text-blue-600 transition-colors"
+                        onDoubleClick={(ev) => {
+                          ev.stopPropagation();
+                          setEditingBudget({ id: e.id, value: e.verbaDestinada.toString() });
+                        }}
+                        title="Duplo clique para editar verba inicial"
+                      >
+                        R${e.verbaDestinada?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[8px] text-slate-500 uppercase font-bold">Saldo</p>
+                    <p className={`text-[11px] font-black ${novoSaldo < 0 ? 'text-red-600' : 'text-emerald-600'}`}>R${novoSaldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <p className="text-[8px] text-slate-500 uppercase font-bold">Gasto Previsto</p>
+                  <p className={`text-xs font-semibold ${impact > 0 ? 'text-blue-600 font-black' : 'text-slate-400 font-medium'}`}>
+                     R${impact.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  {/* Barra de progresso do gasto */}
+                  <div className="w-full h-1 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
+                    <div 
+                      className="h-full transition-all duration-500 rounded-full"
+                      style={{ 
+                        width: `${impact > 0 ? Math.max(12, Math.min(100, (impact / (e.saldoAtualizado || 1)) * 100)) : 0}%`,
+                        backgroundColor: isNegative ? '#EF4444' : ((impact / (e.saldoAtualizado || 1)) >= 0.8 ? '#F97316' : '#10B981')
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        </div>
+
+        {/* Decision Table */}
+        <div className="card !p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="p-3 lg:p-4 border-b border-brand-border flex flex-col gap-4 shrink-0 bg-slate-50/30">
+            {/* Base Header */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-[11px] font-black text-black uppercase tracking-widest flex items-center gap-2">
+                <div className={`w-1.5 h-4 rounded-full ${selectedTeam ? 'bg-blue-600' : 'bg-slate-800'}`} />
+                Área de Decisão de Compras {selectedTeam ? ` - ${selectedTeam}` : ' - Todas as Equipes'}
+              </h3>
+              <div className="text-right shrink-0">
+                <p className="text-[9px] text-slate-400 uppercase font-black leading-none mb-0.5">
+                  {selectedTeam ? `Pedido (${selectedTeam})` : 'Pedido (Todas)'}
+                </p>
+                <p className={`text-xl font-black tabular-nums transition-colors animate-pulse ${isInvalid ? 'text-red-600' : 'text-blue-600'}`}>
+                  R$ {totalExibido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
               </div>
             </div>
 
-            {equipes?.map((e, idx) => {
-              const impact = impactPerTeam[e.nome] || 0;
-              const novoSaldo = (e.saldoAtualizado || 0) - impact;
-              const isNegative = novoSaldo < 0;
-              const isSelected = selectedTeam === e.nome;
-
-              return (
-                <div 
-                  key={e.id || `equipe-${idx}`} 
-                  onClick={() => setSelectedTeam(isSelected ? null : e.nome)}
-                  className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`} 
-                  style={{ borderLeftColor: e.cor }}
-                >
-                  <div className="flex justify-between items-center bg-transparent">
-                    <p className="text-[9px] font-extrabold text-black uppercase tracking-wider">{e.nome}</p>
-                    {e.nome === 'Pintura' && isTimerRunning && (
-                      <div className="text-[9px] text-emerald-600 font-extrabold animate-pulse">
-                        {formatTime(elapsed)}
-                      </div>
-                    )}
-                    {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />}
+            {/* Search and Filters Strip */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-100 shrink-0">
+              <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center gap-2">
+                <div className="flex flex-col gap-2 flex-1 max-w-xs">
+                  {/* Primeiro campo: Busca Externa */}
+                  <div className="relative group w-full">
+                    <form 
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (externalSearchTerm.trim()) {
+                          window.open(`https://www.google.com/search?q=${encodeURIComponent(externalSearchTerm)}`, '_blank');
+                        }
+                      }}
+                      className="relative group w-full h-8"
+                    >
+                        <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                          <svg className="w-3 h-3 text-emerald-600 group-focus-within:text-emerald-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                        </div>
+                        <input 
+                          type="text" 
+                          placeholder="Busca Externa: Pesquisar no Google..."
+                          className="w-full pl-8 pr-16 py-1 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/10 rounded-lg text-[9px] font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-medium transition-all h-8"
+                          value={externalSearchTerm}
+                          onChange={(e) => setExternalSearchTerm(e.target.value)}
+                        />
+                        <div className="absolute inset-y-0 right-0 pr-1 flex items-center gap-1">
+                          {externalSearchTerm && (
+                            <button 
+                              type="button"
+                              onClick={() => setExternalSearchTerm('')}
+                              className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer p-1"
+                            >
+                              <Trash2 className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                          <button 
+                            type="submit"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[8px] font-black uppercase tracking-wider px-2 py-0.5 transition-all h-6 flex items-center justify-center cursor-pointer select-none active:scale-95"
+                          >
+                            Ir
+                          </button>
+                        </div>
+                    </form>
                   </div>
-                  <div className="mt-1 flex justify-between items-end">
-                    <div>
-                      <p className="text-[8px] text-slate-500 uppercase font-bold">Verba Inicial</p>
-                      <p className="text-[11px] font-bold text-slate-700">R$ {e.verbaDestinada?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[8px] text-slate-500 uppercase font-bold">Saldo</p>
-                      <p className={`text-[11px] font-black ${(e.saldoAtualizado || 0) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>R$ {e.saldoAtualizado?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                    </div>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-[8px] text-slate-500 uppercase font-bold">Gasto Previsto</p>
-                    <p className={`text-xs font-semibold ${impact > 0 ? 'text-blue-600 font-black' : 'text-slate-400 font-medium'}`}>
-                       R$ {impact.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    {/* Barra de progresso do gasto */}
-                    <div className="w-full h-1 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
-                      <div 
-                        className="h-full transition-all duration-500 rounded-full"
-                        style={{ 
-                          width: `${impact > 0 ? Math.max(12, Math.min(100, (impact / (e.saldoAtualizado || 1)) * 100)) : 0}%`,
-                          backgroundColor: isNegative ? '#EF4444' : ((impact / (e.saldoAtualizado || 1)) >= 0.8 ? '#F97316' : '#10B981')
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
 
-          {/* Header com pesquisa e botôes */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-100">
-            <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center gap-2">
-              <div className="flex flex-col gap-2 flex-1 max-w-xs">
-                {/* Primeiro campo: busca interna */}
-                <div className="relative group w-full">
-                    <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                      <svg className="w-3 h-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                    <input 
-                      type="text" 
-                      placeholder="Pesquisar material, COD SAP..."
-                      className="w-full pl-8 pr-4 py-1 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500/10 rounded-lg text-[9px] font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-medium transition-all h-8"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    {searchTerm && (
-                      <button 
-                        onClick={() => setSearchTerm('')}
-                        className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-2.5 h-2.5" />
-                      </button>
-                    )}
-                </div>
-
-                {/* Segundo campo: Busca Externa */}
-                <div className="relative group w-full">
-                  <form 
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (externalSearchTerm.trim()) {
-                        window.open(`https://www.google.com/search?q=${encodeURIComponent(externalSearchTerm)}`, '_blank');
-                      }
-                    }}
-                    className="relative group w-full h-8"
-                  >
+                  {/* Segundo campo: busca interna */}
+                  <div className="relative group w-full">
                       <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                        <svg className="w-3 h-3 text-emerald-600 group-focus-within:text-emerald-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                       </div>
                       <input 
+                        ref={searchInputRef}
                         type="text" 
-                        placeholder="Busca Externa: Pesquisar no Google..."
-                        className="w-full pl-8 pr-16 py-1 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/10 rounded-lg text-[9px] font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-medium transition-all h-8"
-                        value={externalSearchTerm}
-                        onChange={(e) => setExternalSearchTerm(e.target.value)}
+                        placeholder="Pesquisar material, COD SAP..."
+                        className="w-full pl-8 pr-4 py-1 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500/10 rounded-lg text-[9px] font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-medium transition-all h-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                       />
-                      <div className="absolute inset-y-0 right-0 pr-1 flex items-center gap-1">
-                        {externalSearchTerm && (
-                          <button 
-                            type="button"
-                            onClick={() => setExternalSearchTerm('')}
-                            className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer p-1"
-                          >
-                            <Trash2 className="w-2.5 h-2.5" />
-                          </button>
-                        )}
+                      {searchTerm && (
                         <button 
-                          type="submit"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[8px] font-black uppercase tracking-wider px-2 py-0.5 transition-all h-6 flex items-center justify-center cursor-pointer select-none active:scale-95"
+                          onClick={() => setSearchTerm('')}
+                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
                         >
-                          Ir
+                          <Trash2 className="w-2.5 h-2.5" />
                         </button>
-                      </div>
-                  </form>
+                      )}
+                  </div>
+                </div>
+
+                {/* Status Filter Chips */}
+                <div className="flex items-center bg-slate-50 p-0.5 rounded-lg border border-slate-200">
+                  <button 
+                    onClick={() => setFilterStatus('TODOS')}
+                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all ${filterStatus === 'TODOS' ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    Todos
+                  </button>
+                  <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
+                  <button 
+                    onClick={() => setFilterStatus('ZERADO')}
+                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatus === 'ZERADO' ? 'bg-white shadow-sm text-red-600 border border-red-100' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatus === 'ZERADO' ? 'bg-red-500 animate-pulse' : 'bg-slate-300'}`} />
+                    Zerados
+                  </button>
+                  <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
+                  <button 
+                    onClick={() => setFilterStatus('CRITICO')}
+                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatus === 'CRITICO' ? 'bg-white shadow-sm text-amber-600 border border-amber-100' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatus === 'CRITICO' ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`} />
+                    Estoque Baixo
+                  </button>
+                  <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
+                  <button 
+                    onClick={() => setFilterStatus('OK')}
+                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatus === 'OK' ? 'bg-white shadow-sm text-emerald-600 border border-emerald-100' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatus === 'OK' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                    Estoque OK
+                  </button>
                 </div>
               </div>
 
-              {/* Status Filter Chips */}
-              <div className="flex items-center bg-slate-50 p-0.5 rounded-lg border border-slate-200">
-                <button 
-                  onClick={() => setFilterStatus('TODOS')}
-                  className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all ${filterStatus === 'TODOS' ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                  Todos
-                </button>
-                <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
-                <button 
-                  onClick={() => setFilterStatus('ZERADO')}
-                  className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatus === 'ZERADO' ? 'bg-white shadow-sm text-red-600 border border-red-100' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                  <div className={`w-1.5 h-1.5 rounded-full ${filterStatus === 'ZERADO' ? 'bg-red-500 animate-pulse' : 'bg-slate-300'}`} />
-                  Zerados
-                </button>
-                <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
-                <button 
-                  onClick={() => setFilterStatus('CRITICO')}
-                  className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatus === 'CRITICO' ? 'bg-white shadow-sm text-amber-600 border border-amber-100' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                  <div className={`w-1.5 h-1.5 rounded-full ${filterStatus === 'CRITICO' ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`} />
-                  Estoque Baixo
-                </button>
-                <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
-                <button 
-                  onClick={() => setFilterStatus('OK')}
-                  className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatus === 'OK' ? 'bg-white shadow-sm text-emerald-600 border border-emerald-100' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                  <div className={`w-1.5 h-1.5 rounded-full ${filterStatus === 'OK' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-                  Estoque OK
-                </button>
+              <div className="flex items-center gap-2 w-full lg:w-auto mt-2 lg:mt-0">
+                  <div className="flex items-center gap-2 w-full md:w-auto">
+                    {/* Limpar Lista */}
+                    <button 
+                      onClick={() => setShowConfirmClear(true)}
+                      disabled={totalGeral === 0}
+                      className="flex-1 md:flex-none px-3 py-1.5 border border-emerald-600 hover:bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Limpar Lista</span>
+                    </button>
+
+                    <button 
+                      onClick={handleNovaReuniaoClick}
+                      className="flex-1 md:flex-none px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Nova Reunião</span>
+                    </button>
+
+                    <button 
+                      onClick={handleSaveReuniao}
+                      disabled={totalGeral === 0}
+                      className="flex-1 md:flex-none px-3 py-1.5 bg-slate-900 hover:bg-black text-white border border-slate-900 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Salvar Reunião</span>
+                    </button>
+                  </div>
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 w-full lg:w-auto mt-2 lg:mt-0">
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                  {/* Limpar Lista */}
-                  <button 
-                    onClick={() => setShowConfirmClear(true)}
-                    disabled={totalGeral === 0}
-                    className="flex-1 md:flex-none px-3 py-1.5 border border-emerald-600 hover:bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Limpar Lista</span>
-                  </button>
-
-                  <button 
-                    onClick={handleNovaReuniaoClick}
-                    className="flex-1 md:flex-none px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Nova Reunião</span>
-                  </button>
-
-                  <button 
-                    onClick={handleSaveReuniao}
-                    disabled={totalGeral === 0}
-                    className="flex-1 md:flex-none px-3 py-1.5 bg-slate-900 hover:bg-black text-white border border-slate-900 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    <span>Salvar Reunião</span>
-                  </button>
-                </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Divisor Visual Sutil */}
-        <div className="w-full h-0.5 bg-slate-100 animate-pulse my-4" />
-
-        {/* Decision Table */}
-        <div className="card !p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="p-4 border-b border-brand-border flex items-center justify-between shrink-0 bg-slate-50/30">
-            <h3 className="text-[11px] font-black text-black uppercase tracking-widest flex items-center gap-2">
-              <div className={`w-1.5 h-4 rounded-full ${selectedTeam ? 'bg-blue-600' : 'bg-slate-800'}`} />
-              Área de Decisão de Compras {selectedTeam ? ` - ${selectedTeam}` : ' - Todas as Equipes'}
-            </h3>
-            <div className="flex items-center gap-4">
-               <div className="text-right shrink-0">
-                  <p className="text-[9px] text-slate-400 uppercase font-black leading-none mb-0.5">
-                    {selectedTeam ? `Pedido (${selectedTeam})` : 'Pedido (Todas)'}
-                  </p>
-                  <p className={`text-xl font-black tabular-nums transition-colors animate-pulse ${isInvalid ? 'text-red-600' : 'text-blue-600'}`}>
-                    R$ {totalExibido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
             </div>
           </div>
 
@@ -651,177 +734,211 @@ export const SelfMeeting: React.FC = () => {
             <table className="w-full text-left">
               <thead className="sticky top-0 z-20 bg-slate-50 shadow-[0_1px_0_rgba(15,23,42,0.06)]">
                 <tr className="bg-slate-50">
-                  <th className="table-header">COD SAP</th>
-                  <th className="table-header">Cód. Forn.</th>
-                  <th className="table-header">Material</th>
-                  <th className="table-header">Local</th>
-                  <th className="table-header">Estoque</th>
-                  <th className="table-header">Mín/Ideal</th>
-                  <th className="table-header">Status</th>
-                  <th className="table-header">Comprar?</th>
-                  <th className="table-header text-right">Preço Un.</th>
-                  <th className="table-header w-24">Qtd Comprar</th>
-                  <th className="table-header text-right">Subtotal</th>
+                  <th className="table-header !px-4 border-b border-slate-100">COD SAP</th>
+                  <th className="table-header !px-4 border-b border-slate-100">Cód. Forn.</th>
+                  <th className="table-header !px-4 border-b border-slate-100">Material</th>
+                  <th className="table-header !px-4 text-right border-b border-slate-100">Local</th>
+                  <th className="table-header !px-4 text-right border-b border-slate-100">Estoque</th>
+                  <th className="table-header !px-4 text-right border-b border-slate-100">Mín/Ideal</th>
+                  <th className="table-header !px-4 text-center border-b border-slate-100">Status</th>
+                  <th className="table-header !px-4 text-center border-b border-slate-100">Comprar?</th>
+                  <th className="table-header !px-4 text-right border-b border-slate-100">Preço Un.</th>
+                  <th className="table-header !px-4 text-right w-24 border-b border-slate-100">Qtd Comprar</th>
+                  <th className="table-header !px-4 text-right border-b border-slate-100">Subtotal</th>
                 </tr>
               </thead>
               <tbody>
-                {tableData.length === 0 && (
+                {tableData.length === 0 ? (
                   <tr>
                     <td colSpan={11} className="px-4 py-8 text-center text-slate-500 font-medium bg-slate-50/50">
                       Nenhum material encontrado com os filtros atuais.
                     </td>
                   </tr>
-                )}
-                {tableData.map((item, index) => (
-                  <tr key={item.id} className="table-row">
-                    <td className="px-2 py-1.5 font-mono text-slate-500 text-[9px]">{item.sap}</td>
-                    <td className="px-2 py-1.5 font-mono text-[8px] text-slate-400">{item.codigoFornecedor || '-'}</td>
-                    <td className="px-2 py-1.5">
-                      <p className="font-bold text-slate-800 text-[10px] leading-tight">{item.descricao}</p>
-                      <div className="flex gap-1.5 items-center">
-                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">{item.equipe}</p>
-                        {item.ultimaMovimentacao && (
-                          <p className="text-[7.5px] text-slate-300 font-normal">| {item.ultimaMovimentacao}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-2 py-1.5 text-[8px] text-slate-500 font-bold uppercase tracking-tighter">{item.localizacao || '-'}</td>
-                    <td className="px-2 py-1.5 text-[9px] text-slate-600 font-medium">
-                      {editingStock?.id === item.id && editingStock?.field === 'atual' ? (
-                        <input
-                          autoFocus
-                          className="w-10 h-4 bg-white border border-blue-500 rounded text-center text-slate-900 outline-none"
-                          value={editingStock.value}
-                          onChange={(e) => setEditingStock({ ...editingStock, value: e.target.value })}
-                          onBlur={() => {
-                            updateMaterial(item.id, { estoqueAtual: Number(editingStock.value) || 0 });
-                            setEditingStock(null);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
+                ) : (
+                  tableData.map((item, index) => {
+                    const isActive = activeRowId === item.id;
+                    return (
+                      <tr 
+                        key={item.id} 
+                        onClick={() => setActiveRowId(item.id)}
+                        className={`table-row group transition-all duration-200 cursor-pointer relative ${
+                          isActive 
+                            ? 'bg-blue-50/70 shadow-[inset_0_2px_0_0_#1e3a8a,inset_0_-2px_0_0_#1e3a8a] z-10' 
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <td className={`px-4 py-3 font-mono text-[11px] border-b transition-all ${isActive ? 'text-blue-900 font-black border-blue-900/10' : 'text-slate-500 border-slate-200'}`}>
+                          {item.sap}
+                        </td>
+                        <td className={`px-4 py-3 font-mono text-[10px] border-b transition-all ${isActive ? 'text-blue-800 font-bold border-blue-900/10' : 'text-slate-400 border-slate-200'}`}>
+                          {item.codigoFornecedor || '-'}
+                        </td>
+                        <td className={`px-4 py-3 border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                          <p className={`font-bold text-[12px] leading-tight mb-0.5 ${isActive ? 'text-blue-950' : 'text-slate-800'}`}>{item.descricao}</p>
+                          <div className="flex gap-2 items-center">
+                            <p className={`text-[10px] font-bold uppercase tracking-tighter px-1 rounded-sm ${isActive ? 'bg-blue-900 text-white' : 'bg-slate-100 text-slate-400'}`}>{item.equipe}</p>
+                            {item.ultimaMovimentacao && (
+                              <p className={`text-[9.5px] font-normal ${isActive ? 'text-blue-400' : 'text-slate-300'}`}>| {item.ultimaMovimentacao}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className={`px-4 py-3 text-[11px] font-bold uppercase tracking-tighter text-right border-b transition-all ${isActive ? 'text-blue-900 border-blue-900/10' : 'text-slate-500 border-slate-200'}`}>{item.localizacao || '-'}</td>
+                        <td className={`px-4 py-3 text-[11px] font-medium text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                        {editingStock?.id === item.id && editingStock?.field === 'atual' ? (
+                          <input
+                            autoFocus
+                            className="w-10 h-4 bg-white border border-blue-500 rounded text-center text-slate-900 outline-none ml-auto"
+                            value={editingStock.value}
+                            onChange={(e) => setEditingStock({ ...editingStock, value: e.target.value })}
+                            onBlur={() => {
                               updateMaterial(item.id, { estoqueAtual: Number(editingStock.value) || 0 });
                               setEditingStock(null);
-                            }
-                            if (e.key === 'Escape') setEditingStock(null);
-                          }}
-                        />
-                      ) : (
-                        <span 
-                          onDoubleClick={() => setEditingStock({ id: item.id, field: 'atual', value: item.estoqueAtual.toString() })}
-                          className="cursor-edit hover:text-blue-600 transition-colors"
-                          title="Duplo clique para editar estoque atual"
-                        >
-                          {item.estoqueAtual} {formatUnit(item.unidade)}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-2 py-1.5 text-[8.5px] text-slate-400 font-medium">
-                      <div className="flex items-center gap-1">
-                        {editingStock?.id === item.id && editingStock?.field === 'min' ? (
-                          <input
-                            autoFocus
-                            className="w-8 h-4 bg-white border border-blue-500 rounded text-center text-slate-900 outline-none"
-                            value={editingStock.value}
-                            onChange={(e) => setEditingStock({ ...editingStock, value: e.target.value })}
-                            onBlur={() => {
-                              updateMaterial(item.id, { estoqueMinimo: Number(editingStock.value) || 0 });
-                              setEditingStock(null);
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
+                                updateMaterial(item.id, { estoqueAtual: Number(editingStock.value) || 0 });
+                                setEditingStock(null);
+                              }
+                              if (e.key === 'Escape') setEditingStock(null);
+                            }}
+                          />
+                        ) : (
+                          <span 
+                            onDoubleClick={() => setEditingStock({ id: item.id, field: 'atual', value: item.estoqueAtual.toString() })}
+                            className={`px-2 py-0.5 rounded font-black transition-all ${
+                              item.estoqueAtual >= (item.estoqueIdeal || 0) 
+                                ? 'text-emerald-700 bg-emerald-50' 
+                                : item.estoqueAtual === 0 
+                                ? 'text-red-700 bg-red-50' 
+                                : 'text-amber-700 bg-amber-50'
+                            } cursor-edit hover:brightness-95`}
+                            title="Duplo clique para editar estoque atual"
+                          >
+                            {item.estoqueAtual} {formatUnit(item.unidade)}
+                          </span>
+                        )}
+                      </td>
+                        <td className={`px-4 py-3 text-[11px] font-medium text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                        <div className="flex items-center gap-1.5 justify-end">
+                          {editingStock?.id === item.id && editingStock?.field === 'min' ? (
+                             <input
+                              autoFocus
+                              className="w-8 h-4 bg-white border border-blue-500 rounded text-center text-slate-900 outline-none"
+                              value={editingStock.value}
+                              onChange={(e) => setEditingStock({ ...editingStock, value: e.target.value })}
+                              onBlur={() => {
                                 updateMaterial(item.id, { estoqueMinimo: Number(editingStock.value) || 0 });
                                 setEditingStock(null);
-                              }
-                              if (e.key === 'Escape') setEditingStock(null);
-                            }}
-                          />
-                        ) : (
-                          <span 
-                            onDoubleClick={() => setEditingStock({ id: item.id, field: 'min', value: item.estoqueMinimo.toString() })}
-                            className="cursor-edit hover:text-blue-600 transition-colors"
-                            title="Duplo clique para editar"
-                          >
-                            {item.estoqueMinimo}
-                          </span>
-                        )}
-                        <span>/</span>
-                        {editingStock?.id === item.id && editingStock?.field === 'ideal' ? (
-                          <input
-                            autoFocus
-                            className="w-8 h-4 bg-white border border-blue-500 rounded text-center text-slate-900 outline-none"
-                            value={editingStock.value}
-                            onChange={(e) => setEditingStock({ ...editingStock, value: e.target.value })}
-                            onBlur={() => {
-                              updateMaterial(item.id, { estoqueIdeal: Number(editingStock.value) || 0 });
-                              setEditingStock(null);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  updateMaterial(item.id, { estoqueMinimo: Number(editingStock.value) || 0 });
+                                  setEditingStock(null);
+                                }
+                                if (e.key === 'Escape') setEditingStock(null);
+                              }}
+                            />
+                          ) : (
+                            <span 
+                              onDoubleClick={() => setEditingStock({ id: item.id, field: 'min', value: item.estoqueMinimo.toString() })}
+                              className="cursor-edit hover:text-blue-600 transition-colors"
+                              title="Duplo clique para editar"
+                            >
+                              {item.estoqueMinimo}
+                            </span>
+                          )}
+                          <span className="text-slate-200">|</span>
+                          {editingStock?.id === item.id && editingStock?.field === 'ideal' ? (
+                            <input
+                              autoFocus
+                              className="w-8 h-4 bg-white border border-blue-500 rounded text-center text-slate-900 outline-none"
+                              value={editingStock.value}
+                              onChange={(e) => setEditingStock({ ...editingStock, value: e.target.value })}
+                              onBlur={() => {
                                 updateMaterial(item.id, { estoqueIdeal: Number(editingStock.value) || 0 });
                                 setEditingStock(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  updateMaterial(item.id, { estoqueIdeal: Number(editingStock.value) || 0 });
+                                  setEditingStock(null);
+                                }
+                                if (e.key === 'Escape') setEditingStock(null);
+                              }}
+                            />
+                          ) : (
+                            <span 
+                              onDoubleClick={() => setEditingStock({ id: item.id, field: 'ideal', value: (item.estoqueIdeal || 0).toString() })}
+                              className="cursor-edit hover:text-blue-600 transition-colors"
+                              title="Duplo clique para editar"
+                            >
+                              {item.estoqueIdeal || '-'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                        <td className={`px-4 py-3 text-center border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                        <span className={`status-pill !text-[10px] !py-0 !px-2 !h-4 ${
+                          item.status === 'Zerado' ? 'pill-crit' : 
+                          item.status === 'Crítico' ? 'pill-warn' : 'pill-ok'}`}>
+                          {item.status === 'OK' ? 'OK' : item.status === 'Crítico' ? 'BAIXO' : 'ZERADO'}
+                        </span>
+                      </td>
+                        <td className={`px-4 py-3 border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                        <div className="flex justify-center">
+                          <button 
+                            ref={el => buttonRefs.current[item.id] = el}
+                            onKeyDown={(e) => onButtonKeyDown(e, item.id, index)}
+                            onClick={() => {
+                              if (item.qtdComprar > 0) {
+                                handleUpdateQtd(item.id, '0');
+                              } else {
+                                const needed = Math.max(1, (item.estoqueIdeal || 0) - item.estoqueAtual);
+                                handleUpdateQtd(item.id, needed.toString());
                               }
-                              if (e.key === 'Escape') setEditingStock(null);
                             }}
-                          />
-                        ) : (
-                          <span 
-                            onDoubleClick={() => setEditingStock({ id: item.id, field: 'ideal', value: (item.estoqueIdeal || 0).toString() })}
-                            className="cursor-edit hover:text-blue-600 transition-colors"
-                            title="Duplo clique para editar"
+                            className={`text-[11px] font-black h-7 px-4 rounded-full border focus:outline-none transition-all flex items-center justify-center cursor-pointer select-none active:scale-95 touch-manipulation uppercase tracking-tighter w-16 hover:animate-intense-pulse focus:animate-intense-pulse hover:scale-110 focus:scale-110 hover:ring-4 focus:ring-4 ${
+                              item.qtdComprar > 0 
+                              ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200 hover:ring-blue-500/40 focus:ring-blue-500/50' 
+                              : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-700 hover:ring-slate-200 focus:ring-slate-300'
+                            }`}
                           >
-                            {item.estoqueIdeal || '-'}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <span className={`status-pill !text-[8.5px] !py-0 !px-1.5 !h-4 ${
-                        item.status === 'Zerado' ? 'pill-crit' : 
-                        item.status === 'Crítico' ? 'pill-warn' : 'pill-ok'}`}>
-                        {item.status === 'OK' ? 'OK' : item.status === 'Crítico' ? 'BAIXO' : 'ZERADO'}
-                      </span>
-                    </td>
-                    <td className="px-2 py-1.5">
-                       <button 
-                         ref={el => buttonRefs.current[item.id] = el}
-                         onKeyDown={(e) => onButtonKeyDown(e, item.id, index)}
-                         onClick={() => {
-                           if (item.qtdComprar > 0) {
-                             handleUpdateQtd(item.id, '0');
-                           } else {
-                             const needed = Math.max(1, (item.estoqueIdeal || 0) - item.estoqueAtual);
-                             handleUpdateQtd(item.id, needed.toString());
-                           }
-                         }}
-                         className={`text-[9.5px] font-black h-7 px-3 rounded-full border focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all flex items-center justify-center cursor-pointer select-none active:scale-95 touch-manipulation uppercase tracking-tighter w-14 ${
-                           item.qtdComprar > 0 
-                           ? 'bg-blue-600 border-blue-600 text-white shadow-sm' 
-                           : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
-                         }`}
-                       >
-                         {item.qtdComprar > 0 ? 'SIM' : 'NÃO'}
-                       </button>
-                    </td>
-                    <td className="px-2 py-1.5 text-slate-500 tabular-nums text-right text-[9px] font-medium">
-                      R$ {item.precoUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <input 
-                        ref={el => inputRefs.current[item.id] = el}
-                        onKeyDown={(e) => onInputKeyDown(e, index)}
-                        type="number" 
-                        className={`input-field tabular-nums focus:bg-blue-50/10 h-7 px-2 text-[9px] font-bold ${item.qtdComprar > 0 ? 'bg-blue-50/30 border-blue-200' : ''}`}
-                        value={item.qtdComprar || ''}
-                        placeholder="0"
-                        onChange={(e) => handleUpdateQtd(item.id, e.target.value)}
-                        style={{ minWidth: '50px' }}
-                      />
-                    </td>
-                    <td className="px-2 py-1.5 text-right font-black tabular-nums text-slate-900 text-[10px]">
-                      {item.subtotal > 0 ? `R$ ${item.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'}
-                    </td>
-                  </tr>
-                ))}
+                            {item.qtdComprar > 0 ? 'SIM' : 'NÃO'}
+                          </button>
+                        </div>
+                      </td>
+                        <td className={`px-4 py-3 text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                          <div className="flex items-center justify-end gap-0 group">
+                          <span className="text-[11px] text-slate-300 font-bold group-hover:text-green-500 transition-colors">R$</span>
+                          <input 
+                            type="number" 
+                            step="0.01"
+                            className="bg-transparent border-none outline-none focus:ring-0 p-0 m-0 tabular-nums text-[11px] font-bold text-right w-14 text-slate-500 group-hover:text-green-600 focus:text-green-700 transition-colors cursor-pointer"
+                            value={item.precoUnitario}
+                            onChange={(e) => updateMaterial(item.id, { precoUnitario: Number(e.target.value) || 0 })}
+                          />
+                        </div>
+                      </td>
+                        <td className={`px-4 py-3 text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                          <input 
+                            ref={el => inputRefs.current[item.id] = el}
+                          onKeyDown={(e) => onInputKeyDown(e, index)}
+                          type="number" 
+                          className={`input-field tabular-nums focus:bg-emerald-50/10 h-8 px-3 text-[12px] font-bold text-right border-slate-100 hover:border-slate-200 transition-all ${item.qtdComprar > 0 ? 'bg-emerald-50/30 border-emerald-200 ring-2 ring-emerald-500/5' : ''}`}
+                          value={item.qtdComprar || ''}
+                          placeholder="0"
+                          onChange={(e) => handleUpdateQtd(item.id, e.target.value)}
+                          onFocus={() => setActiveRowId(item.id)}
+                          style={{ minWidth: '60px' }}
+                        />
+                      </td>
+                        <td className={`px-4 py-3 text-right font-black tabular-nums text-[12px] border-b transition-all ${isActive ? 'text-blue-950 border-blue-900/10' : 'text-slate-900 border-slate-200'}`}>
+                        {item.subtotal > 0 ? `R$ ${item.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'}
+                      </td>
+                    </tr>
+                   );
+                  })
+                )}
               </tbody>
             </table>
           </div>
