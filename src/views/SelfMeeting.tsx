@@ -467,19 +467,9 @@ export const SelfMeeting: React.FC = () => {
     setEditingBudget(null);
   };
 
-  const handleOuterClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    // Keep filter selected if clicking on the materials table or typing quantity
-    const clickedTeamCard = target.closest('.card-equipe');
-    const isFilterStatusClick = target.closest('.status-filter-chip');
-    if (!clickedTeamCard && !isFilterStatusClick && !target.closest('button') && !target.closest('input') && !target.closest('table')) {
-      setSelectedTeam(null);
-    }
-  };
-
   return (
     <>
-      <div className="flex flex-col h-full overflow-hidden p-5" onClick={handleOuterClick}>
+      <div className="flex flex-col h-full overflow-hidden p-5">
         {/* Fixed Header Content (Sticky) */}
         <div className="bg-slate-50 shrink-0 z-20 pb-1 space-y-4">
         {/* Budget Grid */}
@@ -491,28 +481,28 @@ export const SelfMeeting: React.FC = () => {
             style={{ borderLeftColor: '#1E3A8A' }}
           >
             <div className="flex justify-between items-center bg-transparent">
-              <p className="text-[10px] font-extrabold text-black uppercase tracking-wider">Todas as Equipes</p>
+              <p className="text-[9px] font-extrabold text-black uppercase tracking-wider">Todas as Equipes</p>
               {selectedTeam === null && <div className="w-2.5 h-2.5 rounded-full bg-[#1e3a8a] animate-pulse" />}
             </div>
             <div className="mt-1 flex justify-between items-end">
               <div>
-                <p className="text-[9px] text-slate-500 uppercase">Verba Inicial</p>
-                <p className="text-sm font-bold text-slate-800">R${totalSaldoEquipes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[8px] text-slate-500 uppercase font-bold">Verba Inicial</p>
+                <p className="text-[11px] font-bold text-slate-700">R${totalSaldoEquipes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
               </div>
               <div className="text-right">
-                <p className="text-[9px] text-slate-500 uppercase font-bold">Saldo</p>
-                <p className={`text-sm font-black ${(totalSaldoEquipes - totalGeral) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                <p className="text-[8px] text-slate-500 uppercase font-bold">Saldo</p>
+                <p className={`text-[11px] font-black ${(totalSaldoEquipes - totalGeral) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                   R${(totalSaldoEquipes - totalGeral).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-[9px] text-slate-500 uppercase">Gasto Previsto</p>
-              <p className={`text-sm font-semibold ${totalGeral > 0 ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
+              <p className="text-[8px] text-slate-500 uppercase font-bold">Gasto Previsto</p>
+              <p className={`text-xs font-semibold ${totalGeral > 0 ? 'text-blue-600 font-black' : 'text-slate-400 font-medium'}`}>
                  R${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
               {/* Barra de progresso geral */}
-              <div className="w-full h-1.5 bg-slate-100/80 rounded-full mt-2 overflow-hidden">
+              <div className="w-full h-1 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
                 <div 
                   className={`h-full transition-all duration-500 rounded-full ${(totalSaldoEquipes - totalGeral) < 0 ? 'bg-red-500' : ((totalGeral / (totalSaldoEquipes || 1)) >= 0.8 ? 'bg-orange-500' : 'bg-emerald-500')}`}
                   style={{ 
@@ -532,7 +522,7 @@ export const SelfMeeting: React.FC = () => {
             return (
               <div 
                 key={e.id || `equipe-${idx}`} 
-                onClick={() => setSelectedTeam(isSelected ? null : e.nome)}
+                onClick={() => setSelectedTeam(e.nome)}
                 className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${isSelected ? 'ring-2 ring-[#1E3A8A] ring-offset-2' : ''}`} 
                 style={{ borderLeftColor: '#1E3A8A' }}
               >
