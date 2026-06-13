@@ -133,7 +133,7 @@ export const Settings: React.FC = () => {
           { id: "retirada-materiais", nome: "Retirada de Materiais (Consumo Rápido associado a Nº OS e Equipes)" },
           { id: "estoque-atual", nome: "Estoque Atual (Pesquisa, Status de Nível Crítico/Abaixo do Mínimo, Exportação CSV)" },
           { id: "movimentacoes", nome: "Histórico de Movimentações (Rastreabilidade Completa com Filtro e Exclusão Segura)" },
-          { id: "reuniao-self", nome: "Módulo Reunião de Self (Decisão de Compra com Duplo Clique editável para estoque/mínimos e abate financeiro)" },
+          { id: "reuniao-self", nome: "Tela Reunião de Self (Decisão de Compra com Duplo Clique editável para estoque/mínimos e abate financeiro)" },
           { id: "cad-materiais", nome: "Cadastro de Materiais" },
           { id: "cad-empresas", nome: "Cadastro de Parceiras/Terceirizadas" },
           { id: "cad-fornecedores", nome: "Cadastro de Fornecedores" },
@@ -414,6 +414,10 @@ CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR D
               Testar Conexão Supabase
             </button>
             <p className="text-[10px] text-slate-400">Verifique se as credenciais do Supabase no ambiente estão operantes.</p>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
+            <p className="text-[10px] text-slate-400 italic">O sistema sincroniza automaticamente as alterações em segundo plano.</p>
           </div>
         </div>
       </div>

@@ -135,7 +135,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               <Menu className="w-5 h-5" />
             </button>
             <h2 className="text-[14px] font-semibold text-brand-dark">
-              Módulo: {view.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              Tela: {view.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
             </h2>
           </div>
           

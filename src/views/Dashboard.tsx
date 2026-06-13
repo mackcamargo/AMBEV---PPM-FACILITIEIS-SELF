@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, ArrowUpRight, ArrowDownLeft, AlertCircle, Calendar, Filter, Search, User, Trophy, Coins, History, Play, Pause, RefreshCw } from 'lucide-react';
+import { Package, ArrowUpRight, ArrowDownLeft, AlertCircle, Coins, History, RefreshCw, Trophy, User } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, LineChart, Line, Legend, LabelList
+  BarChart, Bar, Legend, LabelList
 } from 'recharts';
 
 export const Dashboard: React.FC = () => {
@@ -12,15 +12,14 @@ export const Dashboard: React.FC = () => {
 
   // ROTAÇÃO AUTOMÁTICA DAS EQUIPES (ESTILO RELATÓRIOS)
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
-  const [isAutoplay, setIsAutoplay] = useState(true);
 
   useEffect(() => {
-    if (!isAutoplay || equipes.length === 0) return;
+    if (equipes.length === 0) return;
     const interval = setInterval(() => {
       setActiveTeamIndex((prev) => (prev + 1) % equipes.length);
-    }, 8000);
+    }, 6000);
     return () => clearInterval(interval);
-  }, [isAutoplay, equipes.length]);
+  }, [equipes.length]);
 
   const activeTeam = useMemo(() => {
     if (equipes.length === 0) return null;
@@ -129,8 +128,6 @@ export const Dashboard: React.FC = () => {
 
   const totalEstoqueUnits = useMemo(() => materiais.reduce((acc, m) => acc + Number(m?.estoqueAtual || 0), 0), [materiais]);
   const totalMaterialTypes = materiais.length;
-  const estoqueBaixo = materiais.filter(m => (m?.estoqueAtual || 0) < (m?.estoqueMinimo || 0)).length;
-  const estoqueZero = materiais.filter(m => (m?.estoqueAtual || 0) === 0).length;
 
   // Ranking de Retirantes
   const withdrawerRanking = useMemo(() => {
@@ -189,45 +186,6 @@ export const Dashboard: React.FC = () => {
       };
     });
   }, [filteredMovimentacoes, materiais, equipes]);
-
-  // CÁLCULO DE GASTOS: MÊS ATUAL VS MÊS ANTERIOR POR EQUIPE
-  const spendingComparison = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    const prevMonthDate = new Date();
-    prevMonthDate.setMonth(now.getMonth() - 1);
-    const prevMonth = prevMonthDate.getMonth();
-    const prevYear = prevMonthDate.getFullYear();
-
-    return equipes.map(equipe => {
-      const teamMovs = movimentacoes.filter(m => {
-        const material = materiais.find(mat => mat.id === m.materialId);
-        return material?.equipe === equipe.nome && m.tipo === 'Retirada';
-      });
-
-      const currentMonthSpending = teamMovs
-        .filter(m => {
-          const d = new Date(m.data);
-          return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-        })
-        .reduce((acc, m) => acc + (Number(m.quantidade) * (Number(m.precoUnitario) || 0)), 0);
-
-      const prevMonthSpending = teamMovs
-        .filter(m => {
-          const d = new Date(m.data);
-          return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
-        })
-        .reduce((acc, m) => acc + (Number(m.quantidade) * (Number(m.precoUnitario) || 0)), 0);
-
-      return {
-        name: equipe.nome,
-        atual: currentMonthSpending,
-        passado: prevMonthSpending
-      };
-    });
-  }, [movimentacoes, materiais, equipes]);
 
   const stats = [
     { label: 'Tipos de Materiais', value: totalMaterialTypes, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
@@ -348,8 +306,6 @@ export const Dashboard: React.FC = () => {
             </div>
           )}
         </div>
-
-
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -370,20 +326,18 @@ export const Dashboard: React.FC = () => {
         {/* GRÁFICO ROTATIVO: Gastos por Equipe (Linha do Tempo) */}
         <div className="card flex flex-col relative overflow-hidden group/moving bg-white border border-slate-100 shadow-sm">
           {/* Progress Indicator line */}
-          {isAutoplay && (
-            <div className="absolute bottom-0 left-0 w-full h-[3px] bg-slate-50 overflow-hidden z-20">
-              <div 
-                key={activeTeamIndex}
-                className="h-full bg-blue-600 animate-in slide-in-from-left duration-[8000ms] ease-linear repeat-infinite fill-mode-forwards"
-                style={{ width: '100%' }}
-              ></div>
-            </div>
-          )}
+          <div className="absolute bottom-0 left-0 w-full h-[3px] bg-slate-50 overflow-hidden z-20">
+            <div 
+              key={activeTeamIndex}
+              className="h-full bg-blue-600 animate-in slide-in-from-left duration-[6000ms] ease-linear repeat-infinite fill-mode-forwards"
+              style={{ width: '100%' }}
+            ></div>
+          </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${isAutoplay ? 'animate-spin-slow' : ''}`} />
+                <RefreshCw className="w-3.5 h-3.5 text-blue-600 animate-spin-slow" />
                 <h3 className="text-xs font-black text-slate-700 uppercase tracking-widest">Fluxo de Gastos: <span className="animate-blink-red">{activeTeam?.nome}</span></h3>
               </div>
               <div className="flex items-center gap-3">
@@ -405,28 +359,18 @@ export const Dashboard: React.FC = () => {
             <div className="flex items-center gap-2">
               <div className="flex flex-wrap gap-1 max-w-[150px] justify-end">
                 {equipes.slice(0, 5).map((eq, idx) => (
-                  <button 
+                  <div 
                     key={eq.id}
-                    onClick={() => {
-                      setActiveTeamIndex(idx);
-                      setIsAutoplay(false);
-                    }}
-                    className={`w-2.5 h-2.5 rounded-full transition-all ${idx === (activeTeamIndex % equipes.length) ? 'bg-blue-600 scale-125 ring-2 ring-blue-100' : 'bg-slate-200 hover:bg-slate-300'}`}
+                    className={`w-2 h-2 rounded-full transition-all ${idx === (activeTeamIndex % equipes.length) ? 'bg-blue-600 scale-125 ring-2 ring-blue-100' : 'bg-slate-200'}`}
                   />
                 ))}
               </div>
-              <button 
-                onClick={() => setIsAutoplay(!isAutoplay)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-all"
-              >
-                {isAutoplay ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-slate-400" />}
-              </button>
             </div>
           </div>
 
-          <div className="h-72 sm:h-80">
+          <div className="h-64 sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={activeTeamTimeline} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
+              <AreaChart data={activeTeamTimeline} margin={{ top: 35, right: 20, left: 5, bottom: 45 }}>
                 <defs>
                   <linearGradient id="colorGasto" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15}/>
@@ -438,16 +382,16 @@ export const Dashboard: React.FC = () => {
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 8, fill: '#64748B', fontWeight: 700 }} 
+                  tick={{ fontSize: 9, fill: '#64748B', fontWeight: 700 }} 
                   interval={0}
-                  height={25}
+                  dy={10}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
                   tick={{ fontSize: 8, fill: '#94a3b8' }}
                   tickFormatter={(val) => `R$${val >= 1000 ? (val/1000).toFixed(0)+'k' : val}`}
-                  width={35}
+                  width={40}
                 />
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
@@ -509,7 +453,7 @@ export const Dashboard: React.FC = () => {
                 <Tooltip 
                   cursor={{ fill: '#f1f5f9', opacity: 0.4 }}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
-                  formatter={(value: any) => [`R$${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Retirado']}
+                  formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Retirado']}
                 />
                 <Bar 
                   dataKey="retirada" 
@@ -585,46 +529,62 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Comparativo: Gastos Mensais por Equipe (Linear) [REMOVED AS PER SWAP, REPLACED BY PEÇAS QTD] */}
-        <div className="card flex flex-col scale-in">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex flex-col">
-              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Peças Retiradas por Equipe (Qtd)</h3>
-              <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Volume de saída no período</p>
+        {/* Consumo por Equipe (R$) - Identical style to Valued Stock */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <ArrowDownLeft className="w-4 h-4 text-red-500" />
+              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Consumo por Equipe (R$)</h3>
             </div>
+            <span className="text-[10px] text-slate-400 font-medium font-mono uppercase tracking-tighter">Período Ativo</span>
           </div>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={teamQuantities} margin={{ top: 15, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 8, fill: '#64748B', fontWeight: 700 }} 
-                  interval={0}
-                  height={25}
-                />
-                <YAxis hide />
-                <Tooltip 
-                  cursor={{ fill: '#f8fafc' }}
-                  contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '11px' }}
-                  formatter={(value: any) => [`${value} unidades`, 'Quantidade']}
-                />
-                <Bar 
-                  dataKey="quantidade" 
-                  fill="#3B82F6" 
-                  radius={[4, 4, 0, 0]} 
-                  barSize={18}
-                  label={{ 
-                    position: 'top', 
-                    fontSize: 10,
-                    fontWeight: 700,
-                    fill: '#475569'
-                  }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+
+          <div className="mb-4 p-3 bg-red-50/50 border border-red-100/50 rounded-xl flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Total Consumido (R$)</span>
+              <span className="text-[9px] font-bold text-red-600/70 uppercase tracking-wider mt-0.5">
+                {filterType === 'month' ? 'Mês Vigente' : filterType === 'day' ? 'Hoje' : 'Personalizado'}
+              </span>
+            </div>
+            <span className="text-[14px] font-extrabold text-slate-900 font-mono">
+              R${teamPerformance.reduce((acc, c) => acc + (c?.retirada || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          
+          <div className="space-y-4">
+            {[...teamPerformance]
+              .sort((a, b) => b.retirada - a.retirada)
+              .map((team, idx) => {
+                const totalWithdrawal = teamPerformance.reduce((acc, c) => acc + (c?.retirada || 0), 0);
+                const percentage = totalWithdrawal > 0 
+                  ? Math.round((team.retirada / totalWithdrawal) * 100) 
+                  : 0;
+                
+                const teamData = equipes.find(e => e.nome === team.name);
+                const teamQty = teamQuantities.find(q => q.name === team.name);
+
+                return (
+                  <div key={idx} className="group">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: teamData?.cor || '#cbd5e1' }}></div>
+                        <span className="text-[11px] font-bold text-slate-700">{team.name}</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[11px] font-bold text-slate-800 font-mono">
+                          R${team.retirada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-medium">
+                          {teamQty?.quantidade || 0} un ({percentage}%)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
+                      <div className="h-full rounded-full" style={{ backgroundColor: teamData?.cor || '#3b82f6', width: `${percentage}%` }}></div>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
 

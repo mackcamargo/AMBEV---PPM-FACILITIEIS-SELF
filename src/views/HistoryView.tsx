@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useApp } from '../lib/store';
 import { playNotificationSound } from '../lib/audio';
+import { ColaboradorSelect } from '../components/ColaboradorSelect';
 import { 
   ArrowDownLeft, 
   ArrowUpRight, 
@@ -30,8 +31,10 @@ import {
   FileJson,
   Check,
   Mail,
-  AlertTriangle
+  AlertTriangle,
+  BarChart2
 } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Movimentacao, formatUnit } from '../types';
 
 export const HistoryView: React.FC = () => {
@@ -61,6 +64,7 @@ export const HistoryView: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [filterTeam, setFilterTeam] = useState('Tudo');
+  const [filterMaterialId, setFilterMaterialId] = useState('');
   const [showSharePopup, setShowSharePopup] = useState(false);
   const [isEmailChoiceModalOpen, setIsEmailChoiceModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -84,6 +88,7 @@ export const HistoryView: React.FC = () => {
   const [editEmpresa, setEditEmpresa] = useState('');
   const [editLiberador, setEditLiberador] = useState('');
   const [editConferente, setEditConferente] = useState('');
+  const [editEquipe, setEditEquipe] = useState('');
   const [editObservacoes, setEditObservacoes] = useState('');
 
   const startEdit = (m: Movimentacao) => {
@@ -98,6 +103,7 @@ export const HistoryView: React.FC = () => {
     setEditEmpresa(m.empresa || '');
     setEditLiberador(m.liberador || '');
     setEditConferente(m.conferente || '');
+    setEditEquipe(m.equipe || '');
     setEditObservacoes(m.observacoes || '');
     setIsEditing(true);
   };
@@ -125,6 +131,7 @@ export const HistoryView: React.FC = () => {
       colaborador: selectedMov.tipo === 'Retirada' ? editColaborador : undefined,
       empresa: selectedMov.tipo === 'Retirada' ? editEmpresa : undefined,
       liberador: selectedMov.tipo === 'Retirada' ? editLiberador : undefined,
+      equipe: selectedMov.tipo === 'Retirada' ? editEquipe : undefined,
       conferente: selectedMov.tipo === 'Entrada' ? editConferente : undefined,
       observacoes: editObservacoes,
     };
@@ -179,6 +186,9 @@ export const HistoryView: React.FC = () => {
     if (filterTeam !== 'Tudo') {
       if (m.equipe !== filterTeam) return false;
     }
+
+    // Material Filter
+    if (filterMaterialId && m.materialId !== filterMaterialId) return false;
 
     return true;
   });
@@ -312,7 +322,7 @@ export const HistoryView: React.FC = () => {
                     if (selectedIds.length === filteredMovs.length) setSelectedIds([]);
                     else setSelectedIds(filteredMovs.map(m => m.id));
                   }}
-                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all bg-white text-slate-500 hover:bg-slate-50 border border-slate-200 flex items-center gap-2"
+                  className="px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase transition-all bg-white text-slate-500 hover:bg-slate-50 border border-slate-200 flex items-center gap-2"
                 >
                   <Check className={`w-3.5 h-3.5 ${selectedIds.length > 0 ? 'text-blue-600' : 'text-slate-400'}`} />
                   {selectedIds.length === filteredMovs.length && filteredMovs.length > 0 ? 'Desmarcar' : 'Selecionar Tudo'}
@@ -322,7 +332,7 @@ export const HistoryView: React.FC = () => {
                 <div className="relative">
                   <button 
                     onClick={() => setShowSharePopup(!showSharePopup)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all border ${
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase transition-all border ${
                       showSharePopup 
                         ? 'bg-slate-900 text-white border-slate-900' 
                         : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
@@ -372,7 +382,7 @@ export const HistoryView: React.FC = () => {
                 {selectedIds.length > 0 && (
                   <button 
                     onClick={() => setIsBulkDeleteModalOpen(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase transition-all bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Excluir ({selectedIds.length})
@@ -381,7 +391,7 @@ export const HistoryView: React.FC = () => {
 
                 <button 
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all border ${
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase transition-all border ${
                     showFilters || filterType !== 'Tudo' || startDate || endDate || filterTeam !== 'Tudo'
                       ? 'bg-blue-50 text-blue-600 border-blue-200' 
                       : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300'
@@ -406,80 +416,160 @@ export const HistoryView: React.FC = () => {
             </div>
 
             {showFilters && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 animate-in slide-in-from-top-2 duration-200">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-slate-500 uppercase">Tipo</label>
-                  <select 
-                    className="input-field h-8 !py-0 text-[10px]"
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value as any)}
-                  >
-                    <option value="Tudo">Todas as Operações</option>
-                    <option value="Entrada">Somente Entradas</option>
-                    <option value="Retirada">Somente Retiradas</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-slate-500 uppercase">Equipe</label>
-                  <select 
-                    className="input-field h-8 !py-0 text-[10px]"
-                    value={filterTeam}
-                    onChange={(e) => setFilterTeam(e.target.value)}
-                  >
-                    <option value="Tudo">Todas as Equipes</option>
-                    {teams.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-slate-500 uppercase">Período Início</label>
-                  <input 
-                    type="date" 
-                    className="input-field h-8 !py-0 text-[10px]"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-slate-500 uppercase">Período Fim</label>
-                  <input 
-                    type="date" 
-                    className="input-field h-8 !py-0 text-[10px]"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-                
-                <div className="sm:col-span-2 lg:col-span-4 flex justify-between items-center bg-white p-2 rounded-lg border border-slate-200/50">
-                  <div className="flex gap-4">
-                    <div className="flex flex-col">
-                      <span className="text-[8px] font-bold text-slate-400 uppercase">Total Movimentado</span>
-                      <span className="text-xs font-black text-slate-700">{filteredMovs.length} itens</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[8px] font-bold text-slate-400 uppercase">Valor do Filtro</span>
-                      <span className="text-xs font-black text-blue-600">
-                        R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 animate-in slide-in-from-top-2 duration-200">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase">Tipo</label>
+                    <select 
+                      className="input-field h-8 !py-0 text-[10px]"
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value as any)}
+                    >
+                      <option value="Tudo">Todas as Operações</option>
+                      <option value="Entrada">Somente Entradas</option>
+                      <option value="Retirada">Somente Retiradas</option>
+                    </select>
                   </div>
-                  <button 
-                    onClick={() => {
-                      setFilterType('Tudo');
-                      setStartDate('');
-                      setEndDate('');
-                      setFilterTeam('Tudo');
-                      setSearchTerm('');
-                    }}
-                    className="text-[9px] font-bold text-red-500 hover:text-red-600 uppercase transition-colors"
-                  >
-                    Limpar Todos os Filtros
-                  </button>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase">Equipe</label>
+                    <select 
+                      className="input-field h-8 !py-0 text-[10px]"
+                      value={filterTeam}
+                      onChange={(e) => setFilterTeam(e.target.value)}
+                    >
+                      <option value="Tudo">Todas as Equipes</option>
+                      {teams.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase">Peça (Material)</label>
+                    <select 
+                      className="input-field h-8 !py-0 text-[10px]"
+                      value={filterMaterialId}
+                      onChange={(e) => setFilterMaterialId(e.target.value)}
+                    >
+                      <option value="">Todas as Peças</option>
+                      {materiais.sort((a, b) => a.descricao.localeCompare(b.descricao)).map(m => (
+                        <option key={m.id} value={m.id}>{m.descricao}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase">Período Início</label>
+                    <input 
+                      type="date" 
+                      className="input-field h-8 !py-0 text-[10px]"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase">Período Fim</label>
+                    <input 
+                      type="date" 
+                      className="input-field h-8 !py-0 text-[10px]"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="sm:col-span-2 lg:col-span-5 flex justify-between items-center bg-white p-2 rounded-xl border border-slate-200/50">
+                    <div className="flex gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase">Total Movimentado</span>
+                        <span className="text-xs font-black text-slate-700">{filteredMovs.length} itens</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase">Valor do Filtro</span>
+                        <span className="text-xs font-black text-blue-600">
+                          R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setFilterType('Tudo');
+                        setStartDate('');
+                        setEndDate('');
+                        setFilterTeam('Tudo');
+                        setFilterMaterialId('');
+                        setSearchTerm('');
+                      }}
+                      className="text-[9px] font-bold text-red-500 hover:text-red-600 uppercase transition-colors"
+                    >
+                      Limpar Todos os Filtros
+                    </button>
+                  </div>
                 </div>
+
+                {/* Flow Chart for Selected Material */}
+                {filterMaterialId && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm"
+                  >
+                    <div className="flex items-center gap-2 mb-4">
+                      <BarChart2 className="w-4 h-4 text-blue-600" />
+                      <div>
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fluxo de Movimentação</h4>
+                        <p className="text-xs font-bold text-slate-800">
+                          {materiais.find(m => m.id === filterMaterialId)?.descricao}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="h-40 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={filteredMovs.slice().reverse().map(m => ({
+                          data: new Date(m.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                          entrada: m.tipo === 'Entrada' ? m.quantidade : 0,
+                          retirada: m.tipo === 'Retirada' ? m.quantidade : 0,
+                        }))}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis 
+                            dataKey="data" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fontSize: 8, fontWeight: 700, fill: '#94a3b8' }} 
+                            interval="preserveStartEnd"
+                          />
+                          <YAxis 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fontSize: 8, fontWeight: 700, fill: '#94a3b8' }}
+                          />
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '10px', fontWeight: 'bold' }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="entrada" 
+                            stroke="#10b981" 
+                            fillOpacity={0.1} 
+                            fill="#10b981" 
+                            strokeWidth={3}
+                            name="Entrada (+)"
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="retirada" 
+                            stroke="#ef4444" 
+                            fillOpacity={0.1} 
+                            fill="#ef4444" 
+                            strokeWidth={3}
+                            name="Retirada (-)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </motion.div>
+                )}
               </div>
             )}
           </div>
@@ -602,7 +692,7 @@ export const HistoryView: React.FC = () => {
           onClick={handleClose}
         >
           <div 
-            className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col animate-in zoom-in-95 duration-200"
+            className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -733,14 +823,12 @@ export const HistoryView: React.FC = () => {
                       </div>
 
                       <div className="space-y-1 sm:col-span-2">
-                        <label className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider flex items-center gap-1">
-                          <User className="w-3.5 h-3.5 text-slate-400" /> Conferente no Sistema
-                        </label>
-                        <input 
-                          type="text" 
-                          value={editConferente} 
-                          onChange={(e) => setEditConferente(e.target.value)} 
-                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                        <ColaboradorSelect
+                          label="Conferente no Sistema"
+                          placeholder="Selecione um recebedor..."
+                          value={editConferente}
+                          onChange={(val) => setEditConferente(val)}
+                          colaboradores={colaboradores}
                         />
                       </div>
                     </>
@@ -760,22 +848,19 @@ export const HistoryView: React.FC = () => {
                       </div>
 
                       <div className="space-y-1 sm:col-span-2">
-                        <label className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider flex items-center gap-1">
-                          <User className="w-3.5 h-3.5 text-slate-400" /> Retirante (Colaborador)
-                        </label>
-                        <select 
-                          value={editColaborador} 
-                          onChange={(e) => setEditColaborador(e.target.value)} 
-                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-905 focus:outline-none focus:border-blue-500 transition-all"
-                        >
-                          <option value="">Selecione um colaborador...</option>
-                          {colaboradores.map(c => (
-                            <option key={c.id} value={c.nome}>{c.nome} ({c.cargo} • {c.equipe})</option>
-                          ))}
-                          {editColaborador && !colaboradores.some(c => c.nome === editColaborador) && (
-                            <option value={editColaborador}>{editColaborador}</option>
-                          )}
-                        </select>
+                        <ColaboradorSelect
+                          label="Retirante (Colaborador)"
+                          placeholder="Selecione um colaborador..."
+                          value={editColaborador}
+                          onChange={(nome) => {
+                            setEditColaborador(nome);
+                            const colabObj = colaboradores.find(c => c.nome === nome);
+                            if (colabObj) {
+                              if (colabObj.empresa) setEditEmpresa(colabObj.empresa);
+                            }
+                          }}
+                          colaboradores={colaboradores}
+                        />
                       </div>
 
                       <div className="space-y-1">
@@ -802,13 +887,30 @@ export const HistoryView: React.FC = () => {
 
                       <div className="space-y-1">
                         <label className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider flex items-center gap-1">
-                          <User className="w-3.5 h-3.5 text-slate-400" /> Liberador
+                          <Users className="w-3.5 h-3.5 text-slate-400" /> Equipe
                         </label>
-                        <input 
-                          type="text" 
-                          value={editLiberador} 
-                          onChange={(e) => setEditLiberador(e.target.value)} 
-                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                        <select 
+                          value={editEquipe} 
+                          onChange={(e) => setEditEquipe(e.target.value)} 
+                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 transition-all font-mono"
+                        >
+                          <option value="">Selecione a Equipe...</option>
+                          {equipes.map(eq => (
+                            <option key={eq.id} value={eq.nome}>{eq.nome}</option>
+                          ))}
+                          {editEquipe && !equipes.some(eq => eq.nome === editEquipe) && (
+                            <option value={editEquipe}>{editEquipe}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1 sm:col-span-2">
+                        <ColaboradorSelect
+                          label="Liberador"
+                          placeholder="Selecione um liberador..."
+                          value={editLiberador}
+                          onChange={(val) => setEditLiberador(val)}
+                          colaboradores={colaboradores.filter(c => ["TST", "GESTOR", "SUPERVISOR", "ENCARREGADO"].includes(c.cargo))}
                         />
                       </div>
                     </>

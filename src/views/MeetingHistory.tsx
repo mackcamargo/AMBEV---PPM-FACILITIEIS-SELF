@@ -56,6 +56,7 @@ export const MeetingHistory: React.FC = () => {
   const [editedItens, setEditedItens] = useState<Record<string, number>>({});
   const [itensOrder, setItensOrder] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editFilterTeam, setEditFilterTeam] = useState<string | null>(null);
 
   const handleShare = (ata: AtaReuniao) => {
     setSelectedAta(ata);
@@ -74,6 +75,7 @@ export const MeetingHistory: React.FC = () => {
     setIsEditing(true);
     setShowShareOptions(false);
     setEditedDesc(ata.descricao);
+    setEditFilterTeam(null);
 
     // Populate editedItems map
     const itemMap: Record<string, number> = {};
@@ -210,6 +212,20 @@ export const MeetingHistory: React.FC = () => {
 
     setIsEditing(false);
     setSelectedAta(null);
+  };
+
+  const { setView } = useApp();
+  const handleOpenInMeetingMode = () => {
+    if (!selectedAta) return;
+    
+    // Prepare localStorage for SelfMeeting
+    localStorage.setItem('selfMeeting_compras', JSON.stringify(editedItens));
+    localStorage.removeItem('selfMeeting_selectedTeam');
+    
+    // Navigate to SelfMeeting
+    setView('reuniao-self');
+    setSelectedAta(null);
+    setIsEditing(false);
   };
 
   const handleWebShare = async (ata: AtaReuniao) => {
@@ -475,6 +491,21 @@ export const MeetingHistory: React.FC = () => {
                        Compartilhar
                      </button>
                      <button 
+                       onClick={() => {
+                         const itemMap: Record<string, number> = {};
+                         ata.itensComprados.forEach(item => {
+                           itemMap[item.materialId] = item.quantidade;
+                         });
+                         localStorage.setItem('selfMeeting_compras', JSON.stringify(itemMap));
+                         localStorage.removeItem('selfMeeting_selectedTeam');
+                         setView('reuniao-self');
+                       }}
+                       className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 transition-all uppercase tracking-tight active:scale-95 cursor-pointer select-none"
+                     >
+                       <ShoppingCart className="w-3.5 h-3.5" />
+                       Abrir em Reunião
+                     </button>
+                     <button 
                        onClick={() => handleEditInit(ata)}
                        className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 hover:bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-all uppercase tracking-tight active:scale-95 cursor-pointer select-none"
                      >
@@ -512,11 +543,23 @@ export const MeetingHistory: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { if (!isEditing) setSelectedAta(null); }}>
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden max-h-[90vh] flex flex-col border border-slate-100" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-brand-blue" />
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
-                  {isEditing ? 'Editar Reunião' : showShareOptions ? 'Compartilhar Reunião' : 'Detalhes da Reunião'}
-                </h3>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-brand-blue" />
+                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
+                    {isEditing ? 'Editar Reunião' : showShareOptions ? 'Compartilhar Reunião' : 'Detalhes da Reunião'}
+                  </h3>
+                </div>
+                
+                {isEditing && (
+                  <button 
+                    onClick={handleOpenInMeetingMode}
+                    className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase flex items-center gap-2 hover:bg-blue-100 transition-all border border-blue-200 cursor-pointer"
+                  >
+                    <ShoppingCart className="w-3.5 h-3.5" />
+                    Abrir no Modo Dinâmico
+                  </button>
+                )}
               </div>
               <button onClick={() => setSelectedAta(null)} className="p-1 hover:bg-slate-100 rounded-full transition-all text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-4 h-4" />
@@ -552,6 +595,10 @@ export const MeetingHistory: React.FC = () => {
                         const idxA = itensOrder.indexOf(a);
                         const idxB = itensOrder.indexOf(b);
                         return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+                      }).filter(matId => {
+                        if (!editFilterTeam) return true;
+                        const mat = materiais.find(m => m.id === matId);
+                        return mat?.equipe === editFilterTeam;
                       }).map((matId) => {
                         const qty = editedItens[matId];
                         const mat = materiais.find(m => m.id === matId);
@@ -705,7 +752,17 @@ export const MeetingHistory: React.FC = () => {
 
                   {/* Impact preview */}
                   <div className="pt-2 border-t border-slate-155 space-y-2">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Impacto Ajustado nos Orçamentos</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Impacto Ajustado nos Orçamentos</p>
+                      {editFilterTeam && (
+                        <button 
+                          onClick={() => setEditFilterTeam(null)}
+                          className="text-[9px] font-black text-blue-600 hover:text-blue-700 uppercase"
+                        >
+                          Ver Todos
+                        </button>
+                      )}
+                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
                       {equipes.map(e => {
                         const newImpact = editedImpactPerTeam[e.nome] || 0;
@@ -720,10 +777,24 @@ export const MeetingHistory: React.FC = () => {
                         const refund = originalItemSpent;
                         const adjustedBalance = e.saldoAtualizado + refund - newImpact;
                         const isExceeded = adjustedBalance < 0;
+                        const isSelected = editFilterTeam === e.nome;
 
                         return (
-                          <div key={e.id} className={`p-2 rounded-xl border transition-all ${isExceeded ? 'bg-red-50/60 border-red-100' : 'bg-slate-50 border-slate-150'}`}>
-                            <p className="text-[9px] font-black text-black uppercase tracking-tight truncate">{e.nome}</p>
+                          <div 
+                            key={e.id} 
+                            onClick={() => setEditFilterTeam(isSelected ? null : e.nome)}
+                            className={`p-2 rounded-xl border transition-all cursor-pointer hover:shadow-sm ${
+                              isSelected 
+                                ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/30' 
+                                : isExceeded 
+                                  ? 'bg-red-50/60 border-red-100 hover:border-red-200' 
+                                  : 'bg-slate-50 border-slate-150 hover:border-slate-200'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <p className="text-[9px] font-black text-black uppercase tracking-tight truncate">{e.nome}</p>
+                              {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
+                            </div>
                             <div className="mt-1">
                               <span className="text-[9px] text-slate-400 block font-medium">Lançamento: <b className="text-slate-700">R$ {newImpact.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></span>
                               <span className="text-[9px] text-slate-400 block font-medium">Saldo Futuro: <b className={`font-bold ${isExceeded ? 'text-red-600' : 'text-emerald-600'}`}>R$ {adjustedBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></span>

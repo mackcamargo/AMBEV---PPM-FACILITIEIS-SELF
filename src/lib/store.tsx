@@ -70,6 +70,7 @@ interface AppContextType {
   addEmpresa: (e: Omit<Empresa, 'id'>) => Promise<{ success: boolean; error?: string }>;
   deleteEmpresa: (id: string) => Promise<{ success: boolean; error?: string }>;
   seedTestData: () => void;
+  refreshData: () => Promise<void>;
   clearAllData: () => void;
 }
 
@@ -292,72 +293,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('ppm_deletion_password_enabled', isDeletionPasswordEnabled.toString());
   }, [isDeletionPasswordEnabled]);
 
-  // Supabase Initial Multi-Fetch
+  // Supabase Multi-Fetch with user dependency to ensure data loads after login
   useEffect(() => {
     const loadFromSupabase = async () => {
+      // Don't fetch if still checking auth or if already syncing
+      if (authLoading) return;
+      
       setIsSyncing(true);
       try {
         const data = await syncToSupabase.fetchAll();
         
-        // Convert legacy "UM" unit to "UNI" for consistency as requested
-        const sanitizedMaterials = data.materiais.map(m => ({
-          ...m,
-          unidade: m.unidade === 'UM' ? 'UNI' : m.unidade
-        }));
+        // Helper to merge Supabase data with local state, preventing loss of local-only items
+        // while ensuring Supabase data (source of truth) is present
+        const mergeWithSupabase = <T extends { id: string }>(supabaseData: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
+          if (supabaseData.length > 0) {
+            setFn(prev => {
+              const supabaseIds = new Set(supabaseData.map(item => item.id));
+              const localOnly = prev.filter(item => !supabaseIds.has(item.id));
+              return [...supabaseData, ...localOnly];
+            });
+          }
+        };
 
-        // Merge state with fetched data securely
-        if (sanitizedMaterials.length > 0) {
-          setMateriais(prev => {
-            const supabaseIds = new Set(sanitizedMaterials.map(m => m.id));
-            const localOnly = prev.filter(m => !supabaseIds.has(m.id)).map(m => ({
-              ...m,
-              unidade: m.unidade === 'UM' ? 'UNI' : m.unidade
-            }));
-            return [...sanitizedMaterials, ...localOnly];
-          });
+        // 1. Materiais
+        if (data.materiais.length > 0) {
+          const sanitizedMaterials = data.materiais.map(m => ({
+            ...m,
+            unidade: m.unidade === 'UM' ? 'UNI' : m.unidade
+          }));
+          mergeWithSupabase(sanitizedMaterials, setMateriais);
         }
-        if (data.colaboradores.length > 0) {
-          setColaboradores(prev => {
-            const supabaseIds = new Set(data.colaboradores.map(c => c.id));
-            const localOnly = prev.filter(c => !supabaseIds.has(c.id));
-            return [...data.colaboradores, ...localOnly];
-          });
-        }
-        if (data.empresas.length > 0) {
-          setEmpresas(prev => {
-            const supabaseIds = new Set(data.empresas.map(e => e.id));
-            const localOnly = prev.filter(e => !supabaseIds.has(e.id));
-            return [...data.empresas, ...localOnly];
-          });
-        }
-        if (data.equipes.length > 0) {
-          setEquipes(prev => {
-            const supabaseIds = new Set(data.equipes.map(eq => eq.id));
-            const localOnly = prev.filter(eq => !supabaseIds.has(eq.id));
-            return [...data.equipes, ...localOnly];
-          });
-        }
-        if (data.fornecedores.length > 0) {
-          setFornecedores(prev => {
-            const supabaseIds = new Set(data.fornecedores.map(f => f.id));
-            const localOnly = prev.filter(f => !supabaseIds.has(f.id));
-            return [...data.fornecedores, ...localOnly];
-          });
-        }
-        if (data.movimentacoes.length > 0) {
-          setMovimentacoes(prev => {
-            const supabaseIds = new Set(data.movimentacoes.map(m => m.id));
-            const localOnly = prev.filter(m => !supabaseIds.has(m.id));
-            return [...data.movimentacoes, ...localOnly];
-          });
-        }
-        if (data.atas.length > 0) {
-          setAtas(prev => {
-            const supabaseIds = new Set(data.atas.map(a => a.id));
-            const localOnly = prev.filter(a => !supabaseIds.has(a.id));
-            return [...data.atas, ...localOnly];
-          });
-        }
+
+        // 2. Others
+        mergeWithSupabase(data.colaboradores, setColaboradores);
+        mergeWithSupabase(data.empresas, setEmpresas);
+        mergeWithSupabase(data.equipes, setEquipes);
+        mergeWithSupabase(data.fornecedores, setFornecedores);
+        mergeWithSupabase(data.movimentacoes, setMovimentacoes);
+        mergeWithSupabase(data.atas, setAtas);
 
       } catch (err) {
         console.error("Failed to load initial data from Supabase:", err);
@@ -367,10 +340,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     loadFromSupabase();
-  }, []);
+  }, [user, authLoading]);
 
   // Revert any "REUNIÃO-SELF" movements and restore stocks & budgets automatically on load
+  // Now depends on movimentacoes to ensure it runs even if data is fetched after mount
+  const hasRevertedRef = React.useRef(false);
   useEffect(() => {
+    if (movimentacoes.length === 0 || hasRevertedRef.current) return;
+
     const selfMovements = movimentacoes.filter(
       m => m.os === 'REUNIÃO-SELF' || 
            m.observacoes?.includes('Reunião de Self Service') ||
@@ -379,6 +356,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     if (selfMovements.length > 0) {
+      hasRevertedRef.current = true;
       // 1. Revert material stocks
       setMateriais(prev => {
         const updated = [...prev];
@@ -432,7 +410,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                m.conferente === 'Reunião de Self Service')
       ));
     }
-  }, []);
+  }, [movimentacoes.length]);
 
   const addMovimentacao = async (m: Movimentacao): Promise<{ success: boolean; error?: string }> => {
     setMovimentacoes(prev => [m, ...prev]);
@@ -879,6 +857,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const refreshData = async () => {
+    setIsSyncing(true);
+    try {
+      const data = await syncToSupabase.fetchAll();
+      const mergeWithSupabase = <T extends { id: string }>(supabaseData: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
+        if (supabaseData.length > 0) {
+          setFn(prev => {
+            const supabaseIds = new Set(supabaseData.map(item => item.id));
+            const localOnly = prev.filter(item => !supabaseIds.has(item.id));
+            return [...supabaseData, ...localOnly];
+          });
+        }
+      };
+
+      if (data.materiais.length > 0) {
+        const sanitizedMaterials = data.materiais.map(m => ({
+          ...m,
+          unidade: m.unidade === 'UM' ? 'UNI' : m.unidade
+        }));
+        mergeWithSupabase(sanitizedMaterials, setMateriais);
+      }
+      mergeWithSupabase(data.colaboradores, setColaboradores);
+      mergeWithSupabase(data.empresas, setEmpresas);
+      mergeWithSupabase(data.equipes, setEquipes);
+      mergeWithSupabase(data.fornecedores, setFornecedores);
+      mergeWithSupabase(data.movimentacoes, setMovimentacoes);
+      mergeWithSupabase(data.atas, setAtas);
+    } catch (err) {
+      console.error("Manual refresh failed:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const clearAllData = () => {
     // 1. Redefinir estados em memória para vazio completo
     setMateriais([]);
@@ -947,6 +959,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addEmpresa,
       deleteEmpresa,
       seedTestData,
+      refreshData,
       clearAllData,
       user,
       signOut

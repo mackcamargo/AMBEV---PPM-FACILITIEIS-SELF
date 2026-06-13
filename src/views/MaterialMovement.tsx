@@ -2,9 +2,150 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Rocket, Trash2, Search, CheckCircle2, AlertTriangle, X, ArrowUpRight, ArrowDownLeft, FileSpreadsheet } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
-import { Material, ItemLote, Movimentacao, formatUnit } from '../types';
+import { Material, ItemLote, Movimentacao, formatUnit, Fornecedor } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { playNotificationSound } from '../lib/audio';
+import { ColaboradorSelect } from '../components/ColaboradorSelect';
+
+const MaterialSelect = React.forwardRef<HTMLButtonElement, {
+  materials: Material[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  fornecedores: Fornecedor[];
+  invalid?: boolean;
+}>(({ materials, selectedId, onSelect, fornecedores, invalid }, ref) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedMaterial = materials.find(m => m.id === selectedId);
+
+  const filteredMaterials = materials
+    .filter(m => 
+      m.descricao.toLowerCase().includes(search.toLowerCase()) || 
+      m.sap.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => a.descricao.localeCompare(b.descricao));
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        ref={ref}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full text-left bg-white border rounded-xl flex items-center justify-between px-3 h-10 transition-all ${
+          invalid 
+            ? 'ring-2 ring-red-600 border-red-600 bg-red-100 animate-error-pulse' 
+            : 'border-slate-200 hover:border-slate-300 focus:ring-2 focus:ring-blue-500/20'
+        }`}
+      >
+        <span className="truncate flex-1">
+          {selectedMaterial ? (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-black text-slate-800 text-xs uppercase tracking-tight">{selectedMaterial.descricao}</span>
+              <span className="text-slate-300 font-bold">-</span>
+              <span className="text-slate-500 text-[10px] uppercase font-bold">SAP: {selectedMaterial.sap}</span>
+              <span className="text-slate-300 font-bold">-</span>
+              <span className={`text-[10px] font-black uppercase ${
+                selectedMaterial.estoqueAtual >= (selectedMaterial.estoqueIdeal || 0) ? 'text-emerald-600' :
+                selectedMaterial.estoqueAtual === 0 ? 'text-red-600' : 'text-amber-500'
+              }`}>
+                ({selectedMaterial.estoqueAtual} {formatUnit(selectedMaterial.unidade)})
+              </span>
+            </div>
+          ) : (
+            <span className="text-slate-400 text-xs font-bold uppercase">Selecione o Material...</span>
+          )}
+        </span>
+        <Search className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isOpen ? 'rotate-180 scale-110' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -5 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -5 }}
+            className="absolute z-[100] w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-[350px] flex flex-col"
+          >
+            <div className="p-3 border-b border-slate-100 bg-slate-50/50">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Pesquisar por nome ou código SAP..."
+                  className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400 bg-white"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="overflow-y-auto flex-1 custom-scrollbar">
+              {filteredMaterials.map(m => {
+                const isBelowIdeal = m.estoqueAtual < (m.estoqueIdeal || 0);
+                const isZero = m.estoqueAtual === 0;
+                const fornName = fornecedores.find(f => f.id === m.fornecedorId)?.nomeFantasia;
+                
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      onSelect(m.id);
+                      setIsOpen(false);
+                      setSearch('');
+                    }}
+                    className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100/50 last:border-0 transition-all flex flex-col gap-1 group"
+                  >
+                    <div className="flex justify-between items-start gap-3">
+                       <span className="text-xs font-black text-slate-800 uppercase tracking-tight group-hover:text-blue-600 transition-colors">
+                         {m.descricao}
+                       </span>
+                       <span className={`text-[10px] font-black shrink-0 px-2 py-0.5 rounded-full ${
+                         !isBelowIdeal ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                         isZero ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-500 border border-amber-100'
+                       }`}>
+                         {m.estoqueAtual} {formatUnit(m.unidade)}
+                       </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SAP: {m.sap}</span>
+                      {fornName && (
+                        <>
+                          <span className="text-slate-200">•</span>
+                          <span className="text-[9px] font-bold text-slate-300 uppercase italic">
+                            {fornName}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+              {filteredMaterials.length === 0 && (
+                <div className="p-10 text-center flex flex-col items-center gap-2">
+                  <Search className="w-8 h-8 text-slate-100" />
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum resultado</span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+});
 
 export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ type }) => {
   const { materiais, colaboradores, empresas, equipes, fornecedores, addMovimentacao, updateMaterial, setView } = useApp();
@@ -25,6 +166,12 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
   const [batchItems, setBatchItems] = useState<ItemLote[]>([]);
   const [toasts, setToasts] = useState<{ id: string; message: string; type: 'Entrada' | 'Retirada'; severity?: 'success' | 'warning' | 'error' }[]>([]);
   const [showStockWarning, setShowStockWarning] = useState(false);
+  const [insufficientStockModal, setInsufficientStockModal] = useState<{
+    isOpen: boolean;
+    available: number;
+    requested: number;
+    materialName: string;
+  } | null>(null);
   const [invalidFields, setInvalidFields] = useState<string[]>([]);
 
   // Reset fields when changing between Entrada and Retirada
@@ -48,12 +195,12 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
   }, [type]);
 
   // Refs for focusing
-  const materialRef = useRef<HTMLSelectElement>(null);
+  const materialRef = useRef<HTMLButtonElement>(null);
   const quantidadeRef = useRef<HTMLInputElement>(null);
   const osRef = useRef<HTMLInputElement>(null);
-  const colaboradorRef = useRef<HTMLSelectElement>(null);
-  const liberadorRef = useRef<HTMLSelectElement>(null);
-  const conferenteRef = useRef<HTMLSelectElement>(null);
+  const colaboradorRef = useRef<HTMLButtonElement>(null);
+  const liberadorRef = useRef<HTMLButtonElement>(null);
+  const conferenteRef = useRef<HTMLButtonElement>(null);
 
   // Clear invalid status for a specific field when data is provided
   const clearInvalidField = (field: string) => {
@@ -102,9 +249,6 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
     if (nome) clearInvalidField('colaborador');
     const colabObj = colaboradores.find(c => c.nome === nome && c.status === 'Ativo');
     if (colabObj) {
-      if (colabObj.equipe) {
-        setEquipe(colabObj.equipe);
-      }
       if (colabObj.empresa) {
         setEmpresa(colabObj.empresa);
       }
@@ -113,11 +257,6 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
 
   const handleEquipeChange = (newEquipe: string) => {
     setEquipe(newEquipe);
-    // If current collaborator doesn't belong to the new team, reset it
-    const currentColab = colaboradores.find(c => c.nome === colaborador);
-    if (currentColab && currentColab.equipe !== newEquipe) {
-      setColaborador('');
-    }
   };
 
   const selectedMaterial = materiais.find(m => m.id === selectedMaterialId);
@@ -135,11 +274,9 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       // ALWAYS set quantity back to 1 for every new selection
       setQuantidade('1');
       
-      // Auto-select team for Retirada
+      // Auto-select team for Retirada (Material context is primary)
       if (type === 'Retirada' && mat.equipe) {
         setEquipe(mat.equipe);
-        // Clear collaborator if they don't belong to the new team
-        setColaborador('');
       }
     } else {
       setPrecoUnitario('');
@@ -175,7 +312,23 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       return;
     }
 
-    let finalQuantidade = Number(quantidade);
+    const finalQuantityNum = Number(quantidade);
+
+    // Stock check for Retirada
+    if (type === 'Retirada') {
+      const mat = materiais.find(m => m.id === selectedMaterialId);
+      if (mat && finalQuantityNum > mat.estoqueAtual) {
+        setInsufficientStockModal({
+          isOpen: true,
+          available: mat.estoqueAtual,
+          requested: finalQuantityNum,
+          materialName: mat.descricao
+        });
+        return;
+      }
+    }
+
+    let finalQuantidade = finalQuantityNum;
     if (finalQuantidade < 0) {
       finalQuantidade = Math.abs(finalQuantidade);
       showToast('Quantidade negativa convertida para positiva.', type, 'warning');
@@ -269,7 +422,23 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       return;
     }
 
-    let finalQuantidade = Number(quantidade);
+    const finalQuantityNum = Number(quantidade);
+
+    // Stock check for Retirada
+    if (type === 'Retirada') {
+      const mat = materiais.find(m => m.id === selectedMaterialId);
+      if (mat && finalQuantityNum > mat.estoqueAtual) {
+        setInsufficientStockModal({
+          isOpen: true,
+          available: mat.estoqueAtual,
+          requested: finalQuantityNum,
+          materialName: mat.descricao
+        });
+        return;
+      }
+    }
+
+    let finalQuantidade = finalQuantityNum;
     if (finalQuantidade < 0) {
       finalQuantidade = Math.abs(finalQuantidade);
       showToast('Quantidade negativa convertida para positiva.', type, 'warning');
@@ -389,26 +558,14 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
               <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
                 Material <span className="text-red-500">*</span>
               </label>
-              <select 
+              <MaterialSelect 
                 ref={materialRef}
-                className={`input-field transition-all duration-300 ${invalidFields.includes('material') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`}
-                value={selectedMaterialId}
-                onChange={(e) => handleMaterialChange(e.target.value)}
-              >
-                <option value="">Selecione o Material</option>
-                {materiais
-                  .slice()
-                  .sort((a, b) => a.descricao.localeCompare(b.descricao))
-                  .map(m => {
-                    const fornName = fornecedores.find(f => f.id === m.fornecedorId)?.nomeFantasia;
-                    const statusEmoji = m.estoqueAtual >= (m.estoqueIdeal || 0) ? '🟢' : m.estoqueAtual === 0 ? '🔴' : '🟡';
-                    return (
-                      <option key={m.id} value={m.id}>
-                        {statusEmoji} {m.descricao} {fornName ? `(${fornName})` : ''} - COD SAP: {m.sap} ({m.estoqueAtual} {formatUnit(m.unidade)})
-                      </option>
-                    );
-                  })}
-              </select>
+                materials={materiais}
+                selectedId={selectedMaterialId}
+                onSelect={(id) => handleMaterialChange(id)}
+                fornecedores={fornecedores}
+                invalid={invalidFields.includes('material')}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -419,7 +576,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                 <input 
                   ref={quantidadeRef}
                   type="number" 
-                  className={`input-field transition-all duration-300 ${invalidFields.includes('quantidade') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`}
+                  className={`input-field transition-all duration-300 ${invalidFields.includes('quantidade') ? 'ring-2 ring-red-600 border-red-600 bg-red-100 animate-error-pulse' : ''}`}
                   value={quantidade}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -431,7 +588,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
               </div>
               <div>
                 <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Unidade</label>
-                <div className="h-8 flex items-center px-3 text-[12px] bg-slate-50 border border-brand-border rounded text-slate-500">
+                <div className="h-8 flex items-center px-3 text-[12px] bg-slate-50 border border-brand-border rounded-xl text-slate-500">
                   {selectedMaterial ? formatUnit(selectedMaterial.unidade) : '-'}
                 </div>
               </div>
@@ -451,7 +608,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
               </div>
               <div>
                 <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Valor Total (R$)</label>
-                <div className={`input-field h-8 flex items-center font-bold ${type === 'Retirada' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                <div className={`input-field h-8 flex items-center font-bold ${type === 'Retirada' ? 'bg-red-100 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
                   {type === 'Retirada' ? '- ' : ''}R${((Number(quantidade) || 0) * (Number(precoUnitario) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </div>
               </div>
@@ -477,7 +634,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                     <input 
                       ref={osRef}
                       type="text" 
-                      className={`input-field transition-all duration-300 ${invalidFields.includes('os') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`} 
+                      className={`input-field transition-all duration-300 ${invalidFields.includes('os') ? 'ring-2 ring-red-600 border-red-600 bg-red-100 animate-error-pulse' : ''}`} 
                       value={os} 
                       onChange={(e) => {
                         const val = e.target.value;
@@ -489,24 +646,16 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
-                    Retirante <span className="text-red-500">*</span>
-                  </label>
-                  <select 
+                  <ColaboradorSelect
                     ref={colaboradorRef}
-                    className={`input-field transition-all duration-300 ${invalidFields.includes('colaborador') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`} 
-                    value={colaborador} 
-                    onChange={(e) => handleColaboradorChange(e.target.value)}
-                  >
-                    <option value="">Selecione o retirante</option>
-                    {colaboradores
-                      .filter(c => c.status === 'Ativo')
-                      .sort((a, b) => a.nome.localeCompare(b.nome))
-                      .map(c => (
-                        <option key={c.id} value={c.nome}>{c.nome}</option>
-                      ))
-                    }
-                  </select>
+                    label="Retirante"
+                    required
+                    placeholder="Selecione o retirante"
+                    value={colaborador}
+                    onChange={handleColaboradorChange}
+                    colaboradores={colaboradores}
+                    error={invalidFields.includes('colaborador')}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -522,28 +671,19 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
 
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
-                      Liberador <span className="text-red-500">*</span>
-                    </label>
-                    <select 
+                    <ColaboradorSelect
                       ref={liberadorRef}
-                      className={`input-field transition-all duration-300 ${invalidFields.includes('liberador') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`} 
-                      value={liberador} 
-                      onChange={(e) => {
-                        const val = e.target.value;
+                      label="Liberador"
+                      required
+                      placeholder="Selecione"
+                      value={liberador}
+                      onChange={(val) => {
                         setLiberador(val);
                         if (val) clearInvalidField('liberador');
                       }}
-                    >
-                      <option value="">Selecione</option>
-                      {colaboradores
-                        .filter(c => c.status === 'Ativo')
-                        .sort((a, b) => a.nome.localeCompare(b.nome))
-                        .map(c => (
-                          <option key={c.id} value={c.nome}>{c.nome}</option>
-                        ))
-                      }
-                    </select>
+                      colaboradores={colaboradores.filter(c => ["TST", "GESTOR", "SUPERVISOR", "ENCARREGADO"].includes(c.cargo))}
+                      error={invalidFields.includes('liberador')}
+                    />
                   </div>
                 </div>
               </>
@@ -577,28 +717,19 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
-                    Recebedor <span className="text-red-500">*</span>
-                  </label>
-                  <select 
+                  <ColaboradorSelect
                     ref={conferenteRef}
-                    className={`input-field transition-all duration-300 ${invalidFields.includes('conferente') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`} 
-                    value={conferente} 
-                    onChange={(e) => {
-                      const val = e.target.value;
+                    label="Recebedor"
+                    required
+                    placeholder="Selecione o recebedor"
+                    value={conferente}
+                    onChange={(val) => {
                       setConferente(val);
                       if (val) clearInvalidField('conferente');
                     }}
-                  >
-                    <option value="">Selecione o recebedor</option>
-                    {colaboradores
-                      .filter(c => c.status === 'Ativo')
-                      .sort((a, b) => a.nome.localeCompare(b.nome))
-                      .map(c => (
-                        <option key={c.id} value={c.nome}>{c.nome}</option>
-                      ))
-                    }
-                  </select>
+                    colaboradores={colaboradores}
+                    error={invalidFields.includes('conferente')}
+                  />
                 </div>
               </>
             )}
@@ -628,7 +759,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
         <div className="card h-full flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Lote em Preparação</h3>
-            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold">
+            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg font-bold">
               {batchItems.length} ITENS
             </span>
           </div>
@@ -695,8 +826,121 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
           </div>
         </div>
       </div>
+    </div>
 
       {/* Toast notifications container */}
+      {/* Modals outside the toast container for proper layering */}
+      <AnimatePresence>
+        {showStockWarning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+          >
+            <div className="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl space-y-6">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-red-600 animate-pulse" />
+                </div>
+                <h2 className="text-2xl font-black text-center text-red-600">ITEM ZERADO</h2>
+              </div>
+              <p className="text-center text-slate-600 leading-relaxed">
+                Este item não possui estoque disponível para retirada. Deseja realizar uma entrada no estoque agora?
+              </p>
+              <div className="flex gap-4 pt-2">
+                <button 
+                  onClick={() => {
+                    setShowStockWarning(false);
+                    setSelectedMaterialId('');
+                  }}
+                  className="flex-1 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
+                >
+                  Não
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowStockWarning(false);
+                    setView('entrada-materiais');
+                  }}
+                  className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-emerald-200"
+                >
+                  Sim
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {insufficientStockModal?.isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+          >
+            <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl space-y-6">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+                  <AlertTriangle className="w-8 h-8 text-amber-600" />
+                </div>
+                <h2 className="text-xl font-black text-center text-slate-800 uppercase tracking-tight">Estoque Insuficiente</h2>
+              </div>
+              
+              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Material: <span className="text-slate-900">{insufficientStockModal.materialName}</span></p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-3 bg-white rounded-xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Solicitado</p>
+                    <p className="text-lg font-black text-red-600">{insufficientStockModal.requested}</p>
+                  </div>
+                  <div className="text-center p-3 bg-white rounded-xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Disponível</p>
+                    <p className="text-lg font-black text-emerald-600">{insufficientStockModal.available}</p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-center text-slate-500 text-sm leading-relaxed">
+                Você está tentando retirar mais do que possui. Deseja realizar uma <strong>Entrada</strong> para acertar o estoque ou retirar apenas o <strong>saldo de {insufficientStockModal.available}</strong>?
+              </p>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <button 
+                  onClick={() => {
+                    setView('entrada-materiais');
+                    setInsufficientStockModal(null);
+                  }}
+                  className="w-full px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
+                >
+                  <ArrowDownLeft className="w-4 h-4" />
+                  ACERTAR ESTOQUE (FAZER ENTRADA)
+                </button>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => {
+                      setQuantidade(insufficientStockModal.available);
+                      setInsufficientStockModal(null);
+                      showToast(`Quantidade ajustada para o saldo disponível (${insufficientStockModal.available}).`, 'Retirada', 'success');
+                    }}
+                    className="px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-xl transition-colors border border-blue-100"
+                  >
+                    RETIRAR {insufficientStockModal.available}
+                  </button>
+                  <button 
+                    onClick={() => setInsufficientStockModal(null)}
+                    className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition-colors"
+                  >
+                    CANCELAR
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="fixed top-24 right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-sm w-full">
         <AnimatePresence>
           {toasts.map((t) => (
@@ -746,51 +990,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
               </button>
             </motion.div>
           ))}
-          {showStockWarning && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-            >
-              <div className="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl space-y-6">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
-                    <AlertTriangle className="w-8 h-8 text-red-600 animate-pulse" />
-                  </div>
-                  <h2 className="text-2xl font-black text-center text-red-600">ITEM ZERADO</h2>
-                </div>
-                <p className="text-center text-slate-600 leading-relaxed">
-                  Este item não possui estoque disponível para retirada. Deseja realizar uma entrada no estoque agora?
-                </p>
-                <div className="flex gap-4 pt-2">
-                  <button 
-                    onClick={() => {
-                      setShowStockWarning(false);
-                      setSelectedMaterialId('');
-                    }}
-                    className="flex-1 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
-                  >
-                    Não
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setShowStockWarning(false);
-                      // Update material stock: In this app's "simulated" behavior for this request, 
-                      // if they say "Sim" to "register entrance" for a 0-stock item,
-                      // we simulate adding 1 to it so it's not zerado anymore,
-                      // and then keep on the current view instead of redirecting
-                    }}
-                    className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-emerald-200"
-                  >
-                    Sim
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
         </AnimatePresence>
-      </div>
-
       </div>
     </div>
   );

@@ -43,7 +43,7 @@ export const StockView: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [filterEquipe, setFilterEquipe] = useState<string>('TODAS');
-  const [filterStatus, setFilterStatus] = useState<string>('TODOS');
+  const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string>('descricao');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showSharePopup, setShowSharePopup] = useState(false);
@@ -67,19 +67,22 @@ export const StockView: React.FC = () => {
       if (filterEquipe !== 'TODAS' && m.equipe !== filterEquipe) return false;
 
       // Status filter
-      if (filterStatus !== 'TODOS') {
+      if (filterStatuses.length > 0) {
         const isZerado = m.estoqueAtual === 0;
         const isAbaixo = m.estoqueAtual < m.estoqueIdeal && m.estoqueAtual > 0;
         const isOkFilter = m.estoqueAtual >= m.estoqueIdeal && m.estoqueAtual > 0;
 
-        if (filterStatus === 'ZERADO' && !isZerado) return false;
-        if (filterStatus === 'ABAIXO' && !isAbaixo) return false;
-        if (filterStatus === 'OK' && !isOkFilter) return false;
+        const matches = [];
+        if (filterStatuses.includes('ZERADO') && isZerado) matches.push(true);
+        if (filterStatuses.includes('ABAIXO') && isAbaixo) matches.push(true);
+        if (filterStatuses.includes('OK') && isOkFilter) matches.push(true);
+
+        if (matches.length === 0) return false;
       }
 
       return true;
     });
-  }, [materiais, searchTerm, filterEquipe, filterStatus]);
+  }, [materiais, searchTerm, filterEquipe, filterStatuses]);
 
   // Sort filtered materials
   const sorted = useMemo(() => {
@@ -319,16 +322,16 @@ export const StockView: React.FC = () => {
                 setIsSortOpen(false);
               }}
               className={`btn-secondary !h-9 !py-0 px-3 flex items-center gap-2 transition-all ${
-                isFilterOpen || filterEquipe !== 'TODAS' || filterStatus !== 'TODOS'
+                isFilterOpen || filterEquipe !== 'TODAS' || filterStatuses.length > 0
                   ? 'bg-blue-50 border-blue-200 text-blue-700 font-bold hover:bg-blue-100/60'
                   : 'hover:bg-slate-50'
               }`}
             >
-              <Filter className={`w-3.5 h-3.5 ${(isFilterOpen || filterEquipe !== 'TODAS' || filterStatus !== 'TODOS') ? 'text-blue-600' : 'text-slate-500'}`} />
+              <Filter className={`w-3.5 h-3.5 ${(isFilterOpen || filterEquipe !== 'TODAS' || filterStatuses.length > 0) ? 'text-blue-600' : 'text-slate-500'}`} />
               <span className="text-[10.5px] font-bold uppercase tracking-wider">Filtros</span>
-              {(filterEquipe !== 'TODAS' || filterStatus !== 'TODOS') && (
+              {(filterEquipe !== 'TODAS' || filterStatuses.length > 0) && (
                 <span className="ml-1 bg-blue-600 text-white rounded-full text-[8.5px] font-black w-3.5 h-3.5 flex items-center justify-center">
-                  {(filterEquipe !== 'TODAS' ? 1 : 0) + (filterStatus !== 'TODOS' ? 1 : 0)}
+                  {(filterEquipe !== 'TODAS' ? 1 : 0) + (filterStatuses.length)}
                 </span>
               )}
             </button>
@@ -469,11 +472,21 @@ export const StockView: React.FC = () => {
                       { id: 'ABAIXO', label: 'Abaixo do Mínimo', activeClass: 'bg-amber-500 text-white border-amber-500' },
                       { id: 'OK', label: 'Estoque OK', activeClass: 'bg-emerald-600 text-white border-emerald-600' }
                     ].map(st => {
-                      const isActive = filterStatus === st.id;
+                      const isActive = st.id === 'TODOS' ? filterStatuses.length === 0 : filterStatuses.includes(st.id);
                       return (
                         <button 
                           key={st.id}
-                          onClick={() => setFilterStatus(st.id)}
+                          onClick={() => {
+                            if (st.id === 'TODOS') {
+                              setFilterStatuses([]);
+                            } else {
+                              setFilterStatuses(prev => 
+                                prev.includes(st.id) 
+                                  ? prev.filter(s => s !== st.id) 
+                                  : [...prev, st.id]
+                              );
+                            }
+                          }}
                           className={`px-3 py-1 text-xs rounded-full border transition-all ${
                             isActive 
                               ? `${st.activeClass} font-medium` 
@@ -486,12 +499,12 @@ export const StockView: React.FC = () => {
                     })}
                   </div>
                 </div>
-                {(filterEquipe !== 'TODAS' || filterStatus !== 'TODOS') && (
+                {(filterEquipe !== 'TODAS' || filterStatuses.length > 0) && (
                   <div className="col-span-1 md:col-span-2 pt-2 border-t border-slate-200/50 flex justify-end">
                     <button 
                       onClick={() => {
                         setFilterEquipe('TODAS');
-                        setFilterStatus('TODOS');
+                        setFilterStatuses([]);
                       }}
                       className="text-xs text-red-600 hover:text-red-700 font-semibold"
                     >
@@ -657,7 +670,7 @@ export const StockView: React.FC = () => {
                     </td>
                     <td className="px-3 py-2 font-bold text-brand-dark text-center tabular-nums">{m.estoqueAtual}</td>
                     <td className="px-3 py-2 text-center text-slate-500 text-[10px] uppercase">{m.unidade}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 text-center">
                       <span className={`status-pill ${statusClass}`}>
                         {statusLabel}
                       </span>

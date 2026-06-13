@@ -5,7 +5,7 @@ import { Material, Equipe, AtaReuniao, Movimentacao, formatUnit } from '../types
 import { Save, AlertCircle, ShoppingCart, Plus, Trash2, Download, Mail, Share2 } from 'lucide-react';
 
 export const SelfMeeting: React.FC = () => {
-  const { materiais, equipes, setEquipes, setAtas, addMovimentacao, colaboradores, updateMaterial, updateEquipe } = useApp();
+  const { materiais, equipes, setEquipes, atas, setAtas, addMovimentacao, colaboradores, updateMaterial, updateEquipe } = useApp();
   
   // Local state for shopping list items: { materialId: quantity }
   const [compras, setCompras] = useState<Record<string, number>>(() => {
@@ -17,7 +17,7 @@ export const SelfMeeting: React.FC = () => {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [externalSearchTerm, setExternalSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'TODOS' | 'ZERADO' | 'CRITICO' | 'OK'>('TODOS');
+  const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
 
   // Inline editing for Min/Ideal values
   const [editingStock, setEditingStock] = useState<{ id: string, field: 'min' | 'ideal' | 'atual', value: string } | null>(null);
@@ -60,6 +60,11 @@ export const SelfMeeting: React.FC = () => {
   const [showConfirmNewMeeting, setShowConfirmNewMeeting] = useState(false);
   const [clearOnShareClose, setClearOnShareClose] = useState(false);
   const [showConfirmClear, setShowConfirmClear] = useState(false);
+  
+  // States for duplicate check and save handling
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [customAtaName, setCustomAtaName] = useState('');
   
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -106,10 +111,10 @@ export const SelfMeeting: React.FC = () => {
       const isOk = m.estoqueAtual > 0 && m.estoqueAtual >= m.estoqueMinimo;
 
       const matchesStatus = 
-        filterStatus === 'TODOS' || 
-        (filterStatus === 'ZERADO' && isZerado) || 
-        (filterStatus === 'CRITICO' && isCritico) ||
-        (filterStatus === 'OK' && isOk);
+        filterStatuses.length === 0 || 
+        (filterStatuses.includes('ZERADO') && isZerado) || 
+        (filterStatuses.includes('CRITICO') && isCritico) ||
+        (filterStatuses.includes('OK') && isOk);
 
       return matchesSearch && matchesStatus;
     })
@@ -180,38 +185,74 @@ export const SelfMeeting: React.FC = () => {
 
   const handleSaveAndNewMeeting = () => {
     setClearOnShareClose(true);
-    handleSaveReuniao();
+    checkDuplicateAndSave();
     setShowConfirmNewMeeting(false);
   };
 
-  const handleSaveReuniao = () => {
-    // Create Ata
-    const novaAta: AtaReuniao = {
-      id: generateId(),
-      data: new Date().toISOString(),
-      descricao: 'Ata de Reunião de Self Service - ' + new Date().toLocaleDateString(),
-      orcamentosSnapshot: equipes.map(e => {
-        const impact = impactPerTeam[e.nome] || 0;
-        const isOverspent = impact > e.saldoAtualizado;
-        return {
-          equipe: e.nome,
-          saldoAnterior: e.saldoAtualizado,
-          saldoNovo: e.saldoAtualizado - impact,
-          estouro: isOverspent ? impact - e.saldoAtualizado : 0
-        };
-      }),
-      itensComprados: Object.entries(compras)
-        .filter(([_, q]) => (q as number) > 0)
-        .map(([id, q]) => ({
-          materialId: id,
-          quantidade: q as number,
-          custoTotal: (q as number) * (materiais.find(m => m.id === id)?.precoUnitario || 0)
-        }))
-    };
+  const checkDuplicateAndSave = () => {
+    if (isSaving) return;
 
-    setAtas(prev => [novaAta, ...prev]);
+    // Check for potential duplicates: same items on the same day
+    const today = new Date().toLocaleDateString();
+    const currentItemsStr = JSON.stringify(Object.entries(compras)
+      .filter(([_, q]) => (q as number) > 0)
+      .sort(([a], [b]) => a.localeCompare(b)));
 
-    setShowShareModal(true);
+    const isDuplicate = atas.some(ata => {
+      const ataDate = new Date(ata.data).toLocaleDateString();
+      if (ataDate !== today) return false;
+
+      const ataItemsStr = JSON.stringify(ata.itensComprados
+        .map(i => [i.materialId, i.quantidade])
+        .sort(([a], [b]) => (a as string).localeCompare(b as string)));
+      
+      return currentItemsStr === ataItemsStr;
+    });
+
+    if (isDuplicate) {
+      setShowDuplicateModal(true);
+      return;
+    }
+
+    handleSaveReuniao();
+  };
+
+  const handleSaveReuniao = (customName?: string) => {
+    if (isSaving) return;
+    setIsSaving(true);
+
+    try {
+      // Create Ata
+      const novaAta: AtaReuniao = {
+        id: generateId(),
+        data: new Date().toISOString(),
+        descricao: customName || ('Ata de Reunião de Self Service - ' + new Date().toLocaleDateString()),
+        orcamentosSnapshot: equipes.map(e => {
+          const impact = impactPerTeam[e.nome] || 0;
+          const isOverspent = impact > e.saldoAtualizado;
+          return {
+            equipe: e.nome,
+            saldoAnterior: e.saldoAtualizado,
+            saldoNovo: e.saldoAtualizado - impact,
+            estouro: isOverspent ? impact - e.saldoAtualizado : 0
+          };
+        }),
+        itensComprados: Object.entries(compras)
+          .filter(([_, q]) => (q as number) > 0)
+          .map(([id, q]) => ({
+            materialId: id,
+            quantidade: q as number,
+            custoTotal: (q as number) * (materiais.find(m => m.id === id)?.precoUnitario || 0)
+          }))
+      };
+
+      setAtas(prev => [novaAta, ...prev]);
+      setShowShareModal(true);
+    } finally {
+      setIsSaving(false);
+      setShowDuplicateModal(false);
+      setCustomAtaName('');
+    }
   };
 
   const shareViaWhatsApp = () => {
@@ -446,12 +487,12 @@ export const SelfMeeting: React.FC = () => {
           {/* Todas as Equipes Card */}
           <div 
             onClick={() => setSelectedTeam(null)}
-            className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${selectedTeam === null ? 'ring-2 ring-slate-800 ring-offset-2 bg-slate-50/50' : 'bg-white'}`} 
-            style={{ borderLeftColor: '#475569' }}
+            className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${selectedTeam === null ? 'ring-2 ring-[#1E3A8A] ring-offset-2 bg-slate-50/50' : 'bg-white'}`} 
+            style={{ borderLeftColor: '#1E3A8A' }}
           >
             <div className="flex justify-between items-center bg-transparent">
               <p className="text-[10px] font-extrabold text-black uppercase tracking-wider">Todas as Equipes</p>
-              {selectedTeam === null && <div className="w-2.5 h-2.5 rounded-full bg-slate-600 animate-pulse" />}
+              {selectedTeam === null && <div className="w-2.5 h-2.5 rounded-full bg-[#1e3a8a] animate-pulse" />}
             </div>
             <div className="mt-1 flex justify-between items-end">
               <div>
@@ -492,8 +533,8 @@ export const SelfMeeting: React.FC = () => {
               <div 
                 key={e.id || `equipe-${idx}`} 
                 onClick={() => setSelectedTeam(isSelected ? null : e.nome)}
-                className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`} 
-                style={{ borderLeftColor: e.cor }}
+                className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${isSelected ? 'ring-2 ring-[#1E3A8A] ring-offset-2' : ''}`} 
+                style={{ borderLeftColor: '#1E3A8A' }}
               >
                 <div className="flex justify-between items-center bg-transparent">
                   <p className="text-[9px] font-extrabold text-black uppercase tracking-wider">{e.nome}</p>
@@ -568,7 +609,7 @@ export const SelfMeeting: React.FC = () => {
             {/* Base Header */}
             <div className="flex items-center justify-between">
               <h3 className="text-[11px] font-black text-black uppercase tracking-widest flex items-center gap-2">
-                <div className={`w-1.5 h-4 rounded-full ${selectedTeam ? 'bg-blue-600' : 'bg-slate-800'}`} />
+                <div className={`w-1.5 h-4 rounded-full ${selectedTeam ? 'bg-[#1e3a8a]' : 'bg-[#1e3a8a]'}`} />
                 Área de Decisão de Compras {selectedTeam ? ` - ${selectedTeam}` : ' - Todas as Equipes'}
               </h3>
               <div className="text-right shrink-0">
@@ -657,33 +698,33 @@ export const SelfMeeting: React.FC = () => {
                 {/* Status Filter Chips */}
                 <div className="flex items-center bg-slate-50 p-0.5 rounded-lg border border-slate-200">
                   <button 
-                    onClick={() => setFilterStatus('TODOS')}
-                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all ${filterStatus === 'TODOS' ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                    onClick={() => setFilterStatuses([])}
+                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all ${filterStatuses.length === 0 ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     Todos
                   </button>
                   <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
                   <button 
-                    onClick={() => setFilterStatus('ZERADO')}
-                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatus === 'ZERADO' ? 'bg-white shadow-sm text-red-600 border border-red-100' : 'text-slate-400 hover:text-slate-600'}`}
+                    onClick={() => setFilterStatuses(prev => prev.includes('ZERADO') ? prev.filter(s => s !== 'ZERADO') : [...prev, 'ZERADO'])}
+                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatuses.includes('ZERADO') ? 'bg-white shadow-sm text-red-600 border border-red-100' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatus === 'ZERADO' ? 'bg-red-500 animate-pulse' : 'bg-slate-300'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatuses.includes('ZERADO') ? 'bg-red-500 animate-pulse' : 'bg-slate-300'}`} />
                     Zerados
                   </button>
                   <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
                   <button 
-                    onClick={() => setFilterStatus('CRITICO')}
-                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatus === 'CRITICO' ? 'bg-white shadow-sm text-amber-600 border border-amber-100' : 'text-slate-400 hover:text-slate-600'}`}
+                    onClick={() => setFilterStatuses(prev => prev.includes('CRITICO') ? prev.filter(s => s !== 'CRITICO') : [...prev, 'CRITICO'])}
+                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatuses.includes('CRITICO') ? 'bg-white shadow-sm text-amber-600 border border-amber-100' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatus === 'CRITICO' ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatuses.includes('CRITICO') ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`} />
                     Estoque Baixo
                   </button>
                   <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
                   <button 
-                    onClick={() => setFilterStatus('OK')}
-                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatus === 'OK' ? 'bg-white shadow-sm text-emerald-600 border border-emerald-100' : 'text-slate-400 hover:text-slate-600'}`}
+                    onClick={() => setFilterStatuses(prev => prev.includes('OK') ? prev.filter(s => s !== 'OK') : [...prev, 'OK'])}
+                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatuses.includes('OK') ? 'bg-white shadow-sm text-emerald-600 border border-emerald-100' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatus === 'OK' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatuses.includes('OK') ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
                     Estoque OK
                   </button>
                 </div>
@@ -710,12 +751,12 @@ export const SelfMeeting: React.FC = () => {
                     </button>
 
                     <button 
-                      onClick={handleSaveReuniao}
-                      disabled={totalGeral === 0}
+                      onClick={checkDuplicateAndSave}
+                      disabled={totalGeral === 0 || isSaving}
                       className="flex-1 md:flex-none px-3 py-1.5 bg-slate-900 hover:bg-black text-white border border-slate-900 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Save className="w-3.5 h-3.5" />
-                      <span>Salvar Reunião</span>
+                      <Save className={`w-3.5 h-3.5 ${isSaving ? 'animate-spin' : ''}`} />
+                      <span>{isSaving ? 'Salvando...' : 'Salvar Reunião'}</span>
                     </button>
                   </div>
               </div>
@@ -1034,6 +1075,56 @@ export const SelfMeeting: React.FC = () => {
               >
                 Agora não, obrigado
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate Meeting Warning Modal */}
+      {showDuplicateModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-slate-100">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="w-6 h-6 text-amber-600" />
+              </div>
+              <h3 className="text-sm font-black text-[#0F172A] uppercase tracking-widest mb-2 font-sans underline decoration-2 decoration-[#0F172A]/20">REUNIÃO NESSA MESMA DATA JÁ FOI SALVA</h3>
+              <p className="text-[11px] text-slate-500 mb-6 leading-relaxed">
+                Este centro de custo já registrou uma reunião hoje com estes itens.
+                Deseja <strong>salvar uma nova reunião</strong> mesmo assim?
+              </p>
+
+              <div className="w-full space-y-4">
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] font-black text-[#0F172A] uppercase tracking-tighter ml-1">Para salvar novamente, informe um nome/identificador para esta segunda reunião:</label>
+                  <input 
+                    type="text"
+                    placeholder="Ex: Reunião Extra, Revisão Pintura..."
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 outline-none transition-all placeholder:font-normal"
+                    value={customAtaName}
+                    onChange={(e) => setCustomAtaName(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    onClick={() => {
+                      setShowDuplicateModal(false);
+                      setCustomAtaName('');
+                    }}
+                    className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all cursor-pointer font-sans"
+                  >
+                    Não, cancelar
+                  </button>
+                  <button 
+                    onClick={() => handleSaveReuniao(customAtaName)}
+                    className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all cursor-pointer shadow-lg shadow-blue-200 font-sans"
+                  >
+                    Sim, salvar agora
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -32,7 +32,7 @@
   }
   
   .card {
-    @apply bg-white border border-brand-border rounded-md shadow-none p-4;
+    @apply bg-white border border-brand-border rounded-3xl shadow-sm p-4;
   }
   
   .table-header {
@@ -48,19 +48,19 @@
   }
   
   .input-field {
-    @apply w-full h-10 px-3 text-[14px] bg-white border border-brand-border rounded focus:outline-none focus:ring-1 focus:ring-brand-accent transition-all;
+    @apply w-full h-10 px-3 text-[14px] bg-white border border-brand-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-accent transition-all;
   }
   
   .btn-primary {
-    @apply h-10 px-5 bg-brand-dark text-white text-[13px] font-bold rounded hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide;
+    @apply h-10 px-5 bg-brand-dark text-white text-[13px] font-bold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide;
   }
   
   .btn-secondary {
-    @apply h-10 px-5 border border-brand-border bg-white text-slate-700 text-[13px] font-bold rounded hover:bg-slate-50 transition-colors uppercase tracking-wide;
+    @apply h-10 px-5 border border-brand-border bg-white text-slate-700 text-[13px] font-bold rounded-xl hover:bg-slate-50 transition-colors uppercase tracking-wide;
   }
 
   .status-pill {
-    @apply px-2.5 py-1 rounded-full text-[11px] font-black uppercase;
+    @apply inline-flex items-center justify-center min-w-[75px] px-2.5 py-1 rounded-full text-[11px] font-black uppercase text-center;
   }
   
   .scrollbar-hide::-webkit-scrollbar {
@@ -81,7 +81,7 @@
   }
   
   .pill-crit {
-    @apply bg-red-500 text-white shadow-sm;
+    @apply bg-red-600 text-white shadow-sm;
   }
 }
 
@@ -149,6 +149,21 @@
   animation: custom-blink 1.5s ease-in-out infinite;
   display: inline-block;
   transform-origin: center;
+}
+
+@keyframes error-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+    border-color: #dc2626;
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+    border-color: #ef4444;
+  }
+}
+
+.animate-error-pulse {
+  animation: error-pulse 1s ease-in-out infinite;
 }
 
 @keyframes intense-pulse {

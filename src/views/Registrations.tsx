@@ -1243,7 +1243,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           onChange={(e) => handleInputChange('cargo', e.target.value)}
         >
           <option value="">Selecione...</option>
-          {["ADM", "AJUDANTE", "ENCARREGADO", "GESSEIRO", "GESTOR", "MECÂNICO", "OUTROS", "PEDREIRO", "PINTOR", "SUPERVISOR", "TST"].map(cargo => (
+          {["ADM", "AJUDANTE", "ELETRICISTA", "ENCARREGADO", "GESSEIRO", "GESTOR", "MECÂNICO", "OUTROS", "PEDREIRO", "PINTOR", "SUPERVISOR", "TST"].map(cargo => (
             <option key={cargo} value={cargo}>{cargo}</option>
           ))}
         </select>
@@ -2263,7 +2263,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       onChange={(e) => setEditFormData({ ...editFormData, cargo: e.target.value })}
                     >
                       <option value="">Selecione...</option>
-                      {["ADM", "AJUDANTE", "ENCARREGADO", "GESSEIRO", "GESTOR", "MECÂNICO", "OUTROS", "PEDREIRO", "PINTOR", "SUPERVISOR", "TST"].map(cargo => (
+                      {["ADM", "AJUDANTE", "ELETRICISTA", "ENCARREGADO", "GESSEIRO", "GESTOR", "MECÂNICO", "OUTROS", "PEDREIRO", "PINTOR", "SUPERVISOR", "TST"].map(cargo => (
                         <option key={cargo} value={cargo}>{cargo}</option>
                       ))}
                     </select>
