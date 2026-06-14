@@ -265,8 +265,7 @@ export const MeetingHistory: React.FC = () => {
         return `• ${m?.descricao}\n  - COD SAP: ${m?.sap}\n  - Qtd: ${item.quantidade} ${formatUnit(m?.unidade)}`;
       });
     
-    const teamLabel = shareTeam === 'Todas' ? 'todas as equipes' : `a equipe ${shareTeam}`;
-    return `Olá,\n\nGostaria de solicitar um orçamento referente à ${ata.descricao} para ${teamLabel}:\n\n${items.length > 0 ? items.join('\n\n') : 'Nenhum material selecionado para esta equipe nesta ata.'}\n\nFico no aguardo do retorno.\nAtenciosamente.`;
+    return `Ola Espero que esteja Tudo Bem! \n\nSolicitamos o orçamento para os materiais e peças listados abaixo, referentes à nossa Reunião de Self Service.\nPedimos que o retorno com valores, disponibilidade e condições comerciais seja enviado em até 48 horas após o recebimento deste e-mail ou WhatsApp.\nÉ imprescindível que a proposta contemple o prazo de entrega após a geração do pedido de compra, para que possamos avaliar e dar prosseguimento ao processo de aquisição. \nSegue lista abaixo!\n\n${items.length > 0 ? items.join('\n\n') : 'Nenhum material selecionado para esta equipe nesta ata.'}`;
   };
 
   const shareViaWhatsApp = (ata: AtaReuniao) => {
@@ -292,8 +291,16 @@ export const MeetingHistory: React.FC = () => {
     } else {
       url = `https://outlook.live.com/mail/0/deeplink/compose?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(formattedBody)}`;
     }
+    
+    // Automatic spreadsheet download
+    downloadSpreadsheet(ata);
+    
     window.open(url, '_blank');
     setIsEmailChoiceModalOpen(false);
+
+    setTimeout(() => {
+      alert("E-mail aberto e planilha baixada!\n\nPor favor, anexe o arquivo da planilha (.csv) baixado em seu computador no corpo do e-mail.");
+    }, 500);
   };
 
   const initiateEmailShare = (ata: AtaReuniao) => {
@@ -310,17 +317,69 @@ export const MeetingHistory: React.FC = () => {
     const subject = `Solicitação de Orçamento - ${ata.descricao}`;
     const text = generateShareMessage(ata);
     const formattedBody = text.replace(/\n/g, '\r\n');
+    
+    // Automatic spreadsheet download
+    downloadSpreadsheet(ata);
+    
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(formattedBody)}`;
+
+    setTimeout(() => {
+      alert("Planilha baixada e e-mail aberto!\n\nPor favor, anexe o arquivo da planilha (.csv) baixado em seu computador.");
+    }, 500);
   };
 
   const handleGlobalShare = async (ata: AtaReuniao) => {
     const subject = `Solicitação de Orçamento - ${ata.descricao}`;
     const text = generateShareMessage(ata);
     
-    const shareData = {
+    // Generate CSV items
+    const items = ata.itensComprados
+      .filter(item => {
+        if (shareTeam === 'Todas') return true;
+        const m = materiais.find(mat => mat.id === item.materialId);
+        return m?.equipe === shareTeam;
+      })
+      .map(item => {
+        const m = materiais.find(mat => mat.id === item.materialId);
+        return {
+          SAP: m?.sap,
+          Equipe: m?.equipe || 'N/A',
+          Descricao: m?.descricao,
+          Quantidade: item.quantidade,
+          Unidade: formatUnit(m?.unidade)
+        };
+      });
+
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade'];
+    const csvRows = [
+      headers.join(';'),
+      ...items.map(row => 
+        [
+          row.SAP,
+          `"${row.Equipe}"`,
+          `"${row.Descricao}"`,
+          row.Quantidade,
+          row.Unidade
+        ].join(';')
+      )
+    ];
+
+    const csvContent = "\uFEFF" + csvRows.join('\n');
+    const fileName = `Ata_${ata.descricao.replace(/\s+/g, '_')}.csv`;
+    
+    const shareData: any = {
       title: subject,
-      text: text
+      text: text,
     };
+
+    try {
+      const csvFile = new File([csvContent], fileName, { type: 'text/csv;charset=utf-8;' });
+      if (navigator.canShare && navigator.canShare({ files: [csvFile] })) {
+        shareData.files = [csvFile];
+      }
+    } catch (e) {
+      console.warn("Could not attach file to shareData:", e);
+    }
 
     try {
       if (navigator.share) {
@@ -345,28 +404,25 @@ export const MeetingHistory: React.FC = () => {
         const m = materiais.find(mat => mat.id === item.materialId);
         return {
           SAP: m?.sap,
+          Equipe: m?.equipe || 'N/A',
           Descricao: m?.descricao,
           Quantidade: item.quantidade,
-          Unidade: formatUnit(m?.unidade),
-          PrecoUnit: (m?.precoUnitario || 0),
-          Subtotal: item.custoTotal
+          Unidade: formatUnit(m?.unidade)
         };
       });
 
-    const headers = ['COD SAP', 'Descrição', 'Quantidade', 'Unidade', 'Preço Unit.', 'Subtotal'];
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade'];
     const csvRows = [
       headers.join(';'),
-      ...items.flatMap(row => [
+      ...items.map(row => 
         [
           row.SAP,
+          `"${row.Equipe}"`,
           `"${row.Descricao}"`,
           row.Quantidade,
-          row.Unidade,
-          row.PrecoUnit?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-          row.Subtotal?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-        ].join(';'),
-        '' // Pula uma linha entre registros
-      ])
+          row.Unidade
+        ].join(';')
+      )
     ];
 
     const csvContent = "\uFEFF" + csvRows.join('\n');
@@ -866,7 +922,7 @@ export const MeetingHistory: React.FC = () => {
                       </div>
                       <span className="text-[9px] font-bold text-slate-700">WhatsApp</span>
                     </button>
-                    
+
                     <button 
                       onClick={() => initiateEmailShare(selectedAta)}
                       className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-amber-50 hover:border-amber-200 transition-all group cursor-pointer"
@@ -874,8 +930,10 @@ export const MeetingHistory: React.FC = () => {
                       <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-amber-200">
                         <Mail className="w-5 h-5" />
                       </div>
-                      <span className="text-[9px] font-bold text-slate-700">E-mail</span>
+                      <span className="text-[9px] font-bold text-slate-700">Email</span>
                     </button>
+                    
+
                     
                     <button 
                       onClick={() => downloadSpreadsheet(selectedAta)}

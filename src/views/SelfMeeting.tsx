@@ -24,8 +24,13 @@ export const SelfMeeting: React.FC = () => {
   const [editingBudget, setEditingBudget] = useState<{ id: string, value: string } | null>(null);
   
   // New Timer State
-  const [elapsed, setElapsed] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [elapsed, setElapsed] = useState<number>(() => {
+    const saved = localStorage.getItem('selfMeeting_elapsed');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(() => {
+    return localStorage.getItem('selfMeeting_isTimerRunning') !== 'false';
+  });
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -49,6 +54,14 @@ export const SelfMeeting: React.FC = () => {
   }, [compras]);
 
   useEffect(() => {
+    localStorage.setItem('selfMeeting_elapsed', elapsed.toString());
+  }, [elapsed]);
+
+  useEffect(() => {
+    localStorage.setItem('selfMeeting_isTimerRunning', isTimerRunning.toString());
+  }, [isTimerRunning]);
+
+  useEffect(() => {
     if (selectedTeam) {
       localStorage.setItem('selfMeeting_selectedTeam', selectedTeam);
     } else {
@@ -56,6 +69,7 @@ export const SelfMeeting: React.FC = () => {
     }
   }, [selectedTeam]);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [isEmailChoiceModalOpen, setIsEmailChoiceModalOpen] = useState(false);
   const [shareTeam, setShareTeam] = useState<string>('Todas');
   const [showConfirmNewMeeting, setShowConfirmNewMeeting] = useState(false);
   const [clearOnShareClose, setClearOnShareClose] = useState(false);
@@ -64,7 +78,13 @@ export const SelfMeeting: React.FC = () => {
   // States for duplicate check and save handling
   const [isSaving, setIsSaving] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [customAtaName, setCustomAtaName] = useState('');
+  const [customAtaName, setCustomAtaName] = useState(() => {
+    return localStorage.getItem('selfMeeting_customAtaName') || '';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('selfMeeting_customAtaName', customAtaName);
+  }, [customAtaName]);
   
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -180,6 +200,9 @@ export const SelfMeeting: React.FC = () => {
   const handleDiscardAndNewMeeting = () => {
     setCompras({});
     setSelectedTeam(null);
+    setElapsed(0);
+    setIsTimerRunning(true);
+    setCustomAtaName('');
     setShowConfirmNewMeeting(false);
   };
 
@@ -260,21 +283,114 @@ export const SelfMeeting: React.FC = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
+  const shareViaEmailChoice = (e: React.MouseEvent, provider: 'gmail' | 'outlook') => {
+    e.stopPropagation();
+    const subject = `Solicitação de Orçamento - Reunião de Self Service`;
+    const text = generateShareMessage();
+    let formattedBody = text.replace(/\n/g, '\r\n');
+    
+    // Truncate to avoid 404 / URL too long errors
+    if (formattedBody.length > 1500) {
+      formattedBody = formattedBody.substring(0, 1500) + "\n\n...[Mensagem truncada devido ao tamanho. Baixe a planilha para ver tudo.]";
+    }
+
+    let url = "";
+
+    if (provider === 'gmail') {
+      url = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(formattedBody)}`;
+    } else {
+      url = `https://outlook.live.com/mail/0/deeplink/compose?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(formattedBody)}`;
+    }
+    
+    // Auto download spreadsheet
+    downloadSpreadsheet();
+    
+    window.open(url, '_blank');
+    setIsEmailChoiceModalOpen(false);
+
+    setTimeout(() => {
+      alert("E-mail aberto e planilha baixada!\n\nPor favor, anexe o arquivo da planilha (.csv) baixado em seu computador no corpo do e-mail.");
+    }, 500);
+  };
+
+  const initiateEmailShare = () => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      shareViaEmail();
+    } else {
+      setIsEmailChoiceModalOpen(true);
+    }
+  };
+
   const shareViaEmail = () => {
-    const subject = `Solicitação de Orçamento - ${new Date().toLocaleDateString()}`;
+    const subject = `Solicitação de Orçamento - Reunião de Self Service`;
     const text = generateShareMessage();
     const formattedBody = text.replace(/\n/g, '\r\n');
+    
+    // Auto download spreadsheet
+    downloadSpreadsheet();
+    
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(formattedBody)}`;
+
+    setTimeout(() => {
+      alert("Planilha baixada e e-mail aberto!\n\nPor favor, anexe o arquivo da planilha (.csv) baixado em seu computador.");
+    }, 500);
   };
 
   const handleGlobalShare = async () => {
-    const subject = `Solicitação de Orçamento - ${new Date().toLocaleDateString()}`;
+    const subject = `Solicitação de Orçamento - Reunião de Self Service`;
     const text = generateShareMessage();
     
-    const shareData = {
+    // Prepare items to generate the CSV rows
+    const items = Object.entries(compras)
+      .filter(([id, q]) => {
+        const isSelected = (q as number) > 0;
+        if (!isSelected) return false;
+        if (shareTeam === 'Todas') return true;
+        const m = materiais.find(mat => mat.id === id);
+        return m?.equipe === shareTeam;
+      })
+      .map(([id, q]) => {
+        const m = materiais.find(mat => mat.id === id);
+        return {
+          COD_SAP: m?.sap,
+          Equipe: m?.equipe,
+          Descricao: m?.descricao,
+          Quantidade: q,
+          Unidade: formatUnit(m?.unidade)
+        };
+      });
+
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade'];
+    const csvRows = [
+      headers.join(';'),
+      ...items.map(row => 
+        [
+          row.COD_SAP,
+          row.Equipe,
+          `"${row.Descricao}"`,
+          row.Quantidade,
+          row.Unidade
+        ].join(';')
+      )
+    ];
+
+    const csvContent = "\uFEFF" + csvRows.join('\n');
+    const fileName = `Orcamento_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
+    
+    const shareData: any = {
       title: subject,
-      text: text
+      text: text,
     };
+
+    try {
+      const csvFile = new File([csvContent], fileName, { type: 'text/csv;charset=utf-8;' });
+      if (navigator.canShare && navigator.canShare({ files: [csvFile] })) {
+        shareData.files = [csvFile];
+      }
+    } catch (e) {
+      console.warn("Could not attach file to shareData:", e);
+    }
 
     try {
       if (navigator.share) {
@@ -327,8 +443,7 @@ export const SelfMeeting: React.FC = () => {
         return `• ${m?.descricao}\n  - COD SAP: ${m?.sap}\n  - Qtd: ${q} ${formatUnit(m?.unidade)}`;
       });
     
-    const teamLabel = shareTeam === 'Todas' ? 'todas as equipes' : `a equipe ${shareTeam}`;
-    return `Olá,\n\nGostaria de solicitar um orçamento para os materiais referentes à ${teamLabel}:\n\n${items.length > 0 ? items.join('\n\n') : 'Nenhum material selecionado para esta equipe.'}\n\nFico no aguardo do retorno.\nAtenciosamente.`;
+    return `Ola Espero que esteja Tudo Bem! \n\nSolicitamos o orçamento para os materiais e peças listados abaixo, referentes à nossa Reunião de Self Service.\nPedimos que o retorno com valores, disponibilidade e condições comerciais seja enviado em até 48 horas após o recebimento deste e-mail ou WhatsApp.\nÉ imprescindível que a proposta contemple o prazo de entrega após a geração do pedido de compra, para que possamos avaliar e dar prosseguimento ao processo de aquisição. \nSegue lista abaixo!\n\n${items.length > 0 ? items.join('\n\n') : 'Nenhum material selecionado para esta equipe.'}`;
   };
 
   const downloadSpreadsheet = () => {
@@ -347,13 +462,11 @@ export const SelfMeeting: React.FC = () => {
           Equipe: m?.equipe,
           Descricao: m?.descricao,
           Quantidade: q,
-          Unidade: formatUnit(m?.unidade),
-          PrecoUnit: m?.precoUnitario,
-          Subtotal: (q as number) * (m?.precoUnitario || 0)
+          Unidade: formatUnit(m?.unidade)
         };
       });
 
-    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade', 'Preço Unit.', 'Subtotal'];
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade'];
     const csvRows = [
       headers.join(';'),
       ...items.map(row => 
@@ -362,9 +475,7 @@ export const SelfMeeting: React.FC = () => {
           row.Equipe,
           `"${row.Descricao}"`,
           row.Quantidade,
-          row.Unidade,
-          row.PrecoUnit?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-          row.Subtotal?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+          row.Unidade
         ].join(';')
       )
     ];
@@ -386,6 +497,9 @@ export const SelfMeeting: React.FC = () => {
     if (clearOnShareClose) {
       setCompras({});
       setSelectedTeam(null);
+      setElapsed(0);
+      setIsTimerRunning(true);
+      setCustomAtaName('');
       setClearOnShareClose(false);
     }
   };
@@ -1029,24 +1143,26 @@ export const SelfMeeting: React.FC = () => {
 
                 <button 
                   onClick={shareViaWhatsApp}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all group"
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all group lg:min-w-[70px] cursor-pointer"
                 >
                   <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-emerald-200">
                     <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                   </div>
                   <span className="text-[9px] font-bold text-slate-700">WhatsApp</span>
                 </button>
-                
 
                 <button 
-                  onClick={shareViaEmail}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-amber-50 hover:border-amber-200 transition-all group"
+                  onClick={initiateEmailShare}
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-amber-50 hover:border-amber-200 transition-all group lg:min-w-[70px] cursor-pointer"
                 >
                   <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-amber-200">
                     <Mail className="w-5 h-5" />
                   </div>
-                  <span className="text-[9px] font-bold text-slate-700">E-mail</span>
+                  <span className="text-[9px] font-bold text-slate-700">Email</span>
                 </button>
+                
+
+
                 
                 <button 
                   onClick={downloadSpreadsheet}
@@ -1190,6 +1306,10 @@ export const SelfMeeting: React.FC = () => {
                 <button 
                   onClick={() => {
                     setCompras({});
+                    setSelectedTeam(null);
+                    setElapsed(0);
+                    setIsTimerRunning(true);
+                    setCustomAtaName('');
                     setShowConfirmClear(false);
                   }}
                   className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-extrabold text-[10px] py-2.5 rounded-xl transition-all active:scale-98 cursor-pointer uppercase tracking-wider flex items-center justify-center gap-2 border border-transparent hover:border-red-200"
@@ -1206,6 +1326,37 @@ export const SelfMeeting: React.FC = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isEmailChoiceModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div 
+            className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-200 cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-slate-800 mb-4">Escolha seu provedor</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                onClick={(e) => shareViaEmailChoice(e, 'gmail')}
+                className="p-4 rounded-xl border border-slate-200 hover:bg-red-50 hover:border-red-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
+              >
+                Gmail
+              </button>
+              <button 
+                onClick={(e) => shareViaEmailChoice(e, 'outlook')}
+                className="p-4 rounded-xl border border-slate-200 hover:bg-blue-50 hover:border-blue-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
+              >
+                Outlook
+              </button>
+            </div>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setIsEmailChoiceModalOpen(false); }}
+              className="w-full mt-4 p-2 text-slate-400 hover:text-slate-600 text-sm font-bold transition-colors cursor-pointer text-center"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}

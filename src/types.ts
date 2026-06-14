@@ -139,7 +139,7 @@ export const formatUnit = (unit: string | undefined | null): string => {
   if (u === 'UN' || u === 'UM') return 'UNI';
   if (u === 'GL') return 'GL';
   if (u === 'SC') return 'SC';
-  if (u === 'M' || u === 'MT') return 'M3'; 
+  if (u === 'M' || u === 'MT') return 'MT'; 
   return u;
 };
 

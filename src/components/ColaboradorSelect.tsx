@@ -88,7 +88,7 @@ export const ColaboradorSelect = React.forwardRef<HTMLButtonElement, Colaborador
       </button>
 
       {isOpen && (
-        <div className="absolute z-[100] mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute z-[100] bottom-full mb-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150">
           <div className="p-2 border-b border-slate-100 bg-slate-50">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />

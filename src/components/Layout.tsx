@@ -24,6 +24,23 @@ import {
 import { useApp } from '../lib/store';
 import { ViewState } from '../types';
 
+const VIEW_TITLES: Record<ViewState, string> = {
+  'dashboard': 'Dashboard',
+  'entrada-materiais': 'Entrada de Materiais',
+  'retirada-materiais': 'Retirada de Materiais',
+  'estoque-atual': 'Estoque Atual',
+  'movimentacoes': 'Movimentações',
+  'cad-materiais': 'Cadastro de Materiais',
+  'cad-empresas': 'Cadastro de Empresas',
+  'cad-fornecedores': 'Cadastro de Fornecedores',
+  'cad-colaboradores': 'Cadastro de Colaboradores',
+  'cad-equipes': 'Cadastro de Equipes',
+  'reuniao-self': 'Reunião de Self',
+  'historico-reunioes': 'Histórico de Reuniões',
+  'relatorios': 'Relatórios',
+  'configuracoes': 'Configurações'
+};
+
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { view, setView, setHasEntered, isSyncing, user, signOut } = useApp();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -135,7 +152,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               <Menu className="w-5 h-5" />
             </button>
             <h2 className="text-[14px] font-semibold text-brand-dark">
-              Tela: {view.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              Tela: {VIEW_TITLES[view] || view}
             </h2>
           </div>
           

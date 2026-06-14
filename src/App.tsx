@@ -20,10 +20,23 @@ import { Login } from './views/Login';
 
 function AppContent() {
   const { user, authLoading, view, setView, hasEntered, setHasEntered } = useApp();
+  const [pendingView, setPendingView] = React.useState<'dashboard' | 'retirada-materiais' | 'reuniao-self' | null>(null);
+
+  React.useEffect(() => {
+    if (user && pendingView) {
+      setView(pendingView);
+      setPendingView(null);
+    }
+  }, [user, pendingView, setView]);
 
   const handleEnter = (targetView: 'dashboard' | 'retirada-materiais' | 'reuniao-self') => {
-    setView(targetView);
-    setHasEntered(true);
+    if (user) {
+      setView(targetView);
+      setHasEntered(true);
+    } else {
+      setPendingView(targetView);
+      setHasEntered(true);
+    }
   };
 
   if (authLoading) {
@@ -34,12 +47,12 @@ function AppContent() {
     );
   }
 
-  if (!user) {
-    return <Login />;
-  }
-
   if (!hasEntered) {
     return <WelcomeView onEnter={handleEnter} />;
+  }
+
+  if (!user) {
+    return <Login />;
   }
 
   const renderView = () => {

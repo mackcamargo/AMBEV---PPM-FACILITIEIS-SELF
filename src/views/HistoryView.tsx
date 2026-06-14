@@ -197,20 +197,17 @@ export const HistoryView: React.FC = () => {
     const headers = ['Data', 'Tipo', 'Material', 'Quantidade', 'Valor Total', 'Responsável', 'Equipe', 'OS', 'NF'];
     const csvHeaders = headers.map(h => `"${h}"`).join(';');
     
-    const rows = filteredMovs.flatMap(m => [
-      [
-        new Date(m.data).toLocaleString('pt-BR'),
-        m.tipo,
-        m.materialDesc,
-        m.quantidade.toString(),
-        (m.quantidade * (m.precoUnitario || 0)).toFixed(2).replace('.', ','),
-        m.colaborador || m.conferente || '',
-        m.equipe || '',
-        m.os || '',
-        m.nf || ''
-      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'),
-      '' // Pula uma linha entre registros
-    ]);
+    const rows = filteredMovs.map(m => [
+      new Date(m.data).toLocaleString('pt-BR'),
+      m.tipo,
+      m.materialDesc,
+      m.quantidade.toString(),
+      (m.quantidade * (m.precoUnitario || 0)).toFixed(2).replace('.', ','),
+      m.colaborador || m.conferente || '',
+      m.equipe || '',
+      m.os || '',
+      m.nf || ''
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'));
     
     const csvContent = [csvHeaders, ...rows].join("\r\n");
     const bom = new Uint8Array([0xEF, 0xBB, 0xBF]); // UTF-8 BOM
@@ -307,6 +304,27 @@ export const HistoryView: React.FC = () => {
     setShowSharePopup(false);
   };
 
+  const teamStats = React.useMemo(() => {
+    const stats: Record<string, { entradas: number, saidas: number, cor: string }> = {};
+    equipes.forEach(e => {
+      stats[e.nome] = { entradas: 0, saidas: 0, cor: e.cor };
+    });
+    filteredMovs.forEach(m => {
+      const eq = m.equipe || 'Outros';
+      if (!stats[eq]) {
+        stats[eq] = { entradas: 0, saidas: 0, cor: '#ccc' };
+      }
+      if (m.tipo === 'Entrada') {
+        stats[eq].entradas += m.quantidade;
+      } else if (m.tipo === 'Retirada') {
+        stats[eq].saidas += m.quantidade;
+      }
+    });
+    return stats;
+  }, [filteredMovs, equipes]);
+
+  const totalEntradas = React.useMemo(() => filteredMovs.filter(m => m.tipo === 'Entrada').reduce((acc, m) => acc + m.quantidade, 0), [filteredMovs]);
+  const totalSaidas = React.useMemo(() => filteredMovs.filter(m => m.tipo === 'Retirada').reduce((acc, m) => acc + m.quantidade, 0), [filteredMovs]);
   const totalValue = filteredMovs.reduce((acc, m) => acc + (m.quantidade * (m.precoUnitario || 0)), 0);
 
   return (
@@ -314,32 +332,31 @@ export const HistoryView: React.FC = () => {
       <div className="card !p-0 flex-1 flex flex-col overflow-hidden">
         <div className="p-4 border-b border-slate-100 bg-white sticky top-0 z-30 shadow-sm shrink-0">
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider hidden sm:block">Histórico de Movimentações</h3>
-                <button 
-                  onClick={() => {
-                    if (selectedIds.length === filteredMovs.length) setSelectedIds([]);
-                    else setSelectedIds(filteredMovs.map(m => m.id));
-                  }}
-                  className="px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase transition-all bg-white text-slate-500 hover:bg-slate-50 border border-slate-200 flex items-center gap-2"
-                >
-                  <Check className={`w-3.5 h-3.5 ${selectedIds.length > 0 ? 'text-blue-600' : 'text-slate-400'}`} />
-                  {selectedIds.length === filteredMovs.length && filteredMovs.length > 0 ? 'Desmarcar' : 'Selecionar Tudo'}
-                </button>
+            
+            <div className="flex items-center gap-3 w-full">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Pesquisar por Material, COD SAP, OS ou Colaborador..."
+                  className="w-full h-11 pl-11 pr-4 bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-[11px] font-medium transition-all shadow-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
-              <div className="flex items-center gap-2">
+
+              <div className="flex items-center gap-2 shrink-0">
                 <div className="relative">
                   <button 
                     onClick={() => setShowSharePopup(!showSharePopup)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase transition-all border ${
+                    className={`btn-secondary !h-9 !py-0 px-3 flex items-center gap-2 transition-all ${
                       showSharePopup 
-                        ? 'bg-slate-900 text-white border-slate-900' 
-                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                        ? 'bg-slate-900 border-slate-900 text-white' 
+                        : 'hover:bg-slate-50 border-slate-200'
                     }`}
                   >
                     <Share2 className="w-3.5 h-3.5" />
-                    Compartilhar
+                    <span className="text-[10.5px] font-bold uppercase tracking-wider hidden sm:block">Compartilhar</span>
                   </button>
 
                   {showSharePopup && (
@@ -366,7 +383,7 @@ export const HistoryView: React.FC = () => {
                         className="w-full flex items-center gap-3 px-3 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors text-left"
                       >
                         {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-                        {copied ? 'Copiado!' : 'Copiar Resumo'}
+                        {copied ? 'Copiado!' : 'Copiar Lista'}
                       </button>
                       <button 
                         onClick={handleWebShare}
@@ -379,40 +396,76 @@ export const HistoryView: React.FC = () => {
                   )}
                 </div>
 
+                <button 
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`btn-secondary !h-9 !py-0 px-3 flex items-center gap-2 transition-all ${
+                    showFilters || filterType !== 'Tudo' || startDate || endDate || filterTeam !== 'Tudo'
+                      ? 'bg-blue-50 border-blue-200 text-blue-700 font-bold hover:bg-blue-100/60'
+                      : 'hover:bg-slate-50'
+                  }`}
+                >
+                  <Filter className={`w-3.5 h-3.5 ${(showFilters || filterType !== 'Tudo' || startDate || endDate || filterTeam !== 'Tudo') ? 'text-blue-600' : 'text-slate-500'}`} />
+                  <span className="text-[10.5px] font-bold uppercase tracking-wider hidden sm:block">Filtros</span>
+                  {(filterType !== 'Tudo' || startDate || endDate || filterTeam !== 'Tudo') && (
+                    <span className="ml-1 bg-blue-600 text-white rounded-full text-[8.5px] font-black w-3.5 h-3.5 flex items-center justify-center">
+                      {(filterType !== 'Tudo' ? 1 : 0) + (startDate || endDate ? 1 : 0) + (filterTeam !== 'Tudo' ? 1 : 0)}
+                    </span>
+                  )}
+                </button>
+                
                 {selectedIds.length > 0 && (
                   <button 
                     onClick={() => setIsBulkDeleteModalOpen(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase transition-all bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                    className="btn-danger !h-9 !py-0 px-3 flex items-center gap-2 border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 flex items-center justify-center rounded-lg h-9 px-3 transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    Excluir ({selectedIds.length})
+                    <span className="text-[10.5px] font-bold uppercase tracking-wider hidden sm:block">
+                      Excluir ({selectedIds.length})
+                    </span>
                   </button>
                 )}
-
-                <button 
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase transition-all border ${
-                    showFilters || filterType !== 'Tudo' || startDate || endDate || filterTeam !== 'Tudo'
-                      ? 'bg-blue-50 text-blue-600 border-blue-200' 
-                      : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <Filter className="w-3 h-3" />
-                  {showFilters ? 'Esconder Filtros' : 'Filtros Avançados'}
-                  {showFilters ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                </button>
               </div>
             </div>
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Pesquisar por Material, COD SAP, OS ou Colaborador..."
-                className="input-field pl-10 h-10 text-xs"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            {/* Stats Cards Dashboard */}
+            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 flex flex-col xl:flex-row xl:items-center justify-between gap-4 text-xs shadow-sm mb-1">
+              <div className="flex flex-wrap items-center gap-4 text-slate-600 shrink-0">
+                <div className="flex items-center gap-1.5 px-2 py-1">
+                  <ArrowDownLeft className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Entradas: <strong>{totalEntradas.toLocaleString('pt-BR')}</strong> unids</span>
+                </div>
+                <div className="h-3 w-px bg-slate-200 hidden sm:block" />
+                <div className="flex items-center gap-1.5 px-2 py-1">
+                  <ArrowUpRight className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Saídas: <strong>{totalSaidas.toLocaleString('pt-BR')}</strong> unids</span>
+                </div>
+                <div className="h-3 w-px bg-slate-200 hidden sm:block" />
+                <div className="flex items-center gap-1.5 px-2 py-1">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Valor do Período: <strong className="text-emerald-700">R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-1.5 overflow-hidden">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block shrink-0">Movimentações por Equipe:</span>
+                <div className="flex flex-wrap gap-1">
+                  {Object.entries(teamStats).map(([eqName, stats]: [string, { entradas: number, saidas: number, cor: string }]) => {
+                    if (stats.entradas === 0 && stats.saidas === 0) return null;
+                    return (
+                      <div 
+                        key={eqName}
+                        className="inline-flex items-center gap-1.5 bg-white border border-slate-200/60 rounded-lg px-2 py-0.5 text-[10px] text-slate-600 shadow-2xs"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: stats.cor || '#94a3b8' }} />
+                        <span className="font-bold text-slate-700">{eqName}:</span>
+                        <span className="text-[9px] font-medium text-slate-500">
+                          <span className="text-blue-600">+{stats.entradas}</span> <span className="opacity-60">un</span> / <span className="text-amber-600">-{stats.saidas}</span> <span className="opacity-60">un</span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {showFilters && (

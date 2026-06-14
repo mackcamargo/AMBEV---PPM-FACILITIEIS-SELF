@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
-import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload } from 'lucide-react';
+import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload, Package } from 'lucide-react';
 import { Material } from '../types';
 import { materialsToImport } from '../data/materials';
 import { motion, AnimatePresence } from 'motion/react';
@@ -13,7 +13,17 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   const [searchTerm, setSearchTerm] = useState('');
   
   // Controlled form state
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<any>(() => {
+    const saved = localStorage.getItem(`registration_draft_${type}`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse initial registration draft", e);
+      }
+    }
+    return type === 'materiais' ? { unidade: 'UNI' } : {};
+  });
   const [invalidFields, setInvalidFields] = useState<string[]>([]);
 
   // Modals state
@@ -192,6 +202,38 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     );
   }, [store.empresas]);
 
+  const statsPorEquipe = useMemo(() => {
+    if (type !== 'materiais') return [];
+    
+    // Group materials by team
+    const groups: { [key: string]: { count: number; totalStock: number; color?: string } } = {};
+    
+    // Initialize groups with existing teams so we don't miss empty ones
+    store.equipes.forEach(eq => {
+      groups[eq.nome] = { count: 0, totalStock: 0, color: eq.cor };
+    });
+    
+    // Aggregate material data
+    store.materiais.forEach(item => {
+      const eqName = item.equipe || 'Sem Equipe';
+      if (!groups[eqName]) {
+        groups[eqName] = { count: 0, totalStock: 0, color: '#64748b' };
+      }
+      groups[eqName].count += 1;
+      groups[eqName].totalStock += (Number(item.estoqueAtual) || 0);
+    });
+    
+    return Object.entries(groups).map(([nome, val]) => ({
+      nome,
+      ...val
+    })).sort((a, b) => b.totalStock - a.totalStock);
+  }, [type, store.materiais, store.equipes]);
+
+  const totalMateriais = store.materiais.length;
+  const totalStockGeral = useMemo(() => {
+    return store.materiais.reduce((acc, item) => acc + (Number(item.estoqueAtual) || 0), 0);
+  }, [store.materiais]);
+
 
   // Custom toast notifications list
   const [toasts, setToasts] = useState<{
@@ -203,15 +245,46 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     equipe?: string;
   }[]>([]);
 
-  // Reset form when type changes to avoid data persistence between different views
+  const lastTypeRef = React.useRef(type);
+
+  // Reset form when type changes to avoid data persistence between different views, loading type-specific drafts
   React.useEffect(() => {
     setInvalidFields([]);
+    const saved = localStorage.getItem(`registration_draft_${type}`);
+    if (saved) {
+      try {
+        setFormData(JSON.parse(saved));
+        lastTypeRef.current = type;
+        return;
+      } catch (e) {
+        console.error("Failed to parse saved registration form draft", e);
+      }
+    }
+
     if (type === 'materiais') {
       setFormData({ unidade: 'UNI' });
     } else {
       setFormData({});
     }
+    lastTypeRef.current = type;
   }, [type]);
+
+  // Persist form changes in real time for currently active tab
+  React.useEffect(() => {
+    if (lastTypeRef.current === type) {
+      const hasRealData = Object.keys(formData).some(k => {
+        if (k === 'unidade' && formData[k] === 'UNI' && type === 'materiais') return false;
+        if (['matricula', 'codigoFornecedor', 'codigoEquipe', 'codigoEmpresa'].includes(k)) return false;
+        return formData[k] !== undefined && formData[k] !== '';
+      });
+
+      if (hasRealData) {
+        localStorage.setItem(`registration_draft_${type}`, JSON.stringify(formData));
+      } else {
+        localStorage.removeItem(`registration_draft_${type}`);
+      }
+    }
+  }, [formData, type]);
 
   const maskCNPJ = (value: string) => {
     return value
@@ -1085,7 +1158,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           <option value="GL">GL</option>
           <option value="GR">GR</option>
           <option value="KG">KG</option>
-          <option value="M">M</option>
+          <option value="MT">MT</option>
           <option value="SC">SC</option>
           <option value="UNI">UNI</option>
         </select>
@@ -1725,6 +1798,43 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   return (
     <div className="flex flex-col h-full overflow-hidden p-5">
       <div className="flex-1 overflow-y-auto space-y-6 pr-1 pb-4 scrollbar-thin scrollbar-thumb-slate-200">
+        {type === 'materiais' && (
+          <div className="bg-slate-50 border border-slate-150 rounded-xl p-3 flex flex-col xl:flex-row xl:items-center justify-between gap-4 text-xs">
+            <div className="flex flex-wrap items-center gap-4 text-slate-600 shrink-0">
+              <div className="flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-slate-400" />
+                <span><strong>{totalMateriais}</strong> modelos cadastrados</span>
+              </div>
+              <div className="h-3 w-px bg-slate-200 hidden sm:block" />
+              <div className="flex items-center gap-1.5">
+                <Package className="w-3.5 h-3.5 text-slate-400" />
+                <span>Estoque Geral: <strong>{totalStockGeral.toLocaleString('pt-BR')}</strong> unids</span>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-1.5 overflow-hidden">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block shrink-0">Estoque por Equipe:</span>
+              <div className="flex flex-wrap gap-1">
+                {statsPorEquipe.map((eq, i) => {
+                  if (eq.count === 0 && eq.totalStock === 0) return null; // Only show teams with some data to keep it clean
+                  return (
+                    <div 
+                      key={eq.nome || i}
+                      className="inline-flex items-center gap-1.5 bg-white border border-slate-200/60 rounded-lg px-2 py-0.5 text-[10px] text-slate-600 shadow-2xs"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: eq.color || '#94a3b8' }} />
+                      <span className="font-bold text-slate-705">{eq.nome}:</span>
+                      <span className="text-[9px] font-medium text-slate-500">
+                        {eq.count} <span className="text-slate-400">cad</span> / {eq.totalStock.toLocaleString('pt-BR')} <span className="text-slate-400">un</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-1 lg:sticky lg:top-0 z-10">
           <div className="card shadow-md border-brand-primary/10">
@@ -2120,7 +2230,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       <option value="GL">GL</option>
                       <option value="GR">GR</option>
                       <option value="KG">KG</option>
-                      <option value="M">M</option>
+                      <option value="MT">MT</option>
                       <option value="SC">SC</option>
                       <option value="UNI">UNI</option>
                     </select>
@@ -2585,15 +2695,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     <span className="text-[9px] font-bold text-slate-700">Compartilhar</span>
                   </button>
 
-                  <button 
-                    onClick={initiateEmailShare}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-amber-50 hover:border-amber-200 transition-all group"
-                  >
-                    <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-amber-200">
-                      <Mail className="w-5 h-5" />
-                    </div>
-                    <span className="text-[9px] font-bold text-slate-700">Email</span>
-                  </button>
+
 
                   <button 
                     onClick={downloadStockSpreadsheet}

@@ -156,7 +156,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [hasEntered, setHasEntered] = useState<boolean>(() => {
-    return localStorage.getItem('ppm_has_entered') === 'true';
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ppm_has_entered') === 'true';
+    }
+    return false;
   });
 
   useEffect(() => {

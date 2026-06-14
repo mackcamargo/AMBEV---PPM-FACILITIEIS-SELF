@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, ArrowUpDown, Edit2, Trash2, X, Save, AlertTriangle, Share2, Download, Copy, Check, Mail } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, Edit2, Trash2, X, Save, AlertTriangle, Share2, Download, Copy, Check, Mail, Package, DollarSign, Database } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { Material, formatUnit } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -20,14 +20,15 @@ export const StockView: React.FC = () => {
   const [deleteError, setDeleteError] = useState('');
   
   const teamStats = useMemo(() => {
-    const stats: Record<string, { valor: number, qtd: number, cor: string }> = {};
+    const stats: Record<string, { valor: number, qtd: number, cor: string, itens: number }> = {};
     equipes.forEach(e => {
-      stats[e.nome] = { valor: 0, qtd: 0, cor: e.cor };
+      stats[e.nome] = { valor: 0, qtd: 0, cor: e.cor, itens: 0 };
     });
     materiais.forEach(m => {
       if (!stats[m.equipe]) return;
       stats[m.equipe].valor += m.estoqueAtual * m.precoUnitario;
       stats[m.equipe].qtd += m.estoqueAtual;
+      stats[m.equipe].itens += 1;
     });
     return stats;
   }, [materiais, equipes]);
@@ -169,23 +170,20 @@ export const StockView: React.FC = () => {
     const headers = ['COD SAP', 'Descrição', 'Equipe', 'Fornecedor', 'Est. Minimo', 'Est. Ideal', 'Est. Atual', 'Unidade', 'Preço Unit', 'Valor Total'];
     const csvHeaders = headers.map(h => `"${h}"`).join(';');
 
-    const rows = sorted.flatMap(m => {
+    const rows = sorted.map(m => {
       const fornecedorName = fornecedores.find(f => f.id === m.fornecedorId)?.nomeFantasia || m.codigoFornecedor || '-';
       return [
-        [
-          m.sap,
-          m.descricao,
-          m.equipe,
-          fornecedorName,
-          m.estoqueMinimo.toString(),
-          m.estoqueIdeal.toString(),
-          m.estoqueAtual.toString(),
-          m.unidade,
-          m.precoUnitario.toFixed(2).replace('.', ','),
-          (m.estoqueAtual * m.precoUnitario).toFixed(2).replace('.', ',')
-        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'),
-        '' // Pula uma linha entre registros
-      ];
+        m.sap,
+        m.descricao,
+        m.equipe,
+        fornecedorName,
+        m.estoqueMinimo.toString(),
+        m.estoqueIdeal.toString(),
+        m.estoqueAtual.toString(),
+        m.unidade,
+        m.precoUnitario.toFixed(2).replace('.', ','),
+        (m.estoqueAtual * m.precoUnitario).toFixed(2).replace('.', ',')
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';');
     });
     
     const csvContent = [csvHeaders, ...rows].join("\r\n");
@@ -383,45 +381,56 @@ export const StockView: React.FC = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="flex overflow-x-auto gap-3 pb-3 scrollbar-hide py-1 px-1">
-          <button 
-            onClick={() => setFilterEquipe('TODAS')}
-            className={`p-3 rounded-xl border transition-all text-left shrink-0 w-[150px] sm:flex-1 relative group ${
-              filterEquipe === 'TODAS'
-                ? 'bg-slate-900 text-white border-slate-900 shadow-lg scale-[1.02]'
-                : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
-            }`}
-          >
-            <p className="text-[10px] uppercase font-black opacity-60 tracking-wider">Total de Peças</p>
-            <div className="mt-1">
-              <p className="text-lg font-black leading-tight">{totalGeralQtd}</p>
-              <p className={`text-[10px] font-bold tracking-tight ${filterEquipe === 'TODAS' ? 'opacity-70' : 'text-slate-500'}`}>
-                R$ {totalGeralValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
+        <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 flex flex-col xl:flex-row xl:items-center justify-between gap-4 text-xs shadow-sm mb-1">
+          <div className="flex flex-wrap items-center gap-4 text-slate-600 shrink-0">
+            <button 
+              onClick={() => setFilterEquipe('TODAS')}
+              className={`flex items-center gap-3 px-3 py-1.5 rounded-lg transition-all ${filterEquipe === 'TODAS' ? 'bg-slate-200/80 text-slate-800 shadow-xs border border-slate-300/50' : 'hover:bg-slate-200/40 text-slate-500 border border-transparent'}`}
+            >
+              <div className="flex items-center gap-1.5">
+                <Database className={`w-3.5 h-3.5 ${filterEquipe === 'TODAS' ? 'text-slate-500' : 'text-slate-400'}`} />
+                <span><strong>{materiais.length}</strong> cad</span>
+              </div>
+              <div className={`h-3 w-px ${filterEquipe === 'TODAS' ? 'bg-slate-300' : 'bg-slate-200'} hidden sm:block`} />
+              <div className="flex items-center gap-1.5">
+                <Package className={`w-3.5 h-3.5 ${filterEquipe === 'TODAS' ? 'text-slate-600' : 'text-slate-400'}`} />
+                <span>Estoque Geral: <strong>{totalGeralQtd.toLocaleString('pt-BR')}</strong> unids</span>
+              </div>
+            </button>
+            <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+            <div className="flex items-center gap-1.5 px-2 py-1">
+              <DollarSign className="w-4 h-4 text-emerald-500" />
+              <span>Valor Total: <strong className="text-emerald-700">R$ {totalGeralValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
             </div>
-          </button>
-          {[...equipes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })).map((equipe, idx) => {
-            const stats = teamStats[equipe.nome] || { valor: 0, qtd: 0, cor: '#ccc' };
-            const isActive = filterEquipe === equipe.nome;
-            return (
-              <button 
-                key={equipe.id || `equipe-${idx}`}
-                onClick={() => setFilterEquipe(equipe.nome)}
-                className={`p-3 rounded-xl border transition-all text-left shrink-0 w-[150px] sm:flex-1 relative group ${
-                  isActive
-                    ? 'bg-white border-2 shadow-lg scale-[1.02]'
-                    : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
-                }`}
-                style={isActive ? { borderColor: stats.cor } : {}}
-              >
-                <p className="text-[10px] uppercase font-black tracking-wider" style={{ color: stats.cor }}>{equipe.nome}</p>
-                <div className="mt-1">
-                  <p className="text-lg font-black leading-tight">{stats.qtd}</p>
-                  <p className="text-[10px] text-slate-500 font-bold tracking-tight">R$ {stats.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                </div>
-              </button>
-            );
-          })}
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-1.5 overflow-hidden">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block shrink-0">Filtrar por Equipe:</span>
+            <div className="flex flex-wrap gap-1">
+              {[...equipes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })).map((equipe, idx) => {
+                const stats = teamStats[equipe.nome] || { valor: 0, qtd: 0, cor: '#ccc', itens: 0 };
+                if (stats.itens === 0 && stats.qtd === 0 && stats.valor === 0) return null;
+                const isActive = filterEquipe === equipe.nome;
+                return (
+                  <button 
+                    key={equipe.id || `equipe-${idx}`}
+                    onClick={() => setFilterEquipe(equipe.nome)}
+                    className={`inline-flex items-center gap-1.5 border rounded-lg px-2 py-0.5 text-[10px] shadow-2xs transition-all ${
+                      isActive 
+                        ? 'bg-white border-slate-300 text-slate-800 scale-105 relative z-10 font-bold' 
+                        : 'bg-white/60 border-slate-200/60 text-slate-600 hover:bg-white hover:border-slate-300 font-medium'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: stats.cor || '#94a3b8' }} />
+                    <span>{equipe.nome}</span>
+                    <span className={`text-[9px] px-1 rounded-sm ${isActive ? 'bg-slate-100 text-slate-600' : 'bg-slate-100/50 text-slate-500'}`}>
+                      {stats.qtd.toLocaleString('pt-BR')} un
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         <AnimatePresence>
