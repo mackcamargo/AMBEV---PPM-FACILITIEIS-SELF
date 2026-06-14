@@ -531,16 +531,6 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
         <div className="card h-full flex flex-col">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Novo Item ({type})</h3>
-             {type === 'Entrada' && (
-              <button 
-                onClick={() => showToast('Funcionalidade de importação de planilhas (Excel/CSV) estará disponível em breve.', 'Entrada', 'warning')}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold uppercase transition-colors"
-                title="Importar planilha de materiais"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-                <span>Importar Planilha</span>
-              </button>
-            )}
           </div>
           
           <div className="space-y-4 flex-1 flex flex-col">

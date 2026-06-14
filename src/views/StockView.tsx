@@ -365,18 +365,6 @@ export const StockView: React.FC = () => {
                 {selectedIds.length === sorted.length && sorted.length > 0 ? 'Desmarcar' : 'Selecionar Tudo'}
               </span>
             </button>
-
-            {selectedIds.length > 0 && (
-              <button 
-                onClick={() => setIsBulkDeleteModalOpen(true)}
-                className="btn-danger !h-9 !py-0 px-3 flex items-center gap-2 border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 flex items-center justify-center rounded-lg h-9 px-3 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span className="text-[10.5px] font-bold uppercase tracking-wider">
-                  Excluir ({selectedIds.length})
-                </span>
-              </button>
-            )}
           </div>
         </div>
 
