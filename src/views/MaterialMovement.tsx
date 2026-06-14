@@ -176,9 +176,32 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
 
   // Reset fields when changing between Entrada and Retirada
   useEffect(() => {
-    setSelectedMaterialId('');
-    setQuantidade('1');
-    setPrecoUnitario('');
+    let isPreselect = false;
+    // Check if we have a preselected material from a previous redirect
+    const preselectId = localStorage.getItem('preselect_material_id');
+    
+    if (preselectId) {
+      isPreselect = true;
+      setSelectedMaterialId(preselectId);
+      const mat = materiais.find(m => m.id === preselectId);
+      if (mat) {
+        setPrecoUnitario(mat.precoUnitario || '');
+        if (type === 'Retirada' && mat.equipe) {
+          setEquipe(mat.equipe);
+        }
+      } else {
+        setPrecoUnitario('');
+      }
+      setQuantidade('1');
+      setTimeout(() => localStorage.removeItem('preselect_material_id'), 50); // clear it after StrictMode finishes
+    } 
+    
+    if (!isPreselect) {
+      setSelectedMaterialId('');
+      setPrecoUnitario('');
+      setQuantidade('1');
+    }
+    
     setBatchItems([]);
     setInvalidFields([]);
     setNf('');
@@ -372,6 +395,16 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
         type,
         'error'
       );
+    }
+
+    // Check for return to retirada
+    if (type === 'Entrada') {
+      const returnToRetiradaId = localStorage.getItem('return_to_retirada_material_id');
+      if (returnToRetiradaId && returnToRetiradaId === selectedMaterialId) {
+        localStorage.removeItem('return_to_retirada_material_id');
+        localStorage.setItem('preselect_material_id', selectedMaterialId);
+        setTimeout(() => setView('retirada-materiais'), 100);
+      }
     }
 
     // Clear item fields
@@ -851,6 +884,8 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                 <button 
                   onClick={() => {
                     setShowStockWarning(false);
+                    localStorage.setItem('preselect_material_id', selectedMaterialId);
+                    localStorage.setItem('return_to_retirada_material_id', selectedMaterialId);
                     setView('entrada-materiais');
                   }}
                   className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-emerald-200"
@@ -898,6 +933,8 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
               <div className="flex flex-col gap-3 pt-2">
                 <button 
                   onClick={() => {
+                    localStorage.setItem('preselect_material_id', selectedMaterialId);
+                    localStorage.setItem('return_to_retirada_material_id', selectedMaterialId);
                     setView('entrada-materiais');
                     setInsufficientStockModal(null);
                   }}

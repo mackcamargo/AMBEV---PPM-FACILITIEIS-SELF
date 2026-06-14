@@ -1817,17 +1817,26 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               <div className="flex flex-wrap gap-1">
                 {statsPorEquipe.map((eq, i) => {
                   if (eq.count === 0 && eq.totalStock === 0) return null; // Only show teams with some data to keep it clean
+                  const isActive = activeFilters.equipe === eq.nome;
                   return (
-                    <div 
+                    <button 
                       key={eq.nome || i}
-                      className="inline-flex items-center gap-1.5 bg-white border border-slate-200/60 rounded-lg px-2 py-0.5 text-[10px] text-slate-600 shadow-2xs"
+                      onClick={() => setActiveFilters(prev => ({ ...prev, equipe: prev.equipe === eq.nome ? '' : eq.nome }))}
+                      className={`inline-flex items-center gap-1.5 border rounded-lg px-2 py-0.5 text-[10px] shadow-2xs transition-all cursor-pointer ${
+                        isActive 
+                          ? 'bg-emerald-50 border-emerald-300 text-emerald-800 ring-1 ring-emerald-200' 
+                          : 'bg-white border-slate-200/60 text-slate-600 hover:bg-slate-50'
+                      }`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: eq.color || '#94a3b8' }} />
-                      <span className="font-bold text-slate-705">{eq.nome}:</span>
-                      <span className="text-[9px] font-medium text-slate-500">
-                        {eq.count} <span className="text-slate-400">cad</span> / {eq.totalStock.toLocaleString('pt-BR')} <span className="text-slate-400">un</span>
+                      <span 
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'animate-[pulse_1s_ease-in-out_infinite] bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]' : ''}`} 
+                        style={isActive ? undefined : { backgroundColor: eq.color || '#94a3b8' }} 
+                      />
+                      <span className={`font-bold ${isActive ? 'text-emerald-700' : 'text-slate-700'}`}>{eq.nome}:</span>
+                      <span className={`text-[9px] font-medium ${isActive ? 'text-emerald-600' : 'text-slate-500'}`}>
+                        {eq.count} <span className={isActive ? 'text-emerald-500/70' : 'text-slate-400'}>cad</span> / {eq.totalStock.toLocaleString('pt-BR')} <span className={isActive ? 'text-emerald-500/70' : 'text-slate-400'}>un</span>
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -1902,25 +1911,6 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                 </div>
                 
                 <div className="flex items-center gap-2 flex-1 justify-end">
-                  <button 
-                    onClick={() => {
-                      const data = store[type as keyof typeof store] as any[];
-                      const s = searchTerm.toLowerCase();
-                      const filteredData = data.filter(item => {
-                        if (!s) return true;
-                        const searchStr = JSON.stringify(item).toLowerCase();
-                        return searchStr.includes(s);
-                      });
-
-                      if (selectedIds.length === filteredData.length) setSelectedIds([]);
-                      else setSelectedIds(filteredData.map((d: any) => d.id));
-                    }}
-                    className="p-1.5 px-3 flex items-center gap-1.5 text-[10px] font-bold uppercase transition-all bg-white text-slate-500 hover:bg-slate-50 border border-slate-200 rounded-lg mr-1 group"
-                  >
-                    <CheckCircle2 className={`w-3.5 h-3.5 ${selectedIds.length > 0 ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                    {selectedIds.length === (store[type as keyof typeof store] as any[]).length && (store[type as keyof typeof store] as any[]).length > 0 ? 'Desmarcar' : 'Selecionar Tudo'}
-                  </button>
-
                   <div className="flex items-center gap-2">
                     {selectedIds.length > 0 && (
                       <button 

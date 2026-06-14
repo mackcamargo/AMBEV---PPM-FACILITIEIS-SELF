@@ -402,16 +402,19 @@ export const StockView: React.FC = () => {
                 return (
                   <button 
                     key={equipe.id || `equipe-${idx}`}
-                    onClick={() => setFilterEquipe(equipe.nome)}
+                    onClick={() => setFilterEquipe(isActive ? 'TODAS' : equipe.nome)}
                     className={`inline-flex items-center gap-1.5 border rounded-lg px-2 py-0.5 text-[10px] shadow-2xs transition-all ${
                       isActive 
-                        ? 'bg-white border-slate-300 text-slate-800 scale-105 relative z-10 font-bold' 
-                        : 'bg-white/60 border-slate-200/60 text-slate-600 hover:bg-white hover:border-slate-300 font-medium'
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800 ring-1 ring-emerald-200' 
+                        : 'bg-white border-slate-200/60 text-slate-600 hover:bg-slate-50 cursor-pointer'
                     }`}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: stats.cor || '#94a3b8' }} />
-                    <span>{equipe.nome}</span>
-                    <span className={`text-[9px] px-1 rounded-sm ${isActive ? 'bg-slate-100 text-slate-600' : 'bg-slate-100/50 text-slate-500'}`}>
+                    <span 
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'animate-[pulse_1s_ease-in-out_infinite] bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]' : ''}`} 
+                      style={isActive ? undefined : { backgroundColor: stats.cor || '#94a3b8' }} 
+                    />
+                    <span className={`font-bold ${isActive ? 'text-emerald-700' : 'font-medium'}`}>{equipe.nome}</span>
+                    <span className={`text-[9px] px-1 rounded-sm ${isActive ? 'bg-emerald-100/50 text-emerald-600' : 'bg-slate-100/50 text-slate-500'}`}>
                       {stats.qtd.toLocaleString('pt-BR')} un
                     </span>
                   </button>

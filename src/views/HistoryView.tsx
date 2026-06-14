@@ -451,17 +451,26 @@ export const HistoryView: React.FC = () => {
                 <div className="flex flex-wrap gap-1">
                   {Object.entries(teamStats).map(([eqName, stats]: [string, { entradas: number, saidas: number, cor: string }]) => {
                     if (stats.entradas === 0 && stats.saidas === 0) return null;
+                    const isActive = filterTeam === eqName;
                     return (
-                      <div 
+                      <button 
                         key={eqName}
-                        className="inline-flex items-center gap-1.5 bg-white border border-slate-200/60 rounded-lg px-2 py-0.5 text-[10px] text-slate-600 shadow-2xs"
+                        onClick={() => setFilterTeam(prev => prev === eqName ? 'Tudo' : eqName)}
+                        className={`inline-flex items-center gap-1.5 border rounded-lg px-2 py-0.5 text-[10px] shadow-2xs transition-all cursor-pointer ${
+                          isActive 
+                            ? 'bg-emerald-50 border-emerald-300 text-emerald-800 ring-1 ring-emerald-200' 
+                            : 'bg-white border-slate-200/60 text-slate-600 hover:bg-slate-50'
+                        }`}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: stats.cor || '#94a3b8' }} />
-                        <span className="font-bold text-slate-700">{eqName}:</span>
-                        <span className="text-[9px] font-medium text-slate-500">
-                          <span className="text-blue-600">+{stats.entradas}</span> <span className="opacity-60">un</span> / <span className="text-amber-600">-{stats.saidas}</span> <span className="opacity-60">un</span>
+                        <span 
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'animate-[pulse_1s_ease-in-out_infinite] bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]' : ''}`} 
+                          style={isActive ? undefined : { backgroundColor: stats.cor || '#94a3b8' }} 
+                        />
+                        <span className={`font-bold ${isActive ? 'text-emerald-700' : 'text-slate-700'}`}>{eqName}:</span>
+                        <span className={`text-[9px] font-medium ${isActive ? 'text-emerald-600' : 'text-slate-500'}`}>
+                          <span className={isActive ? "text-blue-500" : "text-blue-600"}>+{stats.entradas}</span> <span className={isActive ? "text-emerald-500/70" : "opacity-60"}>un</span> / <span className={isActive ? "text-amber-500" : "text-amber-600"}>-{stats.saidas}</span> <span className={isActive ? "text-emerald-500/70" : "opacity-60"}>un</span>
                         </span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
