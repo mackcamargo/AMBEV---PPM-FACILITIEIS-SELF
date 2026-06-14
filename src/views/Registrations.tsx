@@ -314,6 +314,19 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     }, 5000);
   };
 
+  const handleInlineUpdate = async (id: string, field: string, value: any, label: string) => {
+    let result;
+    if (type === 'materiais') {
+      result = await store.updateMaterial(id, { [field]: value });
+    }
+    
+    if (result && result.success) {
+      addToast('Sincronizado', `${label} atualizado com sucesso.`, 'success');
+    } else if (result) {
+      addToast('Erro na Sincronização', `Falha ao salvar no banco. (${result.error})`, 'error');
+    }
+  };
+
   // Auto-fill matricula, codigoFornecedor, and codigoEquipe
   React.useEffect(() => {
     if (type === 'colaboradores' && !formData.matricula) {
@@ -1622,7 +1635,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                           <select 
                             className="text-[9px] h-6 px-1 border border-slate-200 rounded font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 focus:border-transparent w-full min-w-[50px] max-w-[80px] shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
                             value={item.fornecedorId || ''}
-                            onChange={(e) => store.updateMaterial(item.id, { fornecedorId: e.target.value })}
+                            onChange={(e) => handleInlineUpdate(item.id, 'fornecedorId', e.target.value, 'Fornecedor')}
                           >
                             <option value="">Selecione...</option>
                             {sortedFornecedoresList.map(f => <option key={f.id} value={f.id}>{f.nomeFantasia}</option>)}
@@ -1640,7 +1653,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                           <select
                             className="text-[9px] h-6 px-1 border border-slate-200 rounded font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 focus:border-transparent w-full min-w-[60px] shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
                             value={item.equipe || ''}
-                            onChange={(e) => store.updateMaterial(item.id, { equipe: e.target.value })}
+                            onChange={(e) => handleInlineUpdate(item.id, 'equipe', e.target.value, 'Equipe')}
                           >
                             <option value="">Selecione...</option>
                             {sortedEquipesList.map(e => <option key={e.id} value={e.nome}>{e.nome}</option>)}
@@ -1663,7 +1676,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                               const cleaned = e.target.value.replace(/\./g, '').replace(',', '.');
                               const val = cleaned === '' ? 0 : Number(cleaned);
                               if (!isNaN(val)) {
-                                store.updateMaterial(item.id, { estoqueAtual: val });
+                                handleInlineUpdate(item.id, 'estoqueAtual', val, 'Estoque Atual');
                               }
                             }}
                           />
@@ -1678,7 +1691,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                               const cleaned = e.target.value.replace(/\./g, '').replace(',', '.');
                               const val = cleaned === '' ? 0 : Number(cleaned);
                               if (!isNaN(val)) {
-                                store.updateMaterial(item.id, { estoqueMinimo: val });
+                                handleInlineUpdate(item.id, 'estoqueMinimo', val, 'Estq. Mínimo');
                               }
                             }}
                           />
@@ -1693,7 +1706,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                               const cleaned = e.target.value.replace(/\./g, '').replace(',', '.');
                               const val = cleaned === '' ? 0 : Number(cleaned);
                               if (!isNaN(val)) {
-                                store.updateMaterial(item.id, { estoqueIdeal: val });
+                                handleInlineUpdate(item.id, 'estoqueIdeal', val, 'Estq. Ideal');
                               }
                             }}
                           />
@@ -1708,7 +1721,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                               const cleaned = e.target.value.replace(/\./g, '').replace(',', '.');
                               const val = cleaned === '' ? 0 : Number(cleaned);
                               if (!isNaN(val)) {
-                                store.updateMaterial(item.id, { precoUnitario: val });
+                                handleInlineUpdate(item.id, 'precoUnitario', val, 'Preço');
                               }
                             }}
                           />

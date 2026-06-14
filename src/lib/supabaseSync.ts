@@ -20,7 +20,8 @@ export const syncToSupabase = {
         estoque_atual: m.estoqueAtual || 0,
         preco_unitario: m.precoUnitario || 0,
         equipe: m.equipe || 'Geral',
-        localizacao: m.localizacao || null
+        localizacao: m.localizacao || null,
+        detalhes: m.detalhes || null
       }, { onConflict: 'id' });
       
       if (error) {
@@ -46,6 +47,8 @@ export const syncToSupabase = {
     if (m.precoUnitario !== undefined) payload.preco_unitario = m.precoUnitario;
     if (m.equipe !== undefined) payload.equipe = m.equipe;
     if (m.localizacao !== undefined) payload.localizacao = m.localizacao;
+    if (m.fornecedorId !== undefined) payload.fornecedor_id = isUUID(m.fornecedorId || '') ? m.fornecedorId : null;
+    if (m.detalhes !== undefined) payload.detalhes = m.detalhes;
 
     try {
       const { error } = await supabase.from('materiais').update(payload).eq('id', id);

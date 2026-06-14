@@ -443,7 +443,7 @@ export const SelfMeeting: React.FC = () => {
         return `• ${m?.descricao}\n  - COD SAP: ${m?.sap}\n  - Qtd: ${q} ${formatUnit(m?.unidade)}`;
       });
     
-    return `Ola Espero que esteja Tudo Bem! \n\nSolicitamos o orçamento para os materiais e peças listados abaixo, referentes à nossa Reunião de Self Service.\nPedimos que o retorno com valores, disponibilidade e condições comerciais seja enviado em até 48 horas após o recebimento deste e-mail ou WhatsApp.\nÉ imprescindível que a proposta contemple o prazo de entrega após a geração do pedido de compra, para que possamos avaliar e dar prosseguimento ao processo de aquisição. \nSegue lista abaixo!\n\n${items.length > 0 ? items.join('\n\n') : 'Nenhum material selecionado para esta equipe.'}`;
+    return `Ola Espero que esteja Tudo Bem!\n\nSolicitamos o orçamento para os materiais e peças listados abaixo, referentes à nossa Reunião de Self.\nPedimos que o retorno com valores, disponibilidade e condições comerciais seja enviado em até 48 horas após o recebimento deste e-mail ou WhatsApp.\nÉ imprescindível que a proposta contemple o prazo de entrega após a geração do pedido de compra, para que possamos avaliar e dar prosseguimento ao processo de aquisição.\nSegue lista abaixo!\n\n${items.length > 0 ? items.join('\n\n') : 'Nenhum material selecionado para esta equipe.'}`;
   };
 
   const downloadSpreadsheet = () => {
