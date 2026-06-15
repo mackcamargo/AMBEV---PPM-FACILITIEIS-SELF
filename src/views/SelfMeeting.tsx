@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
 import { Material, Equipe, AtaReuniao, Movimentacao, formatUnit } from '../types';
-import { Save, AlertCircle, ShoppingCart, Plus, Trash2, Download, Mail, Share2 } from 'lucide-react';
+import { Save, AlertCircle, ShoppingCart, Plus, Trash2, Download, Mail, Share2, Search } from 'lucide-react';
 
 export const SelfMeeting: React.FC = () => {
   const { materiais, equipes, setEquipes, atas, setAtas, addMovimentacao, colaboradores, updateMaterial, updateEquipe } = useApp();
@@ -596,7 +596,7 @@ export const SelfMeeting: React.FC = () => {
     <>
       <div className="view-container">
         {/* Fixed Header Content (Sticky) */}
-        <div className="bg-slate-50 shrink-0 z-20 pb-1 space-y-4">
+        <div className="bg-slate-50 shrink-0 z-20 pb-1 space-y-3">
         {/* Budget Grid */}
         <div className="flex overflow-x-auto sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 pb-2 sm:pb-0 shrink-0 snap-x scrollbar-hide">
           {/* Todas as Equipes Card */}
@@ -686,19 +686,19 @@ export const SelfMeeting: React.FC = () => {
                         }}
                         title="Duplo clique para editar verba inicial"
                       >
-                        R${e.verbaDestinada?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {e.verbaDestinada?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     )}
                   </div>
                   <div className="text-right">
                     <p className="text-[8px] text-slate-500 uppercase font-bold">Saldo</p>
-                    <p className={`text-[11px] font-black ${novoSaldo < 0 ? 'text-red-600' : 'text-emerald-600'}`}>R${novoSaldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p className={`text-[11px] font-black ${novoSaldo < 0 ? 'text-red-600' : 'text-emerald-600'}`}>R$ {novoSaldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                   </div>
                 </div>
                 <div className="mt-2">
                   <p className="text-[8px] text-slate-500 uppercase font-bold">Gasto Previsto</p>
                   <p className={`text-xs font-semibold ${impact > 0 ? 'text-blue-600 font-black' : 'text-slate-400 font-medium'}`}>
-                     R${impact.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                     R$ {impact.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                   {/* Barra de progresso do gasto */}
                   <div className="w-full h-1 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
@@ -719,159 +719,117 @@ export const SelfMeeting: React.FC = () => {
         </div>
 
         {/* Decision Table */}
-        <div className="card !p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="p-3 lg:p-4 border-b border-brand-border flex flex-col gap-4 shrink-0 bg-slate-50/30">
-            {/* Base Header */}
+        <div className="card !p-0 flex-1 flex flex-col min-h-0 overflow-hidden mt-1">
+          <div className="p-2 lg:p-2.5 border-b border-brand-border flex flex-col gap-2 shrink-0 bg-slate-50/30">
+            {/* Base Header Compacted */}
             <div className="flex items-center justify-between">
-              <h3 className="text-[11px] font-black text-black uppercase tracking-widest flex items-center gap-2">
-                <div className={`w-1.5 h-4 rounded-full ${selectedTeam ? 'bg-[#1e3a8a]' : 'bg-[#1e3a8a]'}`} />
-                Área de Decisão de Compras {selectedTeam ? ` - ${selectedTeam}` : ' - Todas as Equipes'}
+              <h3 className="text-[10px] font-black text-black uppercase tracking-widest flex items-center gap-2">
+                <div className="w-1 h-3 rounded-full bg-[#1e3a8a]" />
+                Área de Decisão {selectedTeam ? ` - ${selectedTeam}` : ''}
               </h3>
-              <div className="text-right shrink-0">
-                <p className="text-[9px] text-slate-400 uppercase font-black leading-none mb-0.5">
-                  {selectedTeam ? `Pedido (${selectedTeam})` : 'Pedido (Todas)'}
-                </p>
-                <p className={`text-xl font-black tabular-nums transition-colors animate-pulse ${isInvalid ? 'text-red-600' : 'text-blue-600'}`}>
-                  R$ {totalExibido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className={`text-sm font-black tabular-nums transition-colors ${isInvalid ? 'text-red-600' : 'text-blue-600'}`}>
+                    R$ {totalExibido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Search and Filters Strip */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-100 shrink-0">
+            {/* Search and Filters Strip Compacted */}
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 bg-white p-1.5 rounded-lg border border-slate-100 shrink-0">
               <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center gap-2">
-                <div className="flex flex-col gap-2 flex-1 max-w-xs">
-                  {/* Primeiro campo: Busca Externa */}
-                  <div className="relative group w-full">
-                    <form 
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        if (externalSearchTerm.trim()) {
-                          window.open(`https://www.google.com/search?q=${encodeURIComponent(externalSearchTerm)}`, '_blank');
-                        }
-                      }}
-                      className="relative group w-full h-8"
-                    >
-                        <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                          <svg className="w-3 h-3 text-emerald-600 group-focus-within:text-emerald-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                          </svg>
-                        </div>
-                        <input 
-                          type="text" 
-                          placeholder="Busca Externa: Pesquisar no Google..."
-                          className="w-full pl-8 pr-16 py-1 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/10 rounded-lg text-[9px] font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-medium transition-all h-8"
-                          value={externalSearchTerm}
-                          onChange={(e) => setExternalSearchTerm(e.target.value)}
-                        />
-                        <div className="absolute inset-y-0 right-0 pr-1 flex items-center gap-1">
-                          {externalSearchTerm && (
-                            <button 
-                              type="button"
-                              onClick={() => setExternalSearchTerm('')}
-                              className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer p-1"
-                            >
-                              <Trash2 className="w-2.5 h-2.5" />
-                            </button>
-                          )}
-                          <button 
-                            type="submit"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[8px] font-black uppercase tracking-wider px-2 py-0.5 transition-all h-6 flex items-center justify-center cursor-pointer select-none active:scale-95"
-                          >
-                            Ir
-                          </button>
-                        </div>
-                    </form>
-                  </div>
+                <div className="flex items-center gap-2 flex-1 md:max-w-md">
+                  {/* Busca Externa - Slim */}
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (externalSearchTerm.trim()) {
+                        window.open(`https://www.google.com/search?q=${encodeURIComponent(externalSearchTerm)}`, '_blank');
+                      }
+                    }}
+                    className="relative group w-1/3 md:w-32 h-7"
+                  >
+                      <input 
+                        type="text" 
+                        placeholder="Google..."
+                        className="w-full pl-2 pr-6 py-0.5 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:ring-0 rounded text-[9px] font-bold text-slate-900 placeholder:text-slate-400 transition-all h-full"
+                        value={externalSearchTerm}
+                        onChange={(e) => setExternalSearchTerm(e.target.value)}
+                      />
+                      <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 text-emerald-600 hover:text-emerald-700">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                      </button>
+                  </form>
 
-                  {/* Segundo campo: busca interna */}
-                  <div className="relative group w-full">
-                      <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                        <svg className="w-3 h-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                  {/* Busca Interna - Slim */}
+                  <div className="relative group flex-1 h-7">
+                      <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                        <Search className="w-3 h-3 text-slate-400 group-focus-within:text-blue-500" />
                       </div>
                       <input 
                         ref={searchInputRef}
                         type="text" 
-                        placeholder="Pesquisar material, COD SAP..."
-                        className="w-full pl-8 pr-4 py-1 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500/10 rounded-lg text-[9px] font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-medium transition-all h-8"
+                        placeholder="Pesquisar material, SAP..."
+                        className="w-full pl-7 pr-3 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded text-[9px] font-bold text-slate-900 placeholder:text-slate-400 transition-all h-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
-                      {searchTerm && (
-                        <button 
-                          onClick={() => setSearchTerm('')}
-                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-2.5 h-2.5" />
-                        </button>
-                      )}
                   </div>
                 </div>
 
-                {/* Status Filter Chips */}
-                <div className="flex items-center bg-slate-50 p-0.5 rounded-lg border border-slate-200">
+                {/* Status Filter Chips - Slim */}
+                <div className="flex items-center bg-slate-50 p-0.5 rounded border border-slate-200 h-7 overflow-x-auto scrollbar-hide">
                   <button 
                     onClick={() => setFilterStatuses([])}
-                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all ${filterStatuses.length === 0 ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded transition-all ${filterStatuses.length === 0 ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    Todos
+                    Ver Tudo
                   </button>
-                  <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
+                  <div className="w-px h-2.5 bg-slate-200 mx-0.5 shrink-0" />
                   <button 
                     onClick={() => setFilterStatuses(prev => prev.includes('ZERADO') ? prev.filter(s => s !== 'ZERADO') : [...prev, 'ZERADO'])}
-                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatuses.includes('ZERADO') ? 'bg-white shadow-sm text-red-600 border border-red-100' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider rounded transition-all flex items-center gap-1 ${filterStatuses.includes('ZERADO') ? 'bg-white shadow-sm text-red-600 border border-red-100' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatuses.includes('ZERADO') ? 'bg-red-500 animate-pulse' : 'bg-slate-300'}`} />
+                    <div className={`w-1 h-1 rounded-full ${filterStatuses.includes('ZERADO') ? 'bg-red-500 animate-pulse' : 'bg-slate-300'}`} />
                     Zerados
                   </button>
-                  <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
                   <button 
                     onClick={() => setFilterStatuses(prev => prev.includes('CRITICO') ? prev.filter(s => s !== 'CRITICO') : [...prev, 'CRITICO'])}
-                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatuses.includes('CRITICO') ? 'bg-white shadow-sm text-amber-600 border border-amber-100' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider rounded transition-all flex items-center gap-1 ${filterStatuses.includes('CRITICO') ? 'bg-white shadow-sm text-amber-600 border border-amber-100' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatuses.includes('CRITICO') ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`} />
-                    Estoque Baixo
-                  </button>
-                  <div className="w-px h-2.5 bg-slate-200 mx-0.5" />
-                  <button 
-                    onClick={() => setFilterStatuses(prev => prev.includes('OK') ? prev.filter(s => s !== 'OK') : [...prev, 'OK'])}
-                    className={`status-filter-chip px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${filterStatuses.includes('OK') ? 'bg-white shadow-sm text-emerald-600 border border-emerald-100' : 'text-slate-400 hover:text-slate-600'}`}
-                  >
-                    <div className={`w-1.5 h-1.5 rounded-full ${filterStatuses.includes('OK') ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-                    Estoque OK
+                    <div className={`w-1 h-1 rounded-full ${filterStatuses.includes('CRITICO') ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`} />
+                    Críticos
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 w-full lg:w-auto mt-2 lg:mt-0">
-                  <div className="flex items-center gap-2 w-full md:w-auto">
-                    {/* Limpar Lista */}
+              <div className="flex items-center gap-2 w-full xl:w-auto mt-0 overflow-x-auto scrollbar-hide min-w-0">
+                  <div className="flex items-center gap-1.5 w-full md:w-auto h-7">
                     <button 
                       onClick={() => setShowConfirmClear(true)}
                       disabled={totalGeral === 0}
-                      className="flex-1 md:flex-none px-3 py-1.5 border border-emerald-600 hover:bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-red-600 rounded text-[9px] font-black uppercase tracking-tight transition-all flex items-center gap-1 h-full whitespace-nowrap disabled:opacity-50"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Limpar Lista</span>
+                      <Trash2 className="w-3 h-3" />
+                      <span>Limpar</span>
                     </button>
 
                     <button 
                       onClick={handleNovaReuniaoClick}
-                      className="flex-1 md:flex-none px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95"
+                      className="px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-black uppercase tracking-tight transition-all flex items-center gap-1 h-full whitespace-nowrap"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Nova Reunião</span>
+                      <Plus className="w-3 h-3" />
+                      <span>Nova</span>
                     </button>
 
                     <button 
                       onClick={checkDuplicateAndSave}
                       disabled={totalGeral === 0 || isSaving}
-                      className="flex-1 md:flex-none px-3 py-1.5 bg-slate-900 hover:bg-black text-white border border-slate-900 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-2 bg-slate-900 hover:bg-black text-white rounded text-[9px] font-black uppercase tracking-tight transition-all flex items-center gap-1 h-full whitespace-nowrap disabled:opacity-50"
                     >
-                      <Save className={`w-3.5 h-3.5 ${isSaving ? 'animate-spin' : ''}`} />
-                      <span>{isSaving ? 'Salvando...' : 'Salvar Reunião'}</span>
+                      <Save className={`w-3 h-3 ${isSaving ? 'animate-spin' : ''}`} />
+                      <span>{isSaving ? 'Salvando...' : 'Salvar'}</span>
                     </button>
                   </div>
               </div>
