@@ -248,8 +248,17 @@ export const MeetingHistory: React.FC = () => {
         document.body.removeChild(tempTextarea);
         alert('Resumo copiado para a área de transferência!');
       }
-    } catch (err) {
-      console.error('Error sharing:', err);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.warn('Share API fallback:', err?.message || err);
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = text;
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempTextarea);
+        alert('Resumo copiado para a área de transferência!');
+      }
     }
   };
 
@@ -387,9 +396,11 @@ export const MeetingHistory: React.FC = () => {
       } else {
         shareViaEmail(ata);
       }
-    } catch (err) {
-      console.error('Error sharing:', err);
-      shareViaEmail(ata);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.warn('Share API fallback:', err?.message || err);
+        shareViaEmail(ata);
+      }
     }
   };
 
@@ -438,7 +449,7 @@ export const MeetingHistory: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden p-5">
+    <div className="view-container">
       <div className="card !p-0 flex-1 flex flex-col overflow-hidden">
         <div className="p-4 border-b border-brand-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sticky top-0 z-30 bg-white shadow-sm shrink-0">
           <div className="flex items-center gap-3">
@@ -482,7 +493,7 @@ export const MeetingHistory: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-slate-100">
+        <div className="scroll-container min-h-0 divide-y divide-slate-100">
           {filteredAtas.length === 0 ? (
             <div className="py-20 text-center text-slate-300 italic">
               {atas.length === 0 ? 'Nenhuma ata de reunião registrada.' : 'Nenhuma ata correspondente ao mês selecionado.'}

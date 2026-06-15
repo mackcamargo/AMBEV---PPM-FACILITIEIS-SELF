@@ -557,8 +557,8 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden p-5">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-y-auto pr-1 pb-4">
+    <div className="view-container">
+      <div className="scroll-container grid grid-cols-1 lg:grid-cols-3 gap-6 pr-1 pb-4">
         {/* Form Card */}
       <div className="lg:col-span-1 h-full">
         <div className="card h-full flex flex-col">

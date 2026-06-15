@@ -349,9 +349,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const selfMovements = movimentacoes.filter(
       m => m.os === 'REUNIÃO-SELF' || 
-           m.observacoes?.includes('Reunião de Self Service') ||
-           m.colaborador === 'Reunião de Self Service' ||
-           m.conferente === 'Reunião de Self Service'
+           m.observacoes?.includes('Reunião de Self') ||
+           m.colaborador?.includes('Reunião de Self') ||
+           m.conferente?.includes('Reunião de Self')
     );
 
     if (selfMovements.length > 0) {
@@ -404,9 +404,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // 3. Filter them out of the live list of movements
       setMovimentacoes(prev => prev.filter(
         m => !(m.os === 'REUNIÃO-SELF' || 
-               m.observacoes?.includes('Reunião de Self Service') ||
-               m.colaborador === 'Reunião de Self Service' ||
-               m.conferente === 'Reunião de Self Service')
+               m.observacoes?.includes('Reunião de Self') ||
+               m.colaborador?.includes('Reunião de Self') ||
+               m.conferente?.includes('Reunião de Self'))
       ));
     }
   }, [movimentacoes.length]);

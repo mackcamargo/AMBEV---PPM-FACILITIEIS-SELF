@@ -540,7 +540,8 @@ export const ReportsView: React.FC = () => {
   }, [selectedReport]);
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto p-5 scroll-smooth">
+    <div className="view-container !p-0 overflow-hidden bg-brand-light">
+      <div className="scroll-container p-5 space-y-6 scroll-smooth">
       {/* Top action header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -1357,6 +1358,7 @@ export const ReportsView: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

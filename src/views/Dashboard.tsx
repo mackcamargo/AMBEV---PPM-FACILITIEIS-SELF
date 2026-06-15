@@ -269,22 +269,23 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto p-5 scroll-smooth">
-      {/* Header Filters */}
-      <div className="card !p-3 flex flex-wrap items-center justify-between gap-4">
+    <div className="view-container !p-0 overflow-hidden bg-brand-light">
+      <div className="scroll-container p-5 space-y-6">
+      {/* Header Filters - Compact */}
+      <div className="card !p-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="flex bg-slate-100 p-1 rounded-lg">
+          <div className="flex bg-slate-100 p-0.5 rounded-lg">
             <button 
               onClick={() => setFilterType('day')}
-              className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${filterType === 'day' ? 'bg-white shadow-sm text-brand-dark' : 'text-slate-500'}`}
+              className={`px-3 py-1 text-[9px] font-black uppercase rounded-md transition-all ${filterType === 'day' ? 'bg-white shadow-sm text-brand-dark' : 'text-slate-500'}`}
             >Hoje</button>
             <button 
               onClick={() => setFilterType('month')}
-              className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${filterType === 'month' ? 'bg-white shadow-sm text-brand-dark' : 'text-slate-500'}`}
+              className={`px-3 py-1 text-[9px] font-black uppercase rounded-md transition-all ${filterType === 'month' ? 'bg-white shadow-sm text-brand-dark' : 'text-slate-500'}`}
             >Mês</button>
             <button 
               onClick={() => setFilterType('custom')}
-              className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${filterType === 'custom' ? 'bg-white shadow-sm text-brand-dark' : 'text-slate-500'}`}
+              className={`px-3 py-1 text-[9px] font-black uppercase rounded-md transition-all ${filterType === 'custom' ? 'bg-white shadow-sm text-brand-dark' : 'text-slate-500'}`}
             >Personalizado</button>
           </div>
 
@@ -292,14 +293,14 @@ export const Dashboard: React.FC = () => {
             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
               <input 
                 type="date" 
-                className="text-xs border border-slate-200 rounded px-2 py-1.5 outline-none focus:border-brand-accent transition-all" 
+                className="text-[9px] font-bold border border-slate-200 rounded px-2 py-1 outline-none focus:border-brand-accent transition-all" 
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
               />
-              <span className="text-slate-300 text-[10px] font-bold">A</span>
+              <span className="text-slate-300 text-[9px] font-bold">A</span>
               <input 
                 type="date" 
-                className="text-xs border border-slate-200 rounded px-2 py-1.5 outline-none focus:border-brand-accent transition-all" 
+                className="text-[9px] font-bold border border-slate-200 rounded px-2 py-1 outline-none focus:border-brand-accent transition-all" 
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
               />
@@ -308,310 +309,311 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, idx) => (
-          <div key={idx} className="card flex items-center gap-4 group transition-all hover:-translate-y-1">
-            <div className={`w-12 h-12 rounded-xl ${stat.bg} flex items-center justify-center transition-all duration-300 group-hover:scale-110 shrink-0`}>
-              <stat.icon className={`w-6 h-6 ${stat.color}`} />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider mb-0.5">{stat.label}</p>
-              <p className="text-xl font-bold text-slate-800 tracking-tight">{stat.value}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* GRÁFICO ROTATIVO: Gastos por Equipe (Linha do Tempo) */}
-        <div className="card flex flex-col relative overflow-hidden group/moving bg-white border border-slate-100 shadow-sm">
-          {/* Progress Indicator line */}
-          <div className="absolute bottom-0 left-0 w-full h-[3px] bg-slate-50 overflow-hidden z-20">
-            <div 
-              key={activeTeamIndex}
-              className="h-full bg-blue-600 animate-in slide-in-from-left duration-[6000ms] ease-linear repeat-infinite fill-mode-forwards"
-              style={{ width: '100%' }}
-            ></div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <RefreshCw className="w-3.5 h-3.5 text-blue-600 animate-spin-slow" />
-                <h3 className="text-xs font-black text-slate-700 uppercase tracking-widest">Fluxo de Gastos: <span className="animate-blink-red">{activeTeam?.nome}</span></h3>
+      <div className="scroll-container space-y-4 pr-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat, idx) => (
+            <div key={idx} className="card !p-3 flex items-center gap-3 group transition-all">
+              <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center transition-all duration-300 group-hover:scale-105 shrink-0`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Mês Vigente</span>
-                  <span className="text-sm font-black text-slate-800">R$ {currentVsPrev.current.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <div>
+                <p className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-0">{stat.label}</p>
+                <p className="text-lg font-bold text-slate-800 tracking-tight">{stat.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* GRÁFICO ROTATIVO: Gastos por Equipe (Linha do Tempo) */}
+          <div className="card !p-4 flex flex-col relative overflow-hidden group/moving bg-white border border-slate-100 shadow-sm">
+            {/* Progress Indicator line */}
+            <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-50 overflow-hidden z-20">
+              <div 
+                key={activeTeamIndex}
+                className="h-full bg-blue-600 animate-in slide-in-from-left duration-[6000ms] ease-linear repeat-infinite fill-mode-forwards"
+                style={{ width: '100%' }}
+              ></div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <RefreshCw className="w-3 h-3 text-blue-600 animate-spin-slow" />
+                  <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">FLUXO DE GASTOS: <span className="animate-blink-red">{activeTeam?.nome}</span></h3>
                 </div>
-                <div className="h-6 w-px bg-slate-100 mx-1"></div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Variação</span>
-                  <div className={`flex items-center gap-1 text-[11px] font-black ${currentVsPrev.diff >= 0 ? 'text-blue-600' : 'text-emerald-600'}`}>
-                    {currentVsPrev.diff >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
-                    {Math.abs(currentVsPrev.percent).toFixed(1)}%
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tight">MÊS VIGENTE</span>
+                    <span className="text-xs font-black text-slate-800">R$ {currentVsPrev.current.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="h-5 w-px bg-slate-100 mx-1"></div>
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tight">VARIAÇÃO</span>
+                    <div className={`flex items-center gap-1 text-[10px] font-black ${currentVsPrev.diff >= 0 ? 'text-blue-600' : 'text-emerald-600'}`}>
+                      {currentVsPrev.diff >= 0 ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownLeft className="w-2.5 h-2.5" />}
+                      {Math.abs(currentVsPrev.percent).toFixed(1)}%
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <div className="flex flex-wrap gap-1 max-w-[150px] justify-end">
-                {equipes.slice(0, 5).map((eq, idx) => (
-                  <div 
-                    key={eq.id}
-                    className={`w-2 h-2 rounded-full transition-all ${idx === (activeTeamIndex % equipes.length) ? 'bg-blue-600 scale-125 ring-2 ring-blue-100' : 'bg-slate-200'}`}
-                  />
-                ))}
+              
+              <div className="flex items-center gap-2">
+                <div className="flex flex-wrap gap-1 max-w-[100px] justify-end">
+                  {equipes.slice(0, 5).map((eq, idx) => (
+                    <div 
+                      key={eq.id}
+                      className={`w-1.5 h-1.5 rounded-full transition-all ${idx === (activeTeamIndex % equipes.length) ? 'bg-blue-600 scale-125' : 'bg-slate-200'}`}
+                    />
+                  ))}
+                </div>
               </div>
+            </div>
+
+            <div className="h-48 sm:h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={activeTeamTimeline} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
+                  <defs>
+                    <linearGradient id="colorGasto" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 8, fill: '#64748B', fontWeight: 700 }} 
+                    interval={0}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 7, fill: '#94a3b8' }}
+                    tickFormatter={(val) => `R$${val >= 1000 ? (val/1000).toFixed(0)+'k' : val}`}
+                    width={35}
+                  />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+                    formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="#2563eb" 
+                    strokeWidth={2} 
+                    fillOpacity={1} 
+                    fill="url(#colorGasto)"
+                    dot={{ fill: '#2563eb', strokeWidth: 1, r: 3 }}
+                    activeDot={{ r: 4, strokeWidth: 0 }}
+                  >
+                    <LabelList 
+                      dataKey="value" 
+                      position="top" 
+                      offset={10} 
+                      content={(props: any) => {
+                        const { x, y, value } = props;
+                        if (!value || value === 0) return null;
+                        return (
+                          <text x={x} y={y - 8} fill="#1e293b" fontSize={8} fontWeight={900} textAnchor="middle">
+                            R${value >= 1000 ? (value/1000).toFixed(1)+'k' : Math.round(value)}
+                          </text>
+                        );
+                      }}
+                    />
+                  </Area>
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
-          <div className="h-64 sm:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={activeTeamTimeline} margin={{ top: 35, right: 20, left: 5, bottom: 45 }}>
-                <defs>
-                  <linearGradient id="colorGasto" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15}/>
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 9, fill: '#64748B', fontWeight: 700 }} 
-                  interval={0}
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 8, fill: '#94a3b8' }}
-                  tickFormatter={(val) => `R$${val >= 1000 ? (val/1000).toFixed(0)+'k' : val}`}
-                  width={40}
-                />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
-                  formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor Consumido']}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#2563eb" 
-                  strokeWidth={3} 
-                  fillOpacity={1} 
-                  fill="url(#colorGasto)"
-                  dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
-                  animationDuration={1500}
+          {/* Withdrawal by Team (Horizontal Bar - Gasto R$) */}
+          <div className="card !p-4 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">RETIRADAS POR EQUIPE (R$)</h3>
+            </div>
+            <div className="h-48 sm:h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={[...teamPerformance].sort((a, b) => b.retirada - a.retirada)} 
+                  layout="vertical" 
+                  margin={{ left: 0, right: 30, top: 0, bottom: 0 }}
                 >
-                  <LabelList 
-                    dataKey="value" 
-                    position="top" 
-                    offset={15} 
-                    content={(props: any) => {
-                      const { x, y, value } = props;
-                      if (!value || value === 0) return null;
-                      return (
-                        <text x={x} y={y - 12} fill="#1e293b" fontSize={9} fontWeight={900} textAnchor="middle">
-                          R${value >= 1000 ? (value/1000).toFixed(1)+'k' : value}
-                        </text>
-                      );
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <XAxis type="number" hide />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 9, fill: '#1e293b', fontWeight: 700 }}
+                    width={80}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#f1f5f9', opacity: 0.4 }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+                    formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']}
+                  />
+                  <Bar 
+                    dataKey="retirada" 
+                    fill="#EF4444" 
+                    radius={[0, 4, 4, 0]} 
+                    barSize={12}
+                    label={{ 
+                      position: 'right', 
+                      formatter: (val: any) => `R$${Math.round(val).toLocaleString('pt-BR')}`,
+                      fontSize: 8,
+                      fontWeight: 800,
+                      fill: '#64748B'
                     }}
                   />
-                </Area>
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Withdrawal by Team (Horizontal Bar - Gasto R$) */}
-        <div className="card flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Retiradas por Equipe (R$)</h3>
-          </div>
-          <div className="h-48 sm:h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart 
-                data={[...teamPerformance].sort((a, b) => b.retirada - a.retirada)} 
-                layout="vertical" 
-                margin={{ left: 20, right: 35, top: 0, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                <XAxis type="number" hide />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#1e293b', fontWeight: 600 }}
-                  width={110}
-                />
-                <Tooltip 
-                  cursor={{ fill: '#f1f5f9', opacity: 0.4 }}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
-                  formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Retirado']}
-                />
-                <Bar 
-                  dataKey="retirada" 
-                  fill="#EF4444" 
-                  radius={[0, 4, 4, 0]} 
-                  barSize={20}
-                  label={{ 
-                    position: 'right', 
-                    formatter: (val: any) => `R$${Math.round(val).toLocaleString('pt-BR')}`,
-                    fontSize: 10,
-                    fontWeight: 700,
-                    fill: '#64748B'
-                  }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Third Row: Health + Critical + Ranking */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Estoque valorizado */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Coins className="w-4 h-4 text-brand-blue" />
-              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Estoque valorizado</h3>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-            <span className="text-[10px] text-slate-400 font-medium font-mono uppercase tracking-tighter">Por Equipe</span>
           </div>
+        </div>
 
-          <div className="mb-4 p-3 bg-slate-50 border border-slate-100/80 rounded-xl flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-slate-500 uppercase">Valor Total do Estoque</span>
-              <span className="text-[9px] font-bold text-brand-accent uppercase tracking-wider mt-0.5">
-                Posição em: {teamValuedStock.asOfDate.toLocaleDateString('pt-BR')}
+        {/* Third Row: Health + Critical + Ranking */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pb-4">
+          {/* Estoque valorizado */}
+          <div className="card !p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Coins className="w-3.5 h-3.5 text-blue-500" />
+                <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">ESTOQUE VALORIZADO</h3>
+              </div>
+              <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">POR EQUIPE</span>
+            </div>
+
+            <div className="mb-3 p-2 bg-slate-50 border border-slate-100/80 rounded-xl flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-slate-500 uppercase">VALOR TOTAL</span>
+                <span className="text-[8px] font-bold text-brand-accent uppercase tracking-wider">
+                  EM: {teamValuedStock.asOfDate.toLocaleDateString('pt-BR')}
+                </span>
+              </div>
+              <span className="text-xs font-black text-slate-900 font-mono">
+                R${teamValuedStock.globalTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>
-            <span className="text-[14px] font-extrabold text-slate-900 font-mono">
-              R${teamValuedStock.globalTotalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-          
-          <div className="space-y-4">
-            {teamValuedStock.teams.map((team, idx) => {
-              const percentage = teamValuedStock.globalTotalValue > 0 
-                ? Math.round((team.valorTotal / teamValuedStock.globalTotalValue) * 100) 
-                : 0;
-
-              return (
-                <div key={idx} className="group">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: team.color }}></div>
-                      <span className="text-[11px] font-bold text-slate-700">{team.name}</span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[11px] font-bold text-slate-800 font-mono">
-                        R${team.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                      <span className="text-[9px] text-slate-400 font-medium">
-                        {team.quantidadeTotal} un ({percentage}%)
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
-                    <div className="h-full rounded-full" style={{ backgroundColor: team.color, width: `${percentage}%` }}></div>
-                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Consumo por Equipe (R$) - Identical style to Valued Stock */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <ArrowDownLeft className="w-4 h-4 text-red-500" />
-              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Consumo por Equipe (R$)</h3>
-            </div>
-            <span className="text-[10px] text-slate-400 font-medium font-mono uppercase tracking-tighter">Período Ativo</span>
-          </div>
-
-          <div className="mb-4 p-3 bg-red-50/50 border border-red-100/50 rounded-xl flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-slate-500 uppercase">Total Consumido (R$)</span>
-              <span className="text-[9px] font-bold text-red-600/70 uppercase tracking-wider mt-0.5">
-                {filterType === 'month' ? 'Mês Vigente' : filterType === 'day' ? 'Hoje' : 'Personalizado'}
-              </span>
-            </div>
-            <span className="text-[14px] font-extrabold text-slate-900 font-mono">
-              R${teamPerformance.reduce((acc, c) => acc + (c?.retirada || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-          
-          <div className="space-y-4">
-            {[...teamPerformance]
-              .sort((a, b) => b.retirada - a.retirada)
-              .map((team, idx) => {
-                const totalWithdrawal = teamPerformance.reduce((acc, c) => acc + (c?.retirada || 0), 0);
-                const percentage = totalWithdrawal > 0 
-                  ? Math.round((team.retirada / totalWithdrawal) * 100) 
+            
+            <div className="space-y-3">
+              {teamValuedStock.teams.map((team, idx) => {
+                const percentage = teamValuedStock.globalTotalValue > 0 
+                  ? Math.round((team.valorTotal / teamValuedStock.globalTotalValue) * 100) 
                   : 0;
-                
-                const teamData = equipes.find(e => e.nome === team.name);
-                const teamQty = teamQuantities.find(q => q.name === team.name);
 
                 return (
                   <div key={idx} className="group">
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: teamData?.cor || '#cbd5e1' }}></div>
-                        <span className="text-[11px] font-bold text-slate-700">{team.name}</span>
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: team.color }}></div>
+                        <span className="text-[10px] font-bold text-slate-700 truncate max-w-[100px] uppercase">{team.name}</span>
                       </div>
                       <div className="flex flex-col items-end">
-                        <span className="text-[11px] font-bold text-slate-800 font-mono">
-                          R${team.retirada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        <span className="text-[10px] font-bold text-slate-800 font-mono">
+                          R${team.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
-                        <span className="text-[9px] text-slate-400 font-medium">
-                          {teamQty?.quantidade || 0} un ({percentage}%)
+                        <span className="text-[8px] text-slate-400 font-bold">
+                          {team.quantidadeTotal} un ({percentage}%)
                         </span>
                       </div>
                     </div>
-                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
-                      <div className="h-full rounded-full" style={{ backgroundColor: teamData?.cor || '#3b82f6', width: `${percentage}%` }}></div>
+                    <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden flex">
+                      <div className="h-full rounded-full" style={{ backgroundColor: team.color, width: `${percentage}%` }}></div>
                     </div>
                   </div>
                 );
               })}
+            </div>
           </div>
-        </div>
 
-        {/* Critical Alerts */}
-        <div className="card">
-          <h3 className="text-xs font-bold text-slate-700 uppercase mb-4 tracking-wider flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-500" />
-            Alertas Críticos
-          </h3>
-          <div className="space-y-2">
-            {materiais
-              .filter(m => m.estoqueAtual < m.estoqueMinimo)
-              .sort((a, b) => (b.estoqueMinimo - b.estoqueAtual) - (a.estoqueMinimo - a.estoqueAtual))
-              .slice(0, 5)
-              .map(m => (
-                <div key={m.id} className="p-2 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
-                   <div className="flex flex-col">
-                     <span className="text-[11px] font-bold text-slate-700 truncate max-w-[150px]">{m.descricao}</span>
-                     <span className="text-[9px] text-slate-400 font-mono">ESTOQUE: <b className="text-red-500">{m.estoqueAtual}</b> / {m.estoqueMinimo}</span>
-                   </div>
-                   <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${m.estoqueAtual === 0 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
-                     {m.estoqueAtual === 0 ? 'ZERADO' : 'CRÍTICO'}
-                   </span>
-                </div>
-              ))}
+          {/* Consumo por Equipe (R$) - Identical style to Valued Stock */}
+          <div className="card !p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <ArrowDownLeft className="w-3.5 h-3.5 text-red-500" />
+                <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">CONSUMO POR EQUIPE (R$)</h3>
+              </div>
+              <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">PERÍODO ATIVO</span>
+            </div>
+
+            <div className="mb-3 p-2 bg-red-50/50 border border-red-100/50 rounded-xl flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-slate-500 uppercase">TOTAL CONSUMIDO</span>
+                <span className="text-[8px] font-bold text-red-600 uppercase tracking-wider">
+                  {filterType === 'month' ? 'Mês Vigente' : filterType === 'day' ? 'Hoje' : 'Personalizado'}
+                </span>
+              </div>
+              <span className="text-xs font-black text-slate-900 font-mono">
+                R${teamPerformance.reduce((acc, c) => acc + (c?.retirada || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            
+            <div className="space-y-3">
+              {[...teamPerformance]
+                .sort((a, b) => b.retirada - a.retirada)
+                .map((team, idx) => {
+                  const totalWithdrawal = teamPerformance.reduce((acc, c) => acc + (c?.retirada || 0), 0);
+                  const percentage = totalWithdrawal > 0 
+                    ? Math.round((team.retirada / totalWithdrawal) * 100) 
+                    : 0;
+                  
+                  const teamData = equipes.find(e => e.nome === team.name);
+                  const teamQty = teamQuantities.find(q => q.name === team.name);
+
+                  return (
+                    <div key={idx} className="group">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: teamData?.cor || '#cbd5e1' }}></div>
+                          <span className="text-[10px] font-bold text-slate-700 truncate max-w-[100px] uppercase">{team.name}</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] font-bold text-slate-800 font-mono">
+                            R${team.retirada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                          <span className="text-[8px] text-slate-400 font-bold">
+                            {teamQty?.quantidade || 0} un ({percentage}%)
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden flex">
+                        <div className="h-full rounded-full" style={{ backgroundColor: teamData?.cor || '#3b82f6', width: `${percentage}%` }}></div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* Critical Alerts */}
+          <div className="card !p-4">
+            <h3 className="text-[10px] font-black text-slate-700 uppercase mb-3 tracking-widest flex items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+              ALERTAS CRÍTICOS
+            </h3>
+            <div className="space-y-1.5">
+              {materiais
+                .filter(m => m.estoqueAtual < m.estoqueMinimo)
+                .sort((a, b) => (b.estoqueMinimo - b.estoqueAtual) - (a.estoqueMinimo - a.estoqueAtual))
+                .slice(0, 6)
+                .map(m => (
+                  <div key={m.id} className="p-1.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
+                     <div className="flex flex-col min-w-0">
+                       <span className="text-[9px] font-black text-slate-700 truncate">{m.descricao}</span>
+                       <span className="text-[8px] text-slate-400 font-bold">QTD: <b className="text-red-500">{m.estoqueAtual}</b> / {m.estoqueMinimo}</span>
+                     </div>
+                     <span className={`text-[7px] font-black px-1 py-0.5 rounded shrink-0 ${m.estoqueAtual === 0 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                       {m.estoqueAtual === 0 ? 'ZERADO' : 'CRÍTICO'}
+                     </span>
+                  </div>
+                ))}
+            </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

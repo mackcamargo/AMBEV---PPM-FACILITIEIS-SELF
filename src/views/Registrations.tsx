@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
-import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload, Package } from 'lucide-react';
+import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload, Package, Users, Truck, MapPin, FilterX } from 'lucide-react';
 import { Material } from '../types';
 import { materialsToImport } from '../data/materials';
 import { motion, AnimatePresence } from 'motion/react';
@@ -723,10 +723,11 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         // Fallback or explicit instruction
         shareViaEmail();
       }
-    } catch (err) {
-      console.error('Error sharing:', err);
-      // Fallback
-      shareViaEmail();
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.warn('Share API fallback:', err?.message || err);
+        shareViaEmail();
+      }
     }
   };
 
@@ -1144,7 +1145,15 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         <select 
           className="input-field pr-8"
           value={formData.fornecedorId || ''}
-          onChange={(e) => handleInputChange('fornecedorId', e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            const f = sortedFornecedoresList.find(x => x.id === val);
+            setFormData({ 
+              ...formData, 
+              fornecedorId: val,
+              codigoFornecedor: f && f.codigoFornecedor ? f.codigoFornecedor : (val ? formData.codigoFornecedor : '')
+            });
+          }}
         >
           <option value="">Selecione...</option>
           {sortedFornecedoresList.map((f, idx) => <option key={`${f.id}_${idx}`} value={f.id}>{f.nomeFantasia}</option>)}
@@ -1575,12 +1584,12 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   const renderList = () => {
     return (
       <table className={`w-full text-left table-auto border-separate border-spacing-0`}>
-        <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
+        <thead className="sticky top-0 z-30 bg-slate-100 shadow-[0_2px_4px_rgba(0,0,0,0.05)]">
           <tr>
-            <th className="px-1 py-1 w-6 text-center border-b border-brand-border bg-slate-50/95">
+            <th className="px-2 py-2 w-8 text-center border-b border-slate-200">
               <input 
                 type="checkbox"
-                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                className="rounded border-slate-300 text-brand-accent focus:ring-brand-accent w-3.5 h-3.5 cursor-pointer"
                 checked={selectedIds.length === sortedData.length && sortedData.length > 0}
                 onChange={() => {
                   if (selectedIds.length === sortedData.length) setSelectedIds([]);
@@ -1597,7 +1606,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               return (
                 <th 
                   key={i} 
-                  className={`px-1 py-1 text-[8.5px] whitespace-nowrap font-bold text-slate-500 leading-tight border-b border-brand-border bg-slate-50/95 ${
+                  className={`px-2 py-2 text-[9px] whitespace-nowrap font-black text-slate-500 tracking-wider uppercase border-b border-slate-200 ${
                     isCenter ? 'text-center' : isRight ? 'text-right' : 'text-left'
                   }`}
                 >
@@ -1631,15 +1640,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                   {type === 'materiais' && (
                       <>
                         <td className="px-1 py-1 font-mono text-slate-500 text-[9px] border-b border-slate-100 whitespace-nowrap">{item.sap}</td>
-                        <td className="px-1 py-1 border-b border-slate-100">
-                          <select 
-                            className="text-[9px] h-6 px-1 border border-slate-200 rounded font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 focus:border-transparent w-full min-w-[50px] max-w-[80px] shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
-                            value={item.fornecedorId || ''}
-                            onChange={(e) => handleInlineUpdate(item.id, 'fornecedorId', e.target.value, 'Fornecedor')}
-                          >
-                            <option value="">Selecione...</option>
-                            {sortedFornecedoresList.map(f => <option key={f.id} value={f.id}>{f.nomeFantasia}</option>)}
-                          </select>
+                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-slate-100 uppercase overflow-hidden text-ellipsis whitespace-nowrap max-w-[80px]">
+                          {sortedFornecedoresList.find(f => f.id === item.fornecedorId)?.nomeFantasia || '-'}
                         </td>
 
                         <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-slate-100">
@@ -1649,15 +1651,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                           <p className="font-bold text-slate-800 text-[10px] leading-tight mb-0.5 truncate" title={item.descricao}>{item.descricao}</p>
                           {item.detalhes && <p className="text-[8px] text-slate-400 italic line-clamp-1">{item.detalhes}</p>}
                         </td>
-                        <td className="px-1 py-1 border-b border-slate-100">
-                          <select
-                            className="text-[9px] h-6 px-1 border border-slate-200 rounded font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 focus:border-transparent w-full min-w-[60px] shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
-                            value={item.equipe || ''}
-                            onChange={(e) => handleInlineUpdate(item.id, 'equipe', e.target.value, 'Equipe')}
-                          >
-                            <option value="">Selecione...</option>
-                            {sortedEquipesList.map(e => <option key={e.id} value={e.nome}>{e.nome}</option>)}
-                          </select>
+                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-slate-100">
+                          {item.equipe || '-'}
                         </td>
 
                         <td className="px-1 py-1 font-bold tabular-nums text-center border-b border-slate-100 w-10">
@@ -1809,8 +1804,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden p-5">
-      <div className="flex-1 overflow-y-auto space-y-6 pr-1 pb-4 scrollbar-thin scrollbar-thumb-slate-200">
+    <div className="view-container">
+      <div className="scroll-container space-y-6">
         {type === 'materiais' && (
           <div className="bg-slate-50 border border-slate-150 rounded-xl p-3 flex flex-col xl:flex-row xl:items-center justify-between gap-4 text-xs">
             <div className="flex flex-wrap items-center gap-4 text-slate-600 shrink-0">
@@ -1859,7 +1854,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-1 lg:sticky lg:top-0 z-10">
-          <div className="card shadow-md border-brand-primary/10">
+          <div className="card shadow-md border-brand-accent/10">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Cadastrar {type === 'materiais' ? 'Material' : type === 'empresas' ? 'Empresa' : type === 'fornecedores' ? 'Fornecedor' : type === 'colaboradores' ? 'Colaborador' : 'Equipe'}
@@ -1904,177 +1899,171 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           </div>
         </div>
 
-        <div className="lg:col-span-2 min-h-[600px] lg:h-[calc(100vh-120px)]">
-          <div className="card !p-0 shadow-sm border-slate-200 flex flex-col h-full overflow-hidden">
+        <div className="lg:col-span-2 min-h-[600px] lg:h-[calc(100vh-140px)]">
+          <div className="card !p-0 shadow-sm border-slate-200 flex flex-col h-full bg-slate-50/30 overflow-hidden">
             {/* Header Title & Search Welded */}
-            <div className="flex-none bg-white border-b border-brand-border rounded-t-2xl z-30">
-              <div className="h-[60px] px-4 flex items-center justify-between gap-4">
-                <div className="flex flex-col">
-                  <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider shrink-0">Listagem de {type}</h3>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-bold text-blue-600 uppercase">
-                      {sortedData.length} {type} {searchTerm ? 'encontrados' : 'cadastrados'}
-                    </span>
-                    {searchTerm && (
-                      <span className="text-[10px] text-slate-400">
-                        (de {data.length} total)
-                      </span>
-                    )}
-                  </div>
+            <div className="flex-none bg-white border-b border-slate-200 z-40">
+              <div className="h-[52px] px-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-brand-accent" />
+                  <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-widest shrink-0">Materiais Cadastrados</h3>
                 </div>
                 
                 <div className="flex items-center gap-2 flex-1 justify-end">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     {selectedIds.length > 0 && (
                       <button 
                         onClick={() => setIsBulkDeleteModalOpen(true)}
-                        className="p-1.5 px-3 flex items-center gap-1.5 text-[10px] font-bold uppercase transition-all bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-lg mr-2"
+                        className="h-8 p-1.5 px-3 flex items-center gap-1.5 text-[10px] font-black uppercase transition-all bg-red-100 text-red-600 hover:bg-red-200 rounded-lg mr-1 transform active:scale-95"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        Excluir ({selectedIds.length})
+                        DELETAR ({selectedIds.length})
                       </button>
                     )}
 
                     {type === 'materiais' && (
-                      <div className="flex items-center gap-1.5 mr-2 pr-2 border-r border-slate-200">
+                      <div className="flex items-center gap-1.5 mr-1 pr-1 border-r border-slate-100 flex-none overflow-visible">
                         <button 
                           onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                          className={`p-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${isFiltersOpen || Object.values(activeFilters).some(v => v) ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50'}`}
-                          title="Filtros Avançados"
+                          className={`h-8 px-2.5 rounded-lg transition-all flex items-center gap-2 whitespace-nowrap group shrink-0 ${isFiltersOpen || Object.values(activeFilters).some(v => String(v).trim() !== '') ? 'bg-brand-accent text-white shadow-sm' : 'bg-slate-50 text-slate-500 hover:text-brand-accent hover:bg-slate-100 border border-slate-200/60'}`}
                         >
-                          <Search className="w-3.5 h-3.5" />
-                          <span className="text-[10px] font-bold">Filtros</span>
+                          <Database className={`w-3.5 h-3.5 shrink-0 ${isFiltersOpen || Object.values(activeFilters).some(v => String(v).trim() !== '') ? 'text-white' : 'text-slate-400 group-hover:text-brand-accent'}`} />
+                          <span className="text-[10px] font-black uppercase tracking-wider block shrink-0">Filtros</span>
+                          {Object.values(activeFilters).some(v => String(v).trim() !== '') && <div className="w-1.5 h-1.5 rounded-full bg-amber-400 border border-white shrink-0 animate-pulse"></div>}
                         </button>
+
                         <button 
                           onClick={exportMaterialsCSV}
-                          className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap"
-                          title="Baixar Backup (Excel/CSV)"
+                          className="h-8 px-2.5 bg-slate-50 text-slate-500 hover:text-brand-accent hover:bg-slate-100 border border-slate-200/60 rounded-lg transition-all flex items-center gap-2 whitespace-nowrap group shrink-0"
+                          title="Baixar Backup"
                         >
-                          <Download className="w-3.5 h-3.5" />
-                          <span className="text-[10px] font-bold">Backup</span>
+                          <Download className="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-accent shrink-0" />
+                          <span className="text-[10px] font-black uppercase tracking-wider block shrink-0">BAIXAR</span>
                         </button>
+                        
                         <button 
                           onClick={handleShareStock}
-                          className="p-1.5 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap"
-                          title="Compartilhar Estoque"
+                          className="h-8 px-2.5 bg-slate-50 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 border border-slate-200/60 rounded-lg transition-all flex items-center gap-2 whitespace-nowrap group shrink-0"
+                          title="Compartilhar"
                         >
-                          <Share2 className="w-3.5 h-3.5" />
-                          <span className="text-[10px] font-bold">Compartilhar</span>
+                          <Share2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 shrink-0" />
+                          <span className="text-[10px] font-black uppercase tracking-wider block shrink-0">COMPARTILHAR</span>
                         </button>
                       </div>
                     )}
 
-                    <motion.div 
-                      initial={false}
-                      animate={{ 
-                        width: (isSearchExpanded || searchTerm) ? (window.innerWidth < 640 ? 140 : 220) : 32,
-                        backgroundColor: (isSearchExpanded || searchTerm) ? '#ffffff' : 'transparent'
-                      }}
-                      className="relative h-8 flex items-center rounded-xl border border-transparent focus-within:border-blue-200 focus-within:ring-2 focus-within:ring-blue-100 transition-all overflow-hidden"
+                    <div 
+                      className={`relative flex items-center rounded-lg border transition-all duration-300 bg-slate-50 border-slate-200/60 ${isSearchExpanded || searchTerm ? 'bg-white border-brand-accent ring-2 ring-brand-accent/5 w-[220px]' : 'w-8 lg:w-40'}`}
                     >
-                      <button 
-                        onClick={() => {
-                          if (isSearchExpanded && !searchTerm) setIsSearchExpanded(false);
-                          else setIsSearchExpanded(true);
-                        }}
-                        className={`absolute left-0 top-0 w-8 h-8 flex items-center justify-center transition-colors z-10 ${isSearchExpanded || searchTerm ? 'text-slate-400' : 'text-slate-500 hover:text-blue-600 bg-slate-100/50 hover:bg-blue-50 rounded-lg'}`}
-                      >
-                        <Search className="w-3.5 h-3.5" />
-                      </button>
+                      <Search className={`w-3.5 h-3.5 absolute left-2.5 transition-colors ${isSearchExpanded || searchTerm ? 'text-brand-accent' : 'text-slate-400'}`} />
                       <input 
                         type="text" 
-                        className={`w-full h-full pl-8 pr-8 bg-transparent text-[11px] font-medium text-slate-700 placeholder:text-slate-400 outline-none transition-opacity duration-300 ${(!isSearchExpanded && !searchTerm) ? 'opacity-0' : 'opacity-100'}`} 
-                        placeholder="Pesquisar materiais, sap, equipes..." 
+                        className="w-full h-8 pl-9 pr-8 bg-transparent text-[11px] font-bold text-slate-700 placeholder:text-slate-400 outline-none" 
+                        placeholder="PESQUISAR MATERIAL, SAP, FORNECEDOR, CÓD. FORN, EQUIPE..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onFocus={() => setIsSearchExpanded(true)}
                         onBlur={() => { if (!searchTerm) setIsSearchExpanded(false); }}
                       />
-                      {(isSearchExpanded || searchTerm) && searchTerm && (
+                      {searchTerm && (
                         <button 
                           onClick={() => { setSearchTerm(''); setIsSearchExpanded(false); }}
-                          className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-slate-300 hover:text-slate-500 transition-colors"
+                          className="absolute right-1.5 p-1 text-slate-300 hover:text-slate-500"
                         >
                           <X className="w-3 h-3" />
                         </button>
                       )}
-                    </motion.div>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <AnimatePresence>
-                  {(isFiltersOpen && type === 'materiais') && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden border-t border-slate-100"
-                    >
-                      <div className="p-3 bg-slate-50/50 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">Filtrar Equipe</label>
+              <AnimatePresence>
+                {(isFiltersOpen && type === 'materiais') && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="bg-slate-50/80 border-t border-slate-200"
+                  >
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest pl-1 flex items-center gap-1.5">
+                            <Users className="w-3 h-3 text-brand-accent" />
+                            Equipe Responsável
+                          </label>
                           <select 
-                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-medium outline-none focus:border-blue-500 transition-colors"
+                            className="w-full h-9 bg-white border border-slate-200 rounded-lg px-3 text-[11px] font-bold text-slate-700 focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/5 transition-all appearance-none cursor-pointer"
                             value={activeFilters.equipe}
                             onChange={(e) => setActiveFilters({ ...activeFilters, equipe: e.target.value })}
+                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '0.8rem' }}
                           >
                             <option value="">Todas as Equipes</option>
                             {sortedEquipesList.map(e => <option key={e.id} value={e.nome}>{e.nome}</option>)}
                           </select>
                         </div>
-                        <div>
-                          <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">Filtrar Fornecedor</label>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest pl-1 flex items-center gap-1.5">
+                            <Truck className="w-3 h-3 text-brand-accent" />
+                            Fornecedor Principal
+                          </label>
                           <select 
-                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-medium outline-none focus:border-blue-500 transition-colors"
+                            className="w-full h-9 bg-white border border-slate-200 rounded-lg px-3 text-[11px] font-bold text-slate-700 focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/5 transition-all appearance-none cursor-pointer"
                             value={activeFilters.fornecedorId}
                             onChange={(e) => setActiveFilters({ ...activeFilters, fornecedorId: e.target.value })}
+                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '0.8rem' }}
                           >
                             <option value="">Todos os Fornecedores</option>
                             {sortedFornecedoresList.map(f => <option key={f.id} value={f.id}>{f.nomeFantasia}</option>)}
                           </select>
                         </div>
-                        <div>
-                          <label className="text-[9px] uppercase font-bold text-slate-400 mb-1 block">Filtrar Localização</label>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest pl-1 flex items-center gap-1.5">
+                            <MapPin className="w-3 h-3 text-brand-accent" />
+                            Localização de Estoque
+                          </label>
                           <div className="relative">
                             <input 
                               type="text" 
-                              placeholder="Ex: Corredor A..."
-                              className="w-full bg-white border border-slate-200 rounded-lg pl-2 pr-7 py-1 text-[10px] font-medium outline-none focus:border-blue-500 transition-colors"
+                              placeholder="FILTRAR POR LOCAL..."
+                              className="w-full h-9 bg-white border border-slate-200 rounded-lg px-3 text-[11px] font-bold text-slate-700 placeholder:text-slate-300 outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/5 transition-all"
                               value={activeFilters.localizacao}
                               onChange={(e) => setActiveFilters({ ...activeFilters, localizacao: e.target.value })}
                             />
                             {activeFilters.localizacao && (
                               <button 
                                 onClick={() => setActiveFilters({ ...activeFilters, localizacao: '' })}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
                               >
-                                <X className="w-2.5 h-2.5" />
+                                <X className="w-3 h-3" />
                               </button>
                             )}
                           </div>
                         </div>
-                      </div>
-                      <div className="px-3 pb-3 bg-slate-50/50 flex justify-end items-center gap-4">
+                    </div>
+                    
+                    <div className="px-4 pb-4 flex justify-end gap-2">
                         <button 
                           onClick={() => setActiveFilters({ equipe: '', fornecedorId: '', localizacao: '' })}
-                          className="px-3 py-1 text-[9px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest"
+                          className="px-4 h-8 text-[9px] font-black text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all uppercase tracking-widest border border-transparent hover:border-red-100"
                         >
-                          Limpar Filtros
+                          Limpar
                         </button>
                         <button 
                           onClick={() => setIsFiltersOpen(false)}
-                          className="px-4 py-1 bg-slate-200 text-slate-600 rounded-full text-[9px] font-bold hover:bg-slate-300 transition-colors uppercase tracking-widest"
+                          className="px-6 h-8 bg-slate-800 text-white rounded-lg text-[9px] font-black hover:bg-slate-700 transition-all uppercase tracking-widest"
                         >
-                          Fechar
+                          Fechar Filtros
                         </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             
-            <div className="flex-1 overflow-auto bg-white">
+            <div className="flex-1 overflow-auto bg-white min-h-0">
               {renderList()}
             </div>
           </div>
@@ -2206,7 +2195,15 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     <select 
                       className="input-field pr-8"
                       value={editFormData.fornecedorId || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, fornecedorId: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const f = sortedFornecedoresList.find(x => x.id === val);
+                        setEditFormData({ 
+                          ...editFormData, 
+                          fornecedorId: val,
+                          codigoFornecedor: f && f.codigoFornecedor ? f.codigoFornecedor : (val ? editFormData.codigoFornecedor : '')
+                        });
+                      }}
                     >
                       <option value="">Selecione o Fornecedor...</option>
                       {sortedFornecedoresList.map((f, idx) => (

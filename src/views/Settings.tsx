@@ -372,7 +372,8 @@ CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR D
   };
 
   return (
-    <div className="p-6">
+    <div className="view-container !p-0 overflow-hidden">
+      <div className="scroll-container p-6">
       <h1 className="text-2xl font-bold mb-6">Configurações e Backup</h1>
       
       <div className="card p-6 mb-6">
@@ -495,7 +496,16 @@ CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR D
             
             <input type="file" ref={fileInputRef} onChange={handleRestore} className="hidden" accept=".json" />
             <button 
-              onClick={() => fileInputRef.current?.click()} 
+              onClick={() => {
+                if (deletionPassword) {
+                  const p = prompt("Digite a senha de autorização para restaurar o sistema:");
+                  if (p !== deletionPassword) {
+                    alert("Senha incorreta. Restauração cancelada.");
+                    return;
+                  }
+                }
+                fileInputRef.current?.click();
+              }} 
               className="bg-red-600 hover:bg-red-700 active:scale-[0.98] transition-all duration-200 text-white font-extrabold uppercase tracking-widest text-[10px] px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg shadow-red-600/25 cursor-pointer max-w-md w-full"
             >
               Restaurar Dados do Aplicativo (JSON)
@@ -509,6 +519,13 @@ CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR D
         <p className="text-slate-500 text-xs mb-4 leading-relaxed">Esta operação irá apagar permanentemente todas as movimentações, atas de reuniões, materiais cadastrados, colaboradores, empresas e equipes. <strong>Não é possível desfazer.</strong></p>
         <button 
           onClick={() => {
+            if (deletionPassword) {
+              const p = prompt("Digite a senha de autorização para apagar tudo:");
+              if (p !== deletionPassword) {
+                alert("Senha incorreta. Ação cancelada.");
+                return;
+              }
+            }
             if (confirm("Deseja realmente apagar TODOS os dados do aplicativo? Esta ação é irreversível!")) {
               clearAllData();
               alert("Todos os dados foram excluídos com sucesso!");
@@ -518,6 +535,7 @@ CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR D
         >
           Zerar Tudo (Clique)
         </button>
+      </div>
       </div>
     </div>
   );

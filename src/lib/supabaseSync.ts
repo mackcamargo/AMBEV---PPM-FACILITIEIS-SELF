@@ -353,6 +353,7 @@ export const syncToSupabase = {
         id: m.id,
         sap: m.sap,
         codigoFornecedor: m.codigo_fornecedor,
+        fornecedorId: m.fornecedor_id,
         descricao: m.descricao,
         unidade: m.unidade,
         estoqueMinimo: Number(m.estoque_minimo),

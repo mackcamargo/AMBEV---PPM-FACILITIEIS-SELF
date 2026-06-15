@@ -298,8 +298,11 @@ export const HistoryView: React.FC = () => {
       } else {
         copyToClipboard();
       }
-    } catch (err) {
-      console.error('Error sharing:', err);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.warn('Share API fallback:', err?.message || err);
+        copyToClipboard();
+      }
     }
     setShowSharePopup(false);
   };
@@ -328,7 +331,7 @@ export const HistoryView: React.FC = () => {
   const totalValue = filteredMovs.reduce((acc, m) => acc + (m.quantidade * (m.precoUnitario || 0)), 0);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden p-5">
+    <div className="view-container">
       <div className="card !p-0 flex-1 flex flex-col overflow-hidden">
         <div className="p-4 border-b border-slate-100 bg-white sticky top-0 z-30 shadow-sm shrink-0">
           <div className="flex flex-col gap-4">
@@ -636,7 +639,7 @@ export const HistoryView: React.FC = () => {
             )}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto min-h-0 scroll-smooth">
+        <div className="scroll-container min-h-0 scroll-smooth">
           {filteredMovs.length === 0 ? (
             <div className="py-20 text-center text-slate-400 italic flex flex-col items-center gap-3">
               <Search className="w-8 h-8 text-slate-200" />

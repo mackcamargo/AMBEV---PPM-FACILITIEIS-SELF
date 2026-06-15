@@ -249,7 +249,7 @@ export const SelfMeeting: React.FC = () => {
       const novaAta: AtaReuniao = {
         id: generateId(),
         data: new Date().toISOString(),
-        descricao: customName || ('Ata de Reunião de Self Service - ' + new Date().toLocaleDateString()),
+        descricao: customName || ('Ata de Reunião de Self - ' + new Date().toLocaleDateString()),
         orcamentosSnapshot: equipes.map(e => {
           const impact = impactPerTeam[e.nome] || 0;
           const isOverspent = impact > e.saldoAtualizado;
@@ -285,7 +285,7 @@ export const SelfMeeting: React.FC = () => {
 
   const shareViaEmailChoice = (e: React.MouseEvent, provider: 'gmail' | 'outlook') => {
     e.stopPropagation();
-    const subject = `Solicitação de Orçamento - Reunião de Self Service`;
+    const subject = `Solicitação de Orçamento - Ata de Reunião de Self - ${new Date().toLocaleDateString()}`;
     const text = generateShareMessage();
     let formattedBody = text.replace(/\n/g, '\r\n');
     
@@ -323,7 +323,7 @@ export const SelfMeeting: React.FC = () => {
   };
 
   const shareViaEmail = () => {
-    const subject = `Solicitação de Orçamento - Reunião de Self Service`;
+    const subject = `Solicitação de Orçamento - Ata de Reunião de Self - ${new Date().toLocaleDateString()}`;
     const text = generateShareMessage();
     const formattedBody = text.replace(/\n/g, '\r\n');
     
@@ -338,7 +338,7 @@ export const SelfMeeting: React.FC = () => {
   };
 
   const handleGlobalShare = async () => {
-    const subject = `Solicitação de Orçamento - Reunião de Self Service`;
+    const subject = `Solicitação de Orçamento - Ata de Reunião de Self - ${new Date().toLocaleDateString()}`;
     const text = generateShareMessage();
     
     // Prepare items to generate the CSV rows
@@ -398,9 +398,11 @@ export const SelfMeeting: React.FC = () => {
       } else {
         shareViaEmail();
       }
-    } catch (err) {
-      console.error('Error sharing:', err);
-      shareViaEmail();
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.warn('Share API fallback:', err?.message || err);
+        shareViaEmail();
+      }
     }
   };
 
@@ -424,8 +426,17 @@ export const SelfMeeting: React.FC = () => {
         document.body.removeChild(tempTextarea);
         alert('Resumo copiado para a área de transferência!');
       }
-    } catch (err) {
-      console.error('Error sharing:', err);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.warn('Share API fallback:', err?.message || err);
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = text;
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempTextarea);
+        alert('Resumo copiado para a área de transferência!');
+      }
     }
   };
 
@@ -583,7 +594,7 @@ export const SelfMeeting: React.FC = () => {
 
   return (
     <>
-      <div className="flex flex-col h-full overflow-hidden p-5">
+      <div className="view-container">
         {/* Fixed Header Content (Sticky) */}
         <div className="bg-slate-50 shrink-0 z-20 pb-1 space-y-4">
         {/* Budget Grid */}
@@ -875,7 +886,7 @@ export const SelfMeeting: React.FC = () => {
           )}
 
           {/* Área de Decisão de Compras */}
-          <div ref={tableContainerRef} className="flex-1 overflow-auto">
+          <div ref={tableContainerRef} className="scroll-container">
             <table className="w-full text-left">
               <thead className="sticky top-0 z-20 bg-slate-50 shadow-[0_1px_0_rgba(15,23,42,0.06)]">
                 <tr className="bg-slate-50">

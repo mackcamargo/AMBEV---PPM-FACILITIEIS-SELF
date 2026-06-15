@@ -242,14 +242,17 @@ export const StockView: React.FC = () => {
       } else {
         copyToClipboard();
       }
-    } catch (err) {
-      console.error('Error sharing:', err);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.warn('Share API fallback:', err?.message || err);
+        copyToClipboard();
+      }
     }
     setShowSharePopup(false);
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden p-5 pt-2">
+    <div className="view-container !pt-2">
       {/* Fixed Top Section: Stats + Search + Filters */}
       <div className="bg-brand-light space-y-4 pb-4 shrink-0 z-30">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -585,7 +588,7 @@ export const StockView: React.FC = () => {
       {/* Table Section - Consolidated and Fixed Header */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="card !p-0 flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-slate-200">
+          <div className="scroll-container scrollbar-thin scrollbar-thumb-slate-200">
             <table className="w-full text-left border-separate border-spacing-0">
               <thead className="sticky top-0 z-20 bg-slate-100">
                 <tr className="shadow-sm">
