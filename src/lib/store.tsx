@@ -231,6 +231,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Background sync for pending items
+  useEffect(() => {
+    const syncPending = async () => {
+      // 1. Colaboradores
+      const pendingColabs = colaboradores.filter(c => c.syncStatus === 'pending');
+      for (const c of pendingColabs) {
+        try {
+          const res = await syncToSupabase.insertColaborador(c);
+          if (res.success) {
+            setColaboradores(prev => prev.map(item => item.id === c.id ? { ...item, syncStatus: 'synced' } : item));
+          }
+        } catch (e) {
+          console.error("Auto-sync error (colaborador):", e);
+        }
+      }
+
+      // 2. Materiais
+      const pendingMateriais = materiais.filter(m => m.syncStatus === 'pending');
+      for (const m of pendingMateriais) {
+        try {
+          const res = await syncToSupabase.insertMaterial(m);
+          if (res.success) {
+            setMateriais(prev => prev.map(item => item.id === m.id ? { ...item, syncStatus: 'synced' } : item));
+          }
+        } catch (e) {
+          console.error("Auto-sync error (material):", e);
+        }
+      }
+    };
+
+    // Try sync every 60 seconds
+    const interval = setInterval(syncPending, 60000);
+    
+    // Also sync when coming back online
+    window.addEventListener('online', syncPending);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', syncPending);
+    };
+  }, [colaboradores, materiais]);
+
   // LocalStorage Synchronization Effects
   useEffect(() => {
     try {
@@ -308,9 +350,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         // Helper to merge Supabase data with local state, preventing loss of local-only items
         // while ensuring Supabase data (source of truth) is present
-        const mergeWithSupabase = <T extends { id: string }>(supabaseData: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
+        const mergeWithSupabase = <T extends { id: string; syncStatus?: 'synced' | 'pending' }>(supabaseData: T[], currentLocal: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
           if (supabaseData.length > 0) {
-            setFn(supabaseData);
+            // Keep items that are pending sync from local state
+            const pendingItems = currentLocal.filter(item => item.syncStatus === 'pending');
+            
+            // Create a map of synced items for fast lookup
+            const supabaseIds = new Set(supabaseData.map(item => item.id));
+            
+            // Filter out pending items that might have actually synced (same ID already in Supabase)
+            const remainingPending = pendingItems.filter(item => !supabaseIds.has(item.id));
+            
+            // Final set: Supabase data (truth) + remaining local pending items
+            setFn([...supabaseData, ...remainingPending]);
+          } else if (currentLocal.some(i => i.syncStatus === 'pending')) {
+            // If supabase returned nothing but we have pending, keep pending
+            setFn(currentLocal.filter(i => i.syncStatus === 'pending'));
           }
         };
 
@@ -318,18 +373,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.materiais.length > 0) {
           const sanitizedMaterials = data.materiais.map(m => ({
             ...m,
-            unidade: m.unidade === 'UM' ? 'UNI' : m.unidade
+            unidade: m.unidade === 'UM' ? 'UNI' : m.unidade,
+            syncStatus: 'synced' as const
           }));
-          mergeWithSupabase(sanitizedMaterials, setMateriais);
+          mergeWithSupabase(sanitizedMaterials, materiais, setMateriais);
         }
 
         // 2. Others
-        mergeWithSupabase(data.colaboradores, setColaboradores);
-        mergeWithSupabase(data.empresas, setEmpresas);
-        mergeWithSupabase(data.equipes, setEquipes);
-        mergeWithSupabase(data.fornecedores, setFornecedores);
-        mergeWithSupabase(data.movimentacoes, setMovimentacoes);
-        mergeWithSupabase(data.atas, setAtas);
+        mergeWithSupabase(data.colaboradores.map(c => ({ ...c, syncStatus: 'synced' as const })), colaboradores, setColaboradores);
+        mergeWithSupabase(data.empresas, empresas, setEmpresas);
+        mergeWithSupabase(data.equipes, equipes, setEquipes);
+        mergeWithSupabase(data.fornecedores, fornecedores, setFornecedores);
+        mergeWithSupabase(data.movimentacoes, movimentacoes, setMovimentacoes);
+        mergeWithSupabase(data.atas, atas, setAtas);
 
       } catch (err) {
         console.error("Failed to load initial data from Supabase:", err);
@@ -526,16 +582,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       estoqueIdeal: Number(m.estoqueIdeal) || 0,
       estoqueAtual: Number(m.estoqueAtual) || 0,
       precoUnitario: Number(m.precoUnitario) || 0,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      syncStatus: 'pending'
     };
     setMateriais(prev => [...prev, newItem]);
-    return await syncToSupabase.insertMaterial(newItem);
+    
+    try {
+      const result = await syncToSupabase.insertMaterial(newItem);
+      if (result.success) {
+        setMateriais(prev => prev.map(item => item.id === newItem.id ? { ...item, syncStatus: 'synced' } : item));
+      }
+      return result;
+    } catch (err) {
+      return { success: false, error: 'Erro de conexão. O material foi salvo localmente.' };
+    }
   };
 
   const addColaborador = async (c: Omit<Colaborador, 'id'>): Promise<{ success: boolean; error?: string }> => {
-    const newItem: Colaborador = { ...c, id: generateId() };
+    const newItem: Colaborador = { ...c, id: generateId(), syncStatus: 'pending' };
     setColaboradores(prev => [...prev, newItem]);
-    return await syncToSupabase.insertColaborador(newItem);
+    
+    try {
+      const result = await syncToSupabase.insertColaborador(newItem);
+      if (result.success) {
+        setColaboradores(prev => prev.map(item => item.id === newItem.id ? { ...item, syncStatus: 'synced' } : item));
+      }
+      return result;
+    } catch (err) {
+      return { success: false, error: 'Erro de conexão. O registro foi salvo localmente.' };
+    }
   };
 
   const addEquipe = async (e: Omit<Equipe, 'id'>): Promise<{ success: boolean; error?: string }> => {
@@ -860,25 +935,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsSyncing(true);
     try {
       const data = await syncToSupabase.fetchAll();
-      const mergeWithSupabase = <T extends { id: string }>(supabaseData: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
+      const mergeWithSupabase = <T extends { id: string; syncStatus?: 'synced' | 'pending' }>(supabaseData: T[], currentLocal: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
         if (supabaseData.length > 0) {
-          setFn(supabaseData);
+          const pendingItems = currentLocal.filter(item => item.syncStatus === 'pending');
+          const supabaseIds = new Set(supabaseData.map(item => item.id));
+          const remainingPending = pendingItems.filter(item => !supabaseIds.has(item.id));
+          setFn([...supabaseData, ...remainingPending]);
+        } else if (currentLocal.some(i => i.syncStatus === 'pending')) {
+          setFn(currentLocal.filter(i => i.syncStatus === 'pending'));
         }
       };
 
       if (data.materiais.length > 0) {
         const sanitizedMaterials = data.materiais.map(m => ({
           ...m,
-          unidade: m.unidade === 'UM' ? 'UNI' : m.unidade
+          unidade: m.unidade === 'UM' ? 'UNI' : m.unidade,
+          syncStatus: 'synced' as const
         }));
-        mergeWithSupabase(sanitizedMaterials, setMateriais);
+        mergeWithSupabase(sanitizedMaterials, materiais, setMateriais);
       }
-      mergeWithSupabase(data.colaboradores, setColaboradores);
-      mergeWithSupabase(data.empresas, setEmpresas);
-      mergeWithSupabase(data.equipes, setEquipes);
-      mergeWithSupabase(data.fornecedores, setFornecedores);
-      mergeWithSupabase(data.movimentacoes, setMovimentacoes);
-      mergeWithSupabase(data.atas, setAtas);
+      mergeWithSupabase(data.colaboradores.map(c => ({...c, syncStatus: 'synced' as const})), colaboradores, setColaboradores);
+      mergeWithSupabase(data.empresas, empresas, setEmpresas);
+      mergeWithSupabase(data.equipes, equipes, setEquipes);
+      mergeWithSupabase(data.fornecedores, fornecedores, setFornecedores);
+      mergeWithSupabase(data.movimentacoes, movimentacoes, setMovimentacoes);
+      mergeWithSupabase(data.atas, atas, setAtas);
     } catch (err) {
       console.error("Manual refresh failed:", err);
     } finally {

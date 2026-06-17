@@ -20,6 +20,7 @@ export interface Material {
   ultimaMovimentacao?: string;
   detalhes?: string;
   createdAt?: string;
+  syncStatus?: 'synced' | 'pending';
 }
 
 export interface Colaborador {
@@ -31,6 +32,7 @@ export interface Colaborador {
   equipe: EquipeTecnica;
   contato?: string;
   status: 'Ativo' | 'Inativo';
+  syncStatus?: 'synced' | 'pending';
 }
 
 export interface Empresa {

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
-import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload, Package, Users, Truck, MapPin, FilterX } from 'lucide-react';
+import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload, Package, Users, Truck, MapPin, FilterX, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { Material } from '../types';
 import { materialsToImport } from '../data/materials';
 import { motion, AnimatePresence } from 'motion/react';
@@ -150,16 +150,29 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   }, [data, searchTerm, type, store.fornecedores, activeFilters]);
 
   const sortedData = useMemo(() => {
-    // Sort alphabetically based on type as requested
+    // Sort logic
     return [...filteredData].sort((a, b) => {
+      // For materials, sort by registration order (newest first)
+      if (type === 'materiais') {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        
+        // If both have dates, newest first
+        if (dateA !== dateB) {
+          return dateB - dateA;
+        }
+        
+        // Secondary sort by description if dates are equal (or missing)
+        const descA = a.descricao || '';
+        const descB = b.descricao || '';
+        return descA.localeCompare(descB, 'pt-BR', { sensitivity: 'base' });
+      }
+
+      // Default alphabetical sorting for other types
       let nameA = '';
       let nameB = '';
 
       switch(type) {
-        case 'materiais':
-          nameA = a.descricao || '';
-          nameB = b.descricao || '';
-          break;
         case 'colaboradores':
           nameA = a.nome || '';
           nameB = b.nome || '';
@@ -543,13 +556,12 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     });
     
     const csvContent = [csvHeaders, ...rows].join("\r\n");
-    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-    const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Backup_Materiais_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `Cadastro_Materiais_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1639,7 +1651,12 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                   </td>
                   {type === 'materiais' && (
                       <>
-                        <td className="px-1 py-1 font-mono text-slate-500 text-[9px] border-b border-slate-100 whitespace-nowrap">{item.sap}</td>
+                        <td className="px-1 py-1 font-mono text-slate-500 text-[9px] border-b border-slate-100 whitespace-nowrap">
+                          <div className="flex items-center gap-1">
+                            {item.syncStatus === 'pending' && <CloudOff className="w-2.5 h-2.5 text-amber-500 animate-pulse" title="Pendente de sincronização" />}
+                            {item.sap}
+                          </div>
+                        </td>
                         <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-slate-100 uppercase overflow-hidden text-ellipsis whitespace-nowrap max-w-[80px]">
                           {sortedFornecedoresList.find(f => f.id === item.fornecedorId)?.nomeFantasia || '-'}
                         </td>
@@ -1739,7 +1756,12 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     )}
                     {type === 'colaboradores' && (
                       <>
-                        <td className="px-1 py-1 font-mono text-[9px] text-slate-500 border-b border-slate-100">{item.matricula}</td>
+                        <td className="px-1 py-1 font-mono text-[9px] text-slate-500 border-b border-slate-100">
+                          <div className="flex items-center gap-1">
+                            {item.syncStatus === 'pending' && <CloudOff className="w-2.5 h-2.5 text-amber-500 animate-pulse" title="Pendente de sincronização" />}
+                            {item.matricula}
+                          </div>
+                        </td>
                         <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-slate-100">{item.nome}</td>
                         <td className="px-1 py-1 text-[9px] text-slate-500 border-b border-slate-100">{item.empresa}</td>
                         <td className="px-1 py-1 text-[9px] text-slate-500 border-b border-slate-100">{item.cargo}</td>
@@ -1921,11 +1943,22 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       </button>
                     )}
 
+                    {sortedData.some((i: any) => i.syncStatus === 'pending') && (
+                      <div 
+                        className="h-8 px-2.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-lg flex items-center gap-2 animate-pulse cursor-help"
+                        title="Há itens salvos localmente aguardando sincronização com o banco de dados."
+                      >
+                        <CloudOff className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-black uppercase tracking-tighter shrink-0">PENDENTE</span>
+                      </div>
+                    )}
+
                     {type === 'materiais' && (
-                      <div className="flex items-center gap-1.5 mr-1 pr-1 border-r border-slate-100 flex-none overflow-visible">
+                      <>
                         <button 
                           onClick={() => setIsFiltersOpen(!isFiltersOpen)}
                           className={`h-8 px-2.5 rounded-lg transition-all flex items-center gap-2 whitespace-nowrap group shrink-0 ${isFiltersOpen || Object.values(activeFilters).some(v => String(v).trim() !== '') ? 'bg-brand-accent text-white shadow-sm' : 'bg-slate-50 text-slate-500 hover:text-brand-accent hover:bg-slate-100 border border-slate-200/60'}`}
+                          title="Filtros Avançados"
                         >
                           <Database className={`w-3.5 h-3.5 shrink-0 ${isFiltersOpen || Object.values(activeFilters).some(v => String(v).trim() !== '') ? 'text-white' : 'text-slate-400 group-hover:text-brand-accent'}`} />
                           <span className="text-[10px] font-black uppercase tracking-wider block shrink-0">Filtros</span>
@@ -1949,7 +1982,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                           <Share2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 shrink-0" />
                           <span className="text-[10px] font-black uppercase tracking-wider block shrink-0">COMPARTILHAR</span>
                         </button>
-                      </div>
+                      </>
                     )}
 
                     <div 
