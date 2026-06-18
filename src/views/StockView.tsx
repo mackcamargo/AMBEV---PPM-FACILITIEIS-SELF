@@ -13,7 +13,9 @@ export const StockView: React.FC = () => {
     deleteMaterial, 
     equipes, 
     fornecedores,
-    user
+    user,
+    deletionPassword,
+    isDeletionPasswordEnabled
   } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [deletionPasswordInput, setDeletionPasswordInput] = useState('');
@@ -138,22 +140,8 @@ export const StockView: React.FC = () => {
 
   const handleConfirmDelete = async () => {
     if (selectedMaterial) {
-      if (!deletionPasswordInput) {
-        setDeleteError('Senha obrigatória para exclusão.');
-        return;
-      }
-  
-      if (user?.email) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: user.email,
-          password: deletionPasswordInput
-        });
-        if (error) {
-          setDeleteError('Senha de acesso inválida.');
-          return;
-        }
-      } else {
-        setDeleteError('Sessão inválida. Faça login novamente.');
+      if (isDeletionPasswordEnabled && deletionPasswordInput !== deletionPassword) {
+        setDeleteError('Senha de acesso inválida.');
         return;
       }
       
@@ -167,22 +155,8 @@ export const StockView: React.FC = () => {
   };
 
   const handleConfirmBulkDelete = async () => {
-    if (!deletionPasswordInput) {
-      setDeleteError('Senha obrigatória para exclusão.');
-      return;
-    }
-    
-    if (user?.email) {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: deletionPasswordInput
-      });
-      if (error) {
-        setDeleteError('Senha de acesso inválida.');
-        return;
-      }
-    } else {
-      setDeleteError('Sessão inválida. Faça login novamente.');
+    if (isDeletionPasswordEnabled && deletionPasswordInput !== deletionPassword) {
+      setDeleteError('Senha de acesso inválida.');
       return;
     }
     

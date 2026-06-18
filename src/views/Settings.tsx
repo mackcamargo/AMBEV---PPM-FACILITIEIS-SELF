@@ -1,15 +1,76 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../lib/store';
 import { CODEBASE_FILES } from '../lib/codebaseBackup';
 import { supabase } from '../lib/supabase';
+import { Lock, ShieldAlert } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { 
     materiais, colaboradores, empresas, equipes, fornecedores, movimentacoes, atas, batchState,
     setMateriais, setColaboradores, setEmpresas, setEquipes, setFornecedores, setMovimentacoes, setAtas, setBatchState,
-    clearAllData, user
+    clearAllData, user,
+    deletionPassword, setDeletionPassword, isDeletionPasswordEnabled, setIsDeletionPasswordEnabled
   } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isAuthorized, setIsAuthorized] = useState(!isDeletionPasswordEnabled);
+  const [passInput, setPassInput] = useState('');
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!isDeletionPasswordEnabled) {
+      setIsAuthorized(true);
+    }
+  }, [isDeletionPasswordEnabled]);
+
+  const handleAuthorize = () => {
+    if (passInput === deletionPassword) {
+      setIsAuthorized(true);
+      setError(false);
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 2000);
+    }
+  };
+
+  if (!isAuthorized && isDeletionPasswordEnabled) {
+    return (
+      <div className="view-container flex items-center justify-center bg-slate-50">
+        <div className="card p-8 w-full max-w-sm flex flex-col items-center text-center animate-in zoom-in-95 duration-300">
+          <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mb-6 shadow-xl shadow-amber-100/50">
+            <Lock className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Acesso Restrito</h2>
+          <p className="text-slate-500 text-xs mb-8 font-medium">Esta seção contém configurações críticas. <br/>Insira sua senha de administrador para continuar.</p>
+          
+          <div className="w-full space-y-4">
+            <div className="relative">
+              <input 
+                type="password"
+                className={`input-field text-center font-black tracking-[0.5em] text-lg ${error ? 'border-red-500 bg-red-50 ring-2 ring-red-100' : ''}`}
+                placeholder="••••••"
+                value={passInput}
+                onChange={(e) => setPassInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAuthorize()}
+              />
+              {error && (
+                <div className="absolute -bottom-6 left-0 right-0 flex items-center justify-center gap-1 text-[10px] font-bold text-red-600 uppercase animate-in fade-in slide-in-from-top-1">
+                  <ShieldAlert className="w-3 h-3" />
+                  Senha Incorreta
+                </div>
+              )}
+            </div>
+            
+            <button 
+              onClick={handleAuthorize}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-xs py-4 rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-slate-900/20"
+            >
+              Desbloquear Painel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const downloadFile = (content: string, fileName: string, contentType: string) => {
     const a = document.createElement('a');
@@ -367,6 +428,43 @@ CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR D
 
 
       <div className="card p-6 mb-6">
+        <h2 className="text-lg font-bold text-slate-800 uppercase tracking-tight mb-4">Segurança e Configurações de Acesso</h2>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-700">Senha de Proteção</span>
+              <span className="text-[10px] text-slate-500">Exigir senha para exclusões e acesso às configurações</span>
+            </div>
+            <button 
+              onClick={() => setIsDeletionPasswordEnabled(!isDeletionPasswordEnabled)}
+              className={`w-12 h-6 rounded-full transition-all duration-300 relative ${isDeletionPasswordEnabled ? 'bg-brand-accent shadow-[0_0_10px_rgba(242,101,34,0.3)]' : 'bg-slate-300'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${isDeletionPasswordEnabled ? 'left-7' : 'left-1'}`} />
+            </button>
+          </div>
+
+          {isDeletionPasswordEnabled && (
+            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+              <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Senha de Acesso / Exclusão</label>
+              <div className="relative max-w-sm">
+                <input 
+                  type="password"
+                  className="input-field pr-10"
+                  placeholder="Defina sua senha de segurança"
+                  value={deletionPassword}
+                  onChange={(e) => setDeletionPassword(e.target.value)}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                   <div className="w-2 h-2 rounded-full bg-slate-300" />
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2 italic">Esta senha será solicitada para confirmar exclusões e ao tentar entrar neste menu.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="card p-6 mb-6">
         <h2 className="text-lg font-bold text-slate-800 uppercase tracking-tight mb-2">Backup de Segurança & Arquitetura</h2>
         <p className="text-slate-500 text-xs mb-6 leading-relaxed">
           Gere backups seguros de todos os dados gerados no sistema. Isso inclui <strong>peças cadastradas, colaboradores, equipes, empresas parceiras, fornecedores, histórico de movimentações, atas de reuniões, gráficos e fórmulas relacionais</strong>. É recomendado baixar o arquivo JSON regulamente para salvaguardar as informações integradas do Centro de Inteligência PPM.
@@ -388,72 +486,7 @@ CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR D
               Exportar Materiais (CSV)
             </button>
           </div>
-
-          <div className="border-t border-slate-100 pt-6">
-            <h3 className="text-xs font-bold text-red-600 uppercase tracking-wider mb-2">Restaurar Dados Gravados</h3>
-            <p className="text-slate-500 text-[11px] mb-4">Selecione o arquivo de backup (.json) gerado anteriormente para restabelecer imediatamente todos os cadastros, equipes, saldo reativo e históricos de movimentação.</p>
-            
-            <input type="file" ref={fileInputRef} onChange={handleRestore} className="hidden" accept=".json" />
-            <button 
-              onClick={async () => {
-                const p = prompt("Digite sua senha de acesso para autorizar a restauração do sistema:");
-                if (!p) return;
-                
-                if (user?.email) {
-                  const { error } = await supabase.auth.signInWithPassword({
-                    email: user.email,
-                    password: p
-                  });
-                  if (error) {
-                    alert("Senha incorreta. Restauração cancelada.");
-                    return;
-                  }
-                } else {
-                  alert("Você precisa estar logado para realizar esta ação.");
-                  return;
-                }
-                
-                fileInputRef.current?.click();
-              }} 
-              className="bg-red-600 hover:bg-red-700 active:scale-[0.98] transition-all duration-200 text-white font-extrabold uppercase tracking-widest text-[10px] px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg shadow-red-600/25 cursor-pointer max-w-md w-full"
-            >
-              Restaurar Dados do Aplicativo (JSON)
-            </button>
-          </div>
         </div>
-      </div>
-
-      <div className="card p-6 border-red-100 bg-red-50/20 mt-6">
-        <h2 className="text-lg font-bold text-red-800 uppercase tracking-tight mb-2">Limpeza Completa</h2>
-        <p className="text-slate-500 text-xs mb-4 leading-relaxed">Esta operação irá apagar permanentemente todas as movimentações, atas de reuniões, materiais cadastrados, colaboradores, empresas e equipes. <strong>Não é possível desfazer.</strong></p>
-        <button 
-          onClick={async () => {
-            const p = prompt("Digite sua senha de acesso para autorizar apagar tudo:");
-            if (!p) return;
-
-            if (user?.email) {
-              const { error } = await supabase.auth.signInWithPassword({
-                email: user.email,
-                password: p
-              });
-              if (error) {
-                alert("Senha incorreta. Ação cancelada.");
-                return;
-              }
-            } else {
-              alert("Sessão inválida. Faça login novamente.");
-              return;
-            }
-
-            if (confirm("Deseja realmente apagar TODOS os dados do aplicativo? Esta ação é irreversível!")) {
-              clearAllData();
-              alert("Todos os dados foram excluídos com sucesso!");
-            }
-          }}
-          className="text-xs bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-extrabold uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all active:scale-[0.98]"
-        >
-          Zerar Tudo (Clique)
-        </button>
       </div>
       </div>
     </div>

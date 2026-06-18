@@ -134,22 +134,8 @@ export const MeetingHistory: React.FC = () => {
   }, [editedItens, materiais]);
 
   const handleDeleteReuniao = async (ata: AtaReuniao) => {
-    if (!deletionPasswordInput) {
-      setDeleteError('Senha obrigatória para exclusão.');
-      return;
-    }
-
-    if (user?.email) {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: deletionPasswordInput
-      });
-      if (error) {
-        setDeleteError('Senha de exclusão inválida.');
-        return;
-      }
-    } else {
-      setDeleteError('Faça login novamente.');
+    if (isDeletionPasswordEnabled && deletionPasswordInput !== deletionPassword) {
+      setDeleteError('Senha de exclusão inválida.');
       return;
     }
     
@@ -164,22 +150,8 @@ export const MeetingHistory: React.FC = () => {
   };
 
   const handleConfirmBulkDelete = async () => {
-    if (!deletionPasswordInput) {
-      setDeleteError('Senha obrigatória para exclusão.');
-      return;
-    }
-
-    if (user?.email) {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: deletionPasswordInput
-      });
-      if (error) {
-        setDeleteError('Senha de exclusão inválida.');
-        return;
-      }
-    } else {
-      setDeleteError('Faça login novamente.');
+    if (isDeletionPasswordEnabled && deletionPasswordInput !== deletionPassword) {
+      setDeleteError('Senha de exclusão inválida.');
       return;
     }
 

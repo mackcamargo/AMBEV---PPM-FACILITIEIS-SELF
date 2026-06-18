@@ -590,22 +590,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         const isBudgetChanged = editFormData.verbaDestinada !== selectedItem.verbaDestinada || 
                                editFormData.saldoAtualizado !== selectedItem.saldoAtualizado;
         
-        if (isBudgetChanged) {
-           if (!deletionPasswordInput) {
-             addToast('Segurança VRL', 'Sua senha de acesso é necessária para alterar orçamentos.', 'error');
-             return;
-           }
-           if (store.user?.email) {
-             const { error } = await supabase.auth.signInWithPassword({
-               email: store.user.email,
-               password: deletionPasswordInput
-             });
-             if (error) {
-               addToast('Segurança VRL', 'Senha de acesso incorreta. Alteração não autorizada.', 'error');
-               return;
-             }
-           } else {
-             addToast('Erro de sessão', 'Sessão inválida. Faça login novamente.', 'error');
+        if (isBudgetChanged && store.isDeletionPasswordEnabled) {
+           if (deletionPasswordInput !== store.deletionPassword) {
+             addToast('Segurança VRL', 'Senha de acesso incorreta. Alteração não autorizada.', 'error');
              return;
            }
         }
@@ -1102,22 +1089,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   };
 
   const handleConfirmBulkDelete = async () => {
-    if (!deletionPasswordInput) {
-      addToast('Senha Obrigatória', 'Informe sua senha de acesso para autorizar a exclusão.', 'error');
-      return;
-    }
-
-    if (store.user?.email) {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: store.user.email,
-        password: deletionPasswordInput
-      });
-      if (error) {
-        addToast('Senha Incorreta', 'A senha informada para exclusão é inválida.', 'error');
-        return;
-      }
-    } else {
-      addToast('Erro de Sessão', 'Faça login novamente para autorizar.', 'error');
+    if (store.isDeletionPasswordEnabled && deletionPasswordInput !== store.deletionPassword) {
+      addToast('Senha Incorreta', 'A senha informada para exclusão é inválida.', 'error');
       return;
     }
 
@@ -1140,22 +1113,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
   const handleConfirmDelete = async () => {
     if (selectedItem) {
-      if (!deletionPasswordInput) {
-        addToast('Senha Obrigatória', 'Informe sua senha de acesso para autorizar a exclusão.', 'error');
-        return;
-      }
-  
-      if (store.user?.email) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: store.user.email,
-          password: deletionPasswordInput
-        });
-        if (error) {
-          addToast('Senha Incorreta', 'A senha informada para exclusão é inválida.', 'error');
-          return;
-        }
-      } else {
-        addToast('Erro de Sessão', 'Faça login novamente para autorizar.', 'error');
+      if (store.isDeletionPasswordEnabled && deletionPasswordInput !== store.deletionPassword) {
+        addToast('Senha Incorreta', 'A senha informada para exclusão é inválida.', 'error');
         return;
       }
 

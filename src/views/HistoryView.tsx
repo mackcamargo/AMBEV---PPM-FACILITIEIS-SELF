@@ -4,6 +4,7 @@ import { useApp } from '../lib/store';
 import { playNotificationSound } from '../lib/audio';
 import { supabase } from '../lib/supabase';
 import { ColaboradorSelect } from '../components/ColaboradorSelect';
+import { MaterialSelect } from '../components/MaterialSelect';
 import { 
   ArrowDownLeft, 
   ArrowUpRight, 
@@ -144,22 +145,8 @@ export const HistoryView: React.FC = () => {
   };
 
   const handleConfirmBulkDelete = async () => {
-    if (!deletionPasswordInput) {
-      setDeleteError('Senha obrigatória para exclusão.');
-      return;
-    }
-
-    if (user?.email) {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: deletionPasswordInput
-      });
-      if (error) {
-        setDeleteError('Senha de exclusão inválida.');
-        return;
-      }
-    } else {
-      setDeleteError('Faça login novamente.');
+    if (isDeletionPasswordEnabled && deletionPasswordInput !== deletionPassword) {
+      setDeleteError('Senha de exclusão inválida.');
       return;
     }
     
@@ -174,22 +161,8 @@ export const HistoryView: React.FC = () => {
   const handleConfirmDelete = async () => {
     if (!selectedMov) return;
     
-    if (!deletionPasswordInput) {
-      setDeleteError('Senha obrigatória para exclusão.');
-      return;
-    }
-
-    if (user?.email) {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: deletionPasswordInput
-      });
-      if (error) {
-        setDeleteError('Senha de exclusão inválida.');
-        return;
-      }
-    } else {
-      setDeleteError('Faça login novamente.');
+    if (isDeletionPasswordEnabled && deletionPasswordInput !== deletionPassword) {
+      setDeleteError('Senha de exclusão inválida.');
       return;
     }
     
@@ -558,16 +531,12 @@ export const HistoryView: React.FC = () => {
 
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-slate-500 uppercase">Peça (Material)</label>
-                    <select 
-                      className="input-field h-8 !py-0 text-[10px]"
+                    <MaterialSelect
                       value={filterMaterialId}
-                      onChange={(e) => setFilterMaterialId(e.target.value)}
-                    >
-                      <option value="">Todas as Peças</option>
-                      {materiais.sort((a, b) => a.descricao.localeCompare(b.descricao)).map(m => (
-                        <option key={m.id} value={m.id}>{m.descricao}</option>
-                      ))}
-                    </select>
+                      onChange={(val) => setFilterMaterialId(val)}
+                      materiais={materiais}
+                      placeholder="Pesquisar Peça..."
+                    />
                   </div>
 
                   <div className="space-y-1">
