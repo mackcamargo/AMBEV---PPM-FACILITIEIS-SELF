@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Loader2, X, AlertCircle } from 'lucide-react';
+import { Lock, Loader2, X, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useApp } from '../lib/store';
@@ -20,6 +20,7 @@ export const PasswordConfirmModal: React.FC<PasswordConfirmModalProps> = ({
   description = "Digite sua senha para confirmar a exclusão deste registro."
 }) => {
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user } = useApp();
@@ -96,15 +97,24 @@ export const PasswordConfirmModal: React.FC<PasswordConfirmModalProps> = ({
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               Senha de Acesso
             </label>
-            <input 
-              type="password"
-              placeholder="Digite sua senha..."
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all font-mono"
-              autoFocus
-              required
-            />
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"}
+                placeholder="Digite sua senha..."
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all font-mono"
+                autoFocus
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           {error && (

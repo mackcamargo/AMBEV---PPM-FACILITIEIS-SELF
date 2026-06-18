@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useApp } from '../lib/store';
 import { CODEBASE_FILES } from '../lib/codebaseBackup';
 import { supabase } from '../lib/supabase';
-import { Lock, ShieldAlert } from 'lucide-react';
+import { Lock, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { 
@@ -14,16 +14,28 @@ export const Settings: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAuthorized, setIsAuthorized] = useState(!isDeletionPasswordEnabled);
   const [passInput, setPassInput] = useState('');
+  const [showPassInput, setShowPassInput] = useState(false);
+  const [showDeletionPassword, setShowDeletionPassword] = useState(false);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!isDeletionPasswordEnabled) {
+    // Se a proteção estiver desabilitada OU se não houver senha definida, autoriza automaticamente
+    if (!isDeletionPasswordEnabled || deletionPassword.trim() === '') {
       setIsAuthorized(true);
     }
-  }, [isDeletionPasswordEnabled]);
+  }, [isDeletionPasswordEnabled, deletionPassword]);
 
   const handleAuthorize = () => {
-    if (passInput === deletionPassword) {
+    const input = passInput.trim();
+    const target = (deletionPassword || '').toString().trim();
+
+    // Se não houver senha alvo mas o componente de bloqueio ainda estiver visível (fallback)
+    if (target === '') {
+      setIsAuthorized(true);
+      return;
+    }
+
+    if (input === target) {
       setIsAuthorized(true);
       setError(false);
     } else {
@@ -45,13 +57,20 @@ export const Settings: React.FC = () => {
           <div className="w-full space-y-4">
             <div className="relative">
               <input 
-                type="password"
-                className={`input-field text-center font-black tracking-[0.5em] text-lg ${error ? 'border-red-500 bg-red-50 ring-2 ring-red-100' : ''}`}
+                type={showPassInput ? "text" : "password"}
+                className={`input-field text-center font-black tracking-[0.5em] text-lg pr-12 ${error ? 'border-red-500 bg-red-50 ring-2 ring-red-100' : ''}`}
                 placeholder="••••••"
                 value={passInput}
                 onChange={(e) => setPassInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAuthorize()}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassInput(!showPassInput)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+              >
+                {showPassInput ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
               {error && (
                 <div className="absolute -bottom-6 left-0 right-0 flex items-center justify-center gap-1 text-[10px] font-bold text-red-600 uppercase animate-in fade-in slide-in-from-top-1">
                   <ShieldAlert className="w-3 h-3" />
@@ -448,15 +467,19 @@ CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR D
               <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Senha de Acesso / Exclusão</label>
               <div className="relative max-w-sm">
                 <input 
-                  type="password"
-                  className="input-field pr-10"
+                  type={showDeletionPassword ? "text" : "password"}
+                  className="input-field pr-12"
                   placeholder="Defina sua senha de segurança"
                   value={deletionPassword}
                   onChange={(e) => setDeletionPassword(e.target.value)}
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                   <div className="w-2 h-2 rounded-full bg-slate-300" />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDeletionPassword(!showDeletionPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+                >
+                  {showDeletionPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
               <p className="text-[10px] text-slate-400 mt-2 italic">Esta senha será solicitada para confirmar exclusões e ao tentar entrar neste menu.</p>
             </div>
