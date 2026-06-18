@@ -2214,19 +2214,19 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <form 
-            className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 overflow-hidden flex flex-col"
+            className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 overflow-hidden flex flex-col"
             onSubmit={(e) => {
               e.preventDefault();
               handleUpdate();
             }}
           >
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
               <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Editar {type === 'materiais' ? 'Material' : type === 'empresas' ? 'Empresa' : type === 'fornecedores' ? 'Fornecedor' : type === 'colaboradores' ? 'Colaborador' : 'Equipe'}</h3>
               <button type="button" onClick={() => setIsEditModalOpen(false)} className="p-1 hover:bg-white rounded-full transition-all">
                 <X className="w-4 h-4 text-slate-400" />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto flex-1">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
               {type === 'materiais' && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2 md:col-span-1">
@@ -2662,7 +2662,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                 </div>
               )}
             </div>
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
               <button 
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}

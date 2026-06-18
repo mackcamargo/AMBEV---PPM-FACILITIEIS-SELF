@@ -975,7 +975,7 @@ export const HistoryView: React.FC = () => {
                           placeholder="Selecione um liberador..."
                           value={editLiberador}
                           onChange={(val) => setEditLiberador(val)}
-                          colaboradores={colaboradores.filter(c => ["TST", "GESTOR", "SUPERVISOR", "ENCARREGADO"].includes(c.cargo))}
+                          colaboradores={colaboradores.filter(c => ["TST", "GESTOR", "SUPERVISOR", "ENCARREGADO", "ADM"].includes(c.cargo))}
                         />
                       </div>
                     </>

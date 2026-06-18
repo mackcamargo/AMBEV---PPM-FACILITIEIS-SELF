@@ -704,7 +704,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                         setLiberador(val);
                         if (val) clearInvalidField('liberador');
                       }}
-                      colaboradores={colaboradores.filter(c => ["TST", "GESTOR", "SUPERVISOR", "ENCARREGADO"].includes(c.cargo))}
+                      colaboradores={colaboradores.filter(c => ["TST", "GESTOR", "SUPERVISOR", "ENCARREGADO", "ADM"].includes(c.cargo))}
                       error={invalidFields.includes('liberador')}
                     />
                   </div>
