@@ -7,6 +7,7 @@ import { materialsToImport } from '../data/materials';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { playNotificationSound } from '../lib/audio';
+import { supabase } from '../lib/supabase';
 
 export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'fornecedores' | 'colaboradores' | 'equipes' }> = ({ type }) => {
   const store = useApp();
@@ -585,13 +586,28 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   const handleUpdate = async () => {
     if (selectedItem) {
       // Security check for budget (Verba) changes if applicable
-      if (type === 'equipes' && store.isDeletionPasswordEnabled && store.deletionPassword) {
+      if (type === 'equipes') {
         const isBudgetChanged = editFormData.verbaDestinada !== selectedItem.verbaDestinada || 
                                editFormData.saldoAtualizado !== selectedItem.saldoAtualizado;
         
-        if (isBudgetChanged && deletionPasswordInput !== store.deletionPassword) {
-           addToast('Segurança VRL', 'Senha de autorização necessária para alterar orçamentos.', 'error');
-           return;
+        if (isBudgetChanged) {
+           if (!deletionPasswordInput) {
+             addToast('Segurança VRL', 'Sua senha de acesso é necessária para alterar orçamentos.', 'error');
+             return;
+           }
+           if (store.user?.email) {
+             const { error } = await supabase.auth.signInWithPassword({
+               email: store.user.email,
+               password: deletionPasswordInput
+             });
+             if (error) {
+               addToast('Segurança VRL', 'Senha de acesso incorreta. Alteração não autorizada.', 'error');
+               return;
+             }
+           } else {
+             addToast('Erro de sessão', 'Sessão inválida. Faça login novamente.', 'error');
+             return;
+           }
         }
       }
 
@@ -1085,9 +1101,23 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     reader.readAsText(file);
   };
 
-  const handleConfirmBulkDelete = () => {
-    if (store.isDeletionPasswordEnabled && store.deletionPassword && deletionPasswordInput !== store.deletionPassword) {
-      addToast('Senha Incorreta', 'A senha informada para exclusão é inválida.', 'error');
+  const handleConfirmBulkDelete = async () => {
+    if (!deletionPasswordInput) {
+      addToast('Senha Obrigatória', 'Informe sua senha de acesso para autorizar a exclusão.', 'error');
+      return;
+    }
+
+    if (store.user?.email) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: store.user.email,
+        password: deletionPasswordInput
+      });
+      if (error) {
+        addToast('Senha Incorreta', 'A senha informada para exclusão é inválida.', 'error');
+        return;
+      }
+    } else {
+      addToast('Erro de Sessão', 'Faça login novamente para autorizar.', 'error');
       return;
     }
 
@@ -1108,10 +1138,24 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     setDeletionPasswordInput('');
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (selectedItem) {
-      if (store.isDeletionPasswordEnabled && store.deletionPassword && deletionPasswordInput !== store.deletionPassword) {
-        addToast('Senha Incorreta', 'A senha informada para exclusão é inválida.', 'error');
+      if (!deletionPasswordInput) {
+        addToast('Senha Obrigatória', 'Informe sua senha de acesso para autorizar a exclusão.', 'error');
+        return;
+      }
+  
+      if (store.user?.email) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: store.user.email,
+          password: deletionPasswordInput
+        });
+        if (error) {
+          addToast('Senha Incorreta', 'A senha informada para exclusão é inválida.', 'error');
+          return;
+        }
+      } else {
+        addToast('Erro de Sessão', 'Faça login novamente para autorizar.', 'error');
         return;
       }
 
@@ -2132,19 +2176,19 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                 Tem certeza que deseja excluir <span className="font-bold text-slate-700">{selectedIds.length} {type} selecionados</span>? 
                 Esta ação não poderá ser desfeita.
               </p>
-              {store.isDeletionPasswordEnabled && store.deletionPassword && (
-                <div className="w-full mt-6 text-left">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Senha de Confirmação</label>
-                  <input 
-                    type="password" 
-                    className="input-field" 
-                    placeholder="Digite a senha para autorizar"
-                    value={deletionPasswordInput}
-                    onChange={(e) => setDeletionPasswordInput(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-              )}
+              
+              <div className="w-full mt-6 text-left">
+                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
+                <input 
+                  type="password" 
+                  className="input-field" 
+                  placeholder="Digite sua senha para autorizar"
+                  value={deletionPasswordInput}
+                  onChange={(e) => setDeletionPasswordInput(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              
             </div>
             <div className="flex gap-3 mt-6">
               <button 
@@ -2179,19 +2223,19 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                 Tem certeza que deseja excluir <span className="font-bold text-slate-700">"{selectedItem?.descricao || selectedItem?.nome || selectedItem?.nomeFantasia || selectedItem?.razaoSocial}"</span>? 
                 Esta ação não poderá ser desfeita.
               </p>
-              {store.isDeletionPasswordEnabled && store.deletionPassword && (
-                <div className="w-full mt-6 text-left">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Senha de Confirmação</label>
-                  <input 
-                    type="password" 
-                    className="input-field" 
-                    placeholder="Digite a senha para autorizar"
-                    value={deletionPasswordInput}
-                    onChange={(e) => setDeletionPasswordInput(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-              )}
+              
+              <div className="w-full mt-6 text-left">
+                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
+                <input 
+                  type="password" 
+                  className="input-field" 
+                  placeholder="Digite sua senha para autorizar"
+                  value={deletionPasswordInput}
+                  onChange={(e) => setDeletionPasswordInput(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              
             </div>
             <div className="flex gap-3 mt-6">
               <button 
@@ -2566,16 +2610,16 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       onChange={(e) => setEditFormData({ ...editFormData, saldoAtualizado: Number(e.target.value) })}
                     />
                   </div>
-                  {type === 'equipes' && store.isDeletionPasswordEnabled && store.isDeletionPasswordEnabled && store.deletionPassword && (
+                  {type === 'equipes' && (
                     <div className="col-span-2 mt-2 pt-2 border-t border-slate-100">
                       <p className="text-[9px] font-bold text-amber-600 uppercase mb-2 flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3" /> Alteração de Verba requer senha de autorização
                       </p>
-                      <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Senha de Autorização</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
                       <input 
                         type="password" 
                         className="input-field h-8" 
-                        placeholder="Senha VRL necessária para salvar alterações de orçamento"
+                        placeholder="Senha necessária para salvar alterações de orçamento"
                         value={deletionPasswordInput}
                         onChange={(e) => setDeletionPasswordInput(e.target.value)}
                       />

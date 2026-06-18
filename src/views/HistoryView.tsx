@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useApp } from '../lib/store';
 import { playNotificationSound } from '../lib/audio';
+import { supabase } from '../lib/supabase';
 import { ColaboradorSelect } from '../components/ColaboradorSelect';
 import { 
   ArrowDownLeft, 
@@ -46,6 +47,7 @@ export const HistoryView: React.FC = () => {
     empresas,
     fornecedores,
     materiais,
+    user,
     equipes,
     deletionPassword,
     isDeletionPasswordEnabled
@@ -141,9 +143,23 @@ export const HistoryView: React.FC = () => {
     setIsEditing(false);
   };
 
-  const handleConfirmBulkDelete = () => {
-    if (isDeletionPasswordEnabled && deletionPassword && deletionPasswordInput !== deletionPassword) {
-      setDeleteError('Senha de exclusão inválida.');
+  const handleConfirmBulkDelete = async () => {
+    if (!deletionPasswordInput) {
+      setDeleteError('Senha obrigatória para exclusão.');
+      return;
+    }
+
+    if (user?.email) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: deletionPasswordInput
+      });
+      if (error) {
+        setDeleteError('Senha de exclusão inválida.');
+        return;
+      }
+    } else {
+      setDeleteError('Faça login novamente.');
       return;
     }
     
@@ -151,6 +167,36 @@ export const HistoryView: React.FC = () => {
     playNotificationSound('delete');
     setIsBulkDeleteModalOpen(false);
     setSelectedIds([]);
+    setDeletionPasswordInput('');
+    setDeleteError('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedMov) return;
+    
+    if (!deletionPasswordInput) {
+      setDeleteError('Senha obrigatória para exclusão.');
+      return;
+    }
+
+    if (user?.email) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: deletionPasswordInput
+      });
+      if (error) {
+        setDeleteError('Senha de exclusão inválida.');
+        return;
+      }
+    } else {
+      setDeleteError('Faça login novamente.');
+      return;
+    }
+    
+    deleteMovimentacao(selectedMov.id);
+    playNotificationSound('delete');
+    setIsDeleteModalOpen(false);
+    setSelectedMov(null);
     setDeletionPasswordInput('');
     setDeleteError('');
   };
@@ -228,7 +274,7 @@ export const HistoryView: React.FC = () => {
     e.stopPropagation();
     const subject = `Relatório de Movimentações - ${new Date().toLocaleDateString()}`;
     let body = filteredMovs.map(m => 
-      `${new Date(m.data).toLocaleDateString()} - ${m.tipo}: ${m.quantidade}x ${m.materialDesc} (R$ ${(m.quantidade * (m.precoUnitario || 0)).toFixed(2)})`
+      `${new Date(m.data).toLocaleDateString()} - ${m.tipo}: ${m.quantidade}x ${m.materialDesc} (${m.tipo === 'Retirada' ? '-' : ''}R$ ${(m.quantidade * (m.precoUnitario || 0)).toFixed(2)})`
     ).join('\r\n\r\n');
     
     // Truncate to avoid 404 / URL too long errors
@@ -260,7 +306,7 @@ export const HistoryView: React.FC = () => {
   const shareViaEmail = () => {
     const subject = `Relatório de Movimentações - ${new Date().toLocaleDateString()}`;
     const body = filteredMovs.map(m => 
-      `${new Date(m.data).toLocaleDateString()} - ${m.tipo}: ${m.quantidade}x ${m.materialDesc} (R$ ${(m.quantidade * (m.precoUnitario || 0)).toFixed(2)})`
+      `${new Date(m.data).toLocaleDateString()} - ${m.tipo}: ${m.quantidade}x ${m.materialDesc} (${m.tipo === 'Retirada' ? '-' : ''}R$ ${(m.quantidade * (m.precoUnitario || 0)).toFixed(2)})`
     ).join('\n\n');
     
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -269,7 +315,7 @@ export const HistoryView: React.FC = () => {
 
   const copyToClipboard = () => {
     const text = filteredMovs.map(m => 
-      `${new Date(m.data).toLocaleDateString()} - ${m.tipo}: ${m.quantidade}x ${m.materialDesc} (R$ ${(m.quantidade * (m.precoUnitario || 0)).toFixed(2)})`
+      `${new Date(m.data).toLocaleDateString()} - ${m.tipo}: ${m.quantidade}x ${m.materialDesc} (${m.tipo === 'Retirada' ? '-' : ''}R$ ${(m.quantidade * (m.precoUnitario || 0)).toFixed(2)})`
     ).join('\n\n');
     
     navigator.clipboard.writeText(text).then(() => {
@@ -697,8 +743,8 @@ export const HistoryView: React.FC = () => {
                         Qtd: <span className="font-bold text-slate-800">{m.quantidade}</span>
                       </span>
                       {m.precoUnitario !== undefined && m.precoUnitario > 0 && (
-                        <span className="text-[11px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                          R$ {(m.quantidade * m.precoUnitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        <span className={`text-[11px] font-black px-1.5 py-0.5 rounded ${m.tipo === 'Retirada' ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50'}`}>
+                          {m.tipo === 'Retirada' ? '-R$ ' : 'R$ '}{(m.quantidade * m.precoUnitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                       )}
                       {m.equipe && (
@@ -975,7 +1021,7 @@ export const HistoryView: React.FC = () => {
                           placeholder="Selecione um liberador..."
                           value={editLiberador}
                           onChange={(val) => setEditLiberador(val)}
-                          colaboradores={colaboradores.filter(c => ["TST", "GESTOR", "SUPERVISOR", "ENCARREGADO", "ADM"].includes(c.cargo))}
+                          colaboradores={colaboradores.filter(c => ["TST", "GESTOR", "SUPERVISOR", "ENCARREGADO", "ADM", "ADMINISTRADOR", "ADMINISTRATIVO"].includes(c.cargo?.toUpperCase()?.trim()))}
                         />
                       </div>
                     </>
@@ -1068,13 +1114,13 @@ export const HistoryView: React.FC = () => {
                       </div>
 
                       <div className="flex items-start gap-2.5">
-                        <div className="p-1.5 bg-emerald-50 rounded-lg text-emerald-500">
+                        <div className={`p-1.5 rounded-lg ${selectedMov.tipo === 'Retirada' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-500'}`}>
                           <DollarSign className="w-4 h-4" />
                         </div>
                         <div>
                           <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Valor Total</p>
-                          <p className="text-[11px] font-black text-emerald-600 mt-0.5">
-                            R$ {Number(selectedMov.precoUnitario * selectedMov.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <p className={`text-[11px] font-black mt-0.5 ${selectedMov.tipo === 'Retirada' ? 'text-red-600' : 'text-emerald-600'}`}>
+                            {selectedMov.tipo === 'Retirada' ? '-R$ ' : 'R$ '}{Number(selectedMov.precoUnitario * selectedMov.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                         </div>
                       </div>
@@ -1268,25 +1314,25 @@ export const HistoryView: React.FC = () => {
                 Tem certeza que deseja excluir esta movimentação de <span className="font-bold text-slate-700">"{selectedMov.tipo} ({selectedMov.materialDesc})"</span>? 
                 Esta ação não poderá ser desfeita.
               </p>
-              {isDeletionPasswordEnabled && deletionPassword && (
-                <div className="w-full mt-4 text-left">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Senha de Confirmação</label>
-                  <input 
-                    type="password" 
-                    className="input-field" 
-                    placeholder="Digite a senha para autorizar"
-                    value={deletionPasswordInput}
-                    onChange={(e) => {
-                      setDeletionPasswordInput(e.target.value);
-                      if (deleteError) setDeleteError('');
-                    }}
-                    autoFocus
-                  />
-                  {deleteError && (
-                    <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
-                  )}
-                </div>
-              )}
+              
+              <div className="w-full mt-4 text-left">
+                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
+                <input 
+                  type="password" 
+                  className="input-field" 
+                  placeholder="Digite sua senha para autorizar"
+                  value={deletionPasswordInput}
+                  onChange={(e) => {
+                    setDeletionPasswordInput(e.target.value);
+                    if (deleteError) setDeleteError('');
+                  }}
+                  autoFocus
+                />
+                {deleteError && (
+                  <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
+                )}
+              </div>
+              
             </div>
             <div className="flex gap-3 mt-6">
               <button 
@@ -1299,19 +1345,7 @@ export const HistoryView: React.FC = () => {
                 Cancelar
               </button>
               <button 
-                onClick={() => {
-                  if (isDeletionPasswordEnabled && deletionPassword && deletionPasswordInput !== deletionPassword) {
-                    setDeleteError('Senha de exclusão inválida.');
-                    return;
-                  }
-                  
-                  deleteMovimentacao(selectedMov.id);
-                  playNotificationSound('delete');
-                  setIsDeleteModalOpen(false);
-                  setSelectedMov(null);
-                  setDeletionPasswordInput('');
-                  setDeleteError('');
-                }}
+                onClick={handleConfirmDelete}
                 className="flex-1 bg-red-600 text-white rounded-xl font-bold text-[11px] uppercase tracking-wider h-10 hover:bg-red-700 transition-all shadow-sm cursor-pointer"
               >
                 Excluir
@@ -1334,25 +1368,25 @@ export const HistoryView: React.FC = () => {
                 Tem certeza que deseja excluir as <span className="font-bold text-slate-700">{selectedIds.length} movimentações selecionadas</span>? 
                 Esta ação não poderá ser desfeita.
               </p>
-              {isDeletionPasswordEnabled && deletionPassword && (
-                <div className="w-full mt-4 text-left">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Senha de Confirmação</label>
-                  <input 
-                    type="password" 
-                    className="input-field" 
-                    placeholder="Digite a senha para autorizar"
-                    value={deletionPasswordInput}
-                    onChange={(e) => {
-                      setDeletionPasswordInput(e.target.value);
-                      if (deleteError) setDeleteError('');
-                    }}
-                    autoFocus
-                  />
-                  {deleteError && (
-                    <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
-                  )}
-                </div>
-              )}
+              
+              <div className="w-full mt-4 text-left">
+                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
+                <input 
+                  type="password" 
+                  className="input-field" 
+                  placeholder="Digite sua senha para autorizar"
+                  value={deletionPasswordInput}
+                  onChange={(e) => {
+                    setDeletionPasswordInput(e.target.value);
+                    if (deleteError) setDeleteError('');
+                  }}
+                  autoFocus
+                />
+                {deleteError && (
+                  <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
+                )}
+              </div>
+              
             </div>
             <div className="flex gap-3 mt-6">
               <button 

@@ -7,72 +7,9 @@ export const Settings: React.FC = () => {
   const { 
     materiais, colaboradores, empresas, equipes, fornecedores, movimentacoes, atas, batchState,
     setMateriais, setColaboradores, setEmpresas, setEquipes, setFornecedores, setMovimentacoes, setAtas, setBatchState,
-    deletionPassword, setDeletionPassword, clearAllData,
-    isDeletionPasswordEnabled, setIsDeletionPasswordEnabled
+    clearAllData, user
   } = useApp();
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [isAuthorized, setIsAuthorized] = React.useState(!deletionPassword);
-  const [accessPassword, setAccessPassword] = React.useState('');
-  const [error, setError] = React.useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Re-check authorization if password is removed by another view or if it was newly set
-  React.useEffect(() => {
-    if (!deletionPassword) {
-      setIsAuthorized(true);
-    }
-  }, [deletionPassword]);
-
-  const handleAuthorize = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (accessPassword === deletionPassword) {
-      setIsAuthorized(true);
-      setError(false);
-    } else {
-      setError(true);
-      setAccessPassword('');
-    }
-  };
-
-  if (!isAuthorized) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
-        <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 w-full max-w-md text-center">
-          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-             </svg>
-          </div>
-          <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Acesso Restrito</h2>
-          <p className="text-slate-500 text-sm mb-8 leading-relaxed">Esta área contém ferramentas críticas de backup e segurança. Informe a senha de administrador para continuar.</p>
-          
-          <form onSubmit={handleAuthorize} className="space-y-4">
-            <div className="relative">
-              <input 
-                type="password"
-                autoFocus
-                className={`w-full bg-slate-50 border ${error ? 'border-red-300 ring-2 ring-red-50' : 'border-slate-200'} rounded-2xl px-6 py-4 text-center text-lg font-bold tracking-[0.5em] placeholder:tracking-normal placeholder:font-medium placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all`}
-                placeholder="••••••"
-                value={accessPassword}
-                onChange={(e) => {
-                  setAccessPassword(e.target.value);
-                  setError(false);
-                }}
-              />
-              {error && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider mt-2">Senha Incorreta</p>}
-            </div>
-            
-            <button 
-              type="submit"
-              className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl shadow-lg shadow-slate-200 hover:bg-slate-800 active:scale-[0.98] transition-all uppercase tracking-widest text-xs"
-            >
-              Desbloquear Painel
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   const downloadFile = (content: string, fileName: string, contentType: string) => {
     const a = document.createElement('a');
@@ -109,8 +46,7 @@ export const Settings: React.FC = () => {
         fornecedores,
         movimentacoes,
         atas,
-        batchState,
-        deletionPassword
+        batchState
       },
       arquitetura_e_regras: {
         tipografia: {
@@ -428,44 +364,7 @@ CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR D
 
 
 
-      <div className="card p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">Segurança</h2>
-        <div className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-1 text-[10px] uppercase font-bold text-slate-400">
-              <label>Senha para Exclusão de Registros</label>
-              {deletionPassword && (
-                <button
-                  onClick={() => setIsDeletionPasswordEnabled(!isDeletionPasswordEnabled)}
-                  className={`px-2 py-0.5 rounded-full border ${isDeletionPasswordEnabled ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'} transition-colors`}
-                >
-                  {isDeletionPasswordEnabled ? 'Ativada (Protegendo)' : 'Desativada (Temporariamente livre)'}
-                </button>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <input 
-                  type={showPassword ? "text" : "password"} 
-                  className="input-field max-w-[200px]" 
-                  placeholder="Definir nova senha"
-                  value={deletionPassword}
-                  onChange={(e) => setDeletionPassword(e.target.value)}
-                />
-                <button 
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="px-3 border border-slate-200 rounded-xl hover:bg-slate-50 text-[10px] font-bold text-slate-500 transition-colors"
-                >
-                  {showPassword ? 'Ocultar' : 'Mostrar'}
-                </button>
-              </div>
-              <div className="flex items-center text-[10px] text-slate-400 italic">
-                {deletionPassword ? 'Senha configurada. Ela será solicitada ao excluir registros.' : 'Nenhuma senha configurada. Exclusões serão diretas.'}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       <div className="card p-6 mb-6">
         <h2 className="text-lg font-bold text-slate-800 uppercase tracking-tight mb-2">Backup de Segurança & Arquitetura</h2>
@@ -496,14 +395,24 @@ CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR D
             
             <input type="file" ref={fileInputRef} onChange={handleRestore} className="hidden" accept=".json" />
             <button 
-              onClick={() => {
-                if (deletionPassword) {
-                  const p = prompt("Digite a senha de autorização para restaurar o sistema:");
-                  if (p !== deletionPassword) {
+              onClick={async () => {
+                const p = prompt("Digite sua senha de acesso para autorizar a restauração do sistema:");
+                if (!p) return;
+                
+                if (user?.email) {
+                  const { error } = await supabase.auth.signInWithPassword({
+                    email: user.email,
+                    password: p
+                  });
+                  if (error) {
                     alert("Senha incorreta. Restauração cancelada.");
                     return;
                   }
+                } else {
+                  alert("Você precisa estar logado para realizar esta ação.");
+                  return;
                 }
+                
                 fileInputRef.current?.click();
               }} 
               className="bg-red-600 hover:bg-red-700 active:scale-[0.98] transition-all duration-200 text-white font-extrabold uppercase tracking-widest text-[10px] px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg shadow-red-600/25 cursor-pointer max-w-md w-full"
@@ -518,14 +427,24 @@ CREATE POLICY "Allow public delete on atas_reuniao" ON public.atas_reuniao FOR D
         <h2 className="text-lg font-bold text-red-800 uppercase tracking-tight mb-2">Limpeza Completa</h2>
         <p className="text-slate-500 text-xs mb-4 leading-relaxed">Esta operação irá apagar permanentemente todas as movimentações, atas de reuniões, materiais cadastrados, colaboradores, empresas e equipes. <strong>Não é possível desfazer.</strong></p>
         <button 
-          onClick={() => {
-            if (deletionPassword) {
-              const p = prompt("Digite a senha de autorização para apagar tudo:");
-              if (p !== deletionPassword) {
+          onClick={async () => {
+            const p = prompt("Digite sua senha de acesso para autorizar apagar tudo:");
+            if (!p) return;
+
+            if (user?.email) {
+              const { error } = await supabase.auth.signInWithPassword({
+                email: user.email,
+                password: p
+              });
+              if (error) {
                 alert("Senha incorreta. Ação cancelada.");
                 return;
               }
+            } else {
+              alert("Sessão inválida. Faça login novamente.");
+              return;
             }
+
             if (confirm("Deseja realmente apagar TODOS os dados do aplicativo? Esta ação é irreversível!")) {
               clearAllData();
               alert("Todos os dados foram excluídos com sucesso!");

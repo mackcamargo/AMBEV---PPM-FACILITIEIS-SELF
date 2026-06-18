@@ -17,6 +17,7 @@ import {
   Mail,
   AlertTriangle
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { AtaReuniao, formatUnit, Movimentacao } from '../types';
 
 export const MeetingHistory: React.FC = () => {
@@ -29,6 +30,7 @@ export const MeetingHistory: React.FC = () => {
     setMateriais, 
     setMovimentacoes, 
     colaboradores, 
+    user,
     movimentacoes,
     deletionPassword,
     isDeletionPasswordEnabled
@@ -131,9 +133,23 @@ export const MeetingHistory: React.FC = () => {
     return impacts;
   }, [editedItens, materiais]);
 
-  const handleDeleteReuniao = (ata: AtaReuniao) => {
-    if (isDeletionPasswordEnabled && deletionPassword && deletionPasswordInput !== deletionPassword) {
-      setDeleteError('Senha de exclusão inválida.');
+  const handleDeleteReuniao = async (ata: AtaReuniao) => {
+    if (!deletionPasswordInput) {
+      setDeleteError('Senha obrigatória para exclusão.');
+      return;
+    }
+
+    if (user?.email) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: deletionPasswordInput
+      });
+      if (error) {
+        setDeleteError('Senha de exclusão inválida.');
+        return;
+      }
+    } else {
+      setDeleteError('Faça login novamente.');
       return;
     }
     
@@ -147,9 +163,23 @@ export const MeetingHistory: React.FC = () => {
     }
   };
 
-  const handleConfirmBulkDelete = () => {
-    if (isDeletionPasswordEnabled && deletionPassword && deletionPasswordInput !== deletionPassword) {
-      setDeleteError('Senha de exclusão inválida.');
+  const handleConfirmBulkDelete = async () => {
+    if (!deletionPasswordInput) {
+      setDeleteError('Senha obrigatória para exclusão.');
+      return;
+    }
+
+    if (user?.email) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: deletionPasswordInput
+      });
+      if (error) {
+        setDeleteError('Senha de exclusão inválida.');
+        return;
+      }
+    } else {
+      setDeleteError('Faça login novamente.');
       return;
     }
 
@@ -1064,25 +1094,25 @@ export const MeetingHistory: React.FC = () => {
                 Tem certeza que deseja excluir as <span className="font-bold text-slate-700">{selectedIds.length} atas selecionadas</span>? 
                 Esta ação não poderá ser desfeita e irá estornar a verba aos orçamentos afetados.
               </p>
-              {isDeletionPasswordEnabled && deletionPassword && (
-                <div className="w-full mt-4 text-left">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Senha de Confirmação</label>
-                  <input 
-                    type="password" 
-                    className="input-field" 
-                    placeholder="Digite a senha para autorizar"
-                    value={deletionPasswordInput}
-                    onChange={(e) => {
-                      setDeletionPasswordInput(e.target.value);
-                      if (deleteError) setDeleteError('');
-                    }}
-                    autoFocus
-                  />
-                  {deleteError && (
-                    <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
-                  )}
-                </div>
-              )}
+              
+              <div className="w-full mt-4 text-left">
+                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
+                <input 
+                  type="password" 
+                  className="input-field" 
+                  placeholder="Digite sua senha para autorizar"
+                  value={deletionPasswordInput}
+                  onChange={(e) => {
+                    setDeletionPasswordInput(e.target.value);
+                    if (deleteError) setDeleteError('');
+                  }}
+                  autoFocus
+                />
+                {deleteError && (
+                  <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
+                )}
+              </div>
+              
             </div>
             <div className="flex gap-3 mt-6">
               <button 
@@ -1127,25 +1157,23 @@ export const MeetingHistory: React.FC = () => {
               <b>Nota:</b> Esta ação irá estornar a verba de <b>R$ {ataToDelete.itensComprados.reduce((acc, curr) => acc + curr.custoTotal, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b> de volta para os orçamentos das respectivas equipes, atualizará o estoque dos {ataToDelete.itensComprados.length} materiais retirados e removerá as movimentações correspondentes do histórico!
             </p>
 
-            {isDeletionPasswordEnabled && deletionPassword && (
-              <div className="w-full text-left">
-                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Senha de Confirmação</label>
-                <input 
-                  type="password" 
-                  className="input-field" 
-                  placeholder="Digite a senha para autorizar"
-                  value={deletionPasswordInput}
-                  onChange={(e) => {
-                    setDeletionPasswordInput(e.target.value);
-                    if (deleteError) setDeleteError('');
-                  }}
-                  autoFocus
-                />
-                {deleteError && (
-                  <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
-                )}
-              </div>
-            )}
+            <div className="w-full text-left">
+              <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
+              <input 
+                type="password" 
+                className="input-field" 
+                placeholder="Digite sua senha para autorizar"
+                value={deletionPasswordInput}
+                onChange={(e) => {
+                  setDeletionPasswordInput(e.target.value);
+                  if (deleteError) setDeleteError('');
+                }}
+                autoFocus
+              />
+              {deleteError && (
+                <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
+              )}
+            </div>
 
             <div className="flex justify-end gap-3 pt-2">
               <button

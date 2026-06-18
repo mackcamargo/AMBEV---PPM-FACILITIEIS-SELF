@@ -4,6 +4,7 @@ import { useApp } from '../lib/store';
 import { Material, formatUnit } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { playNotificationSound } from '../lib/audio';
+import { supabase } from '../lib/supabase';
 
 export const StockView: React.FC = () => {
   const { 
@@ -11,9 +12,8 @@ export const StockView: React.FC = () => {
     updateMaterial, 
     deleteMaterial, 
     equipes, 
-    deletionPassword, 
-    isDeletionPasswordEnabled,
-    fornecedores 
+    fornecedores,
+    user
   } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [deletionPasswordInput, setDeletionPasswordInput] = useState('');
@@ -136,10 +136,24 @@ export const StockView: React.FC = () => {
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (selectedMaterial) {
-      if (isDeletionPasswordEnabled && deletionPassword && deletionPasswordInput !== deletionPassword) {
-        setDeleteError('Senha de exclusão inválida.');
+      if (!deletionPasswordInput) {
+        setDeleteError('Senha obrigatória para exclusão.');
+        return;
+      }
+  
+      if (user?.email) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: deletionPasswordInput
+        });
+        if (error) {
+          setDeleteError('Senha de acesso inválida.');
+          return;
+        }
+      } else {
+        setDeleteError('Sessão inválida. Faça login novamente.');
         return;
       }
       
@@ -152,9 +166,23 @@ export const StockView: React.FC = () => {
     }
   };
 
-  const handleConfirmBulkDelete = () => {
-    if (isDeletionPasswordEnabled && deletionPassword && deletionPasswordInput !== deletionPassword) {
-      setDeleteError('Senha de exclusão inválida.');
+  const handleConfirmBulkDelete = async () => {
+    if (!deletionPasswordInput) {
+      setDeleteError('Senha obrigatória para exclusão.');
+      return;
+    }
+    
+    if (user?.email) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: deletionPasswordInput
+      });
+      if (error) {
+        setDeleteError('Senha de acesso inválida.');
+        return;
+      }
+    } else {
+      setDeleteError('Sessão inválida. Faça login novamente.');
       return;
     }
     
@@ -724,25 +752,25 @@ export const StockView: React.FC = () => {
                 Tem certeza que deseja excluir o material <span className="font-bold text-slate-700">"{selectedMaterial?.descricao}"</span>? 
                 Esta ação não poderá ser desfeita.
               </p>
-              {isDeletionPasswordEnabled && deletionPassword && (
-                <div className="w-full mt-4 text-left">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Senha de Confirmação</label>
-                  <input 
-                    type="password" 
-                    className="input-field" 
-                    placeholder="Digite a senha para autorizar"
-                    value={deletionPasswordInput}
-                    onChange={(e) => {
-                      setDeletionPasswordInput(e.target.value);
-                      if (deleteError) setDeleteError('');
-                    }}
-                    autoFocus
-                  />
-                  {deleteError && (
-                    <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
-                  )}
-                </div>
-              )}
+              
+              <div className="w-full mt-4 text-left">
+                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
+                <input 
+                  type="password" 
+                  className="input-field" 
+                  placeholder="Digite sua senha para autorizar"
+                  value={deletionPasswordInput}
+                  onChange={(e) => {
+                    setDeletionPasswordInput(e.target.value);
+                    if (deleteError) setDeleteError('');
+                  }}
+                  autoFocus
+                />
+                {deleteError && (
+                  <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
+                )}
+              </div>
+              
             </div>
             <div className="flex gap-3 mt-6">
               <button 
@@ -778,25 +806,25 @@ export const StockView: React.FC = () => {
                 Tem certeza que deseja excluir os <span className="font-bold text-slate-700">{selectedIds.length} materiais selecionados</span>? 
                 Esta ação não poderá ser desfeita.
               </p>
-              {isDeletionPasswordEnabled && deletionPassword && (
-                <div className="w-full mt-4 text-left">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Senha de Confirmação</label>
-                  <input 
-                    type="password" 
-                    className="input-field" 
-                    placeholder="Digite a senha para autorizar"
-                    value={deletionPasswordInput}
-                    onChange={(e) => {
-                      setDeletionPasswordInput(e.target.value);
-                      if (deleteError) setDeleteError('');
-                    }}
-                    autoFocus
-                  />
-                  {deleteError && (
-                    <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
-                  )}
-                </div>
-              )}
+              
+              <div className="w-full mt-4 text-left">
+                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
+                <input 
+                  type="password" 
+                  className="input-field" 
+                  placeholder="Digite sua senha para autorizar"
+                  value={deletionPasswordInput}
+                  onChange={(e) => {
+                    setDeletionPasswordInput(e.target.value);
+                    if (deleteError) setDeleteError('');
+                  }}
+                  autoFocus
+                />
+                {deleteError && (
+                  <p className="text-[11px] text-red-600 font-bold mt-1.5">{deleteError}</p>
+                )}
+              </div>
+              
             </div>
             <div className="flex gap-3 mt-6">
               <button 

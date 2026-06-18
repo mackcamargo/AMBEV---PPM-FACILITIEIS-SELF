@@ -13,65 +13,33 @@ export const Dashboard: React.FC = () => {
   // ROTAÇÃO AUTOMÁTICA DAS EQUIPES (ESTILO RELATÓRIOS)
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
 
+  const sortedEquipesForCarousel = useMemo(() => {
+    return [...equipes].sort((a, b) => {
+      const order = ['CIVIL', 'HIDRAULICA', 'REFRIGERAÇÃO'];
+      const indexA = order.indexOf(a.nome.toUpperCase());
+      const indexB = order.indexOf(b.nome.toUpperCase());
+
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      
+      return a.nome.localeCompare(b.nome);
+    });
+  }, [equipes]);
+
   useEffect(() => {
-    if (equipes.length === 0) return;
+    if (sortedEquipesForCarousel.length === 0) return;
     const interval = setInterval(() => {
-      setActiveTeamIndex((prev) => (prev + 1) % equipes.length);
+      setActiveTeamIndex((prev) => (prev + 1) % sortedEquipesForCarousel.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, [equipes.length]);
+  }, [sortedEquipesForCarousel.length]);
 
   const activeTeam = useMemo(() => {
-    if (equipes.length === 0) return null;
-    return equipes[activeTeamIndex % equipes.length];
-  }, [equipes, activeTeamIndex]);
+    if (sortedEquipesForCarousel.length === 0) return null;
+    return sortedEquipesForCarousel[activeTeamIndex % sortedEquipesForCarousel.length];
+  }, [sortedEquipesForCarousel, activeTeamIndex]);
 
-  // Timline de Gastos da Equipe Ativa (6 meses)
-  const activeTeamTimeline = useMemo(() => {
-    if (!activeTeam) return [];
-    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    const tracker: Record<string, { name: string; value: number; index: number }> = {};
-    
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const mName = months[d.getMonth()];
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      tracker[key] = {
-        name: `${mName}/${String(d.getFullYear()).slice(-2)}`,
-        value: 0,
-        index: d.getTime()
-      };
-    }
-
-    movimentacoes.forEach(m => {
-      if (m.tipo !== 'Retirada') return;
-      const mat = materiais.find(mat => mat.id === m.materialId);
-      if (mat?.equipe !== activeTeam.nome && m.equipe !== activeTeam.nome) return;
-
-      if (!m.data) return;
-      const d = new Date(m.data);
-      if (isNaN(d.getTime())) return;
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const val = (Number(m.quantidade) || 0) * (Number(m.precoUnitario) || 0);
-
-      if (tracker[key]) {
-        tracker[key].value += val;
-      }
-    });
-
-    return Object.values(tracker).sort((a, b) => a.index - b.index);
-  }, [activeTeam, movimentacoes, materiais]);
-
-  const currentVsPrev = useMemo(() => {
-    if (activeTeamTimeline.length < 2) return { current: 0, prev: 0, diff: 0, percent: 0 };
-    const current = activeTeamTimeline[activeTeamTimeline.length - 1].value;
-    const prev = activeTeamTimeline[activeTeamTimeline.length - 2].value;
-    const diff = current - prev;
-    const percent = prev > 0 ? (diff / prev) * 100 : 0;
-    return { current, prev, diff, percent };
-  }, [activeTeamTimeline]);
-  
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7); // Default to last 7 days
@@ -125,6 +93,52 @@ export const Dashboard: React.FC = () => {
       return true;
     });
   }, [movimentacoes, filterType, startDate, endDate]);
+
+  // Timline de Gastos da Equipe Ativa (6 meses)
+  const activeTeamTimeline = useMemo(() => {
+    if (!activeTeam) return [];
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const tracker: Record<string, { name: string; value: number; index: number }> = {};
+    
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mName = months[d.getMonth()];
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      tracker[key] = {
+        name: `${mName}/${String(d.getFullYear()).slice(-2)}`,
+        value: 0,
+        index: d.getTime()
+      };
+    }
+
+    filteredMovimentacoes.forEach(m => {
+      if (m.tipo !== 'Retirada') return;
+      const mat = materiais.find(mat => mat.id === m.materialId);
+      if (mat?.equipe !== activeTeam.nome && m.equipe !== activeTeam.nome) return;
+
+      if (!m.data) return;
+      const d = new Date(m.data);
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const val = (Number(m.quantidade) || 0) * (Number(m.precoUnitario) || 0);
+
+      if (tracker[key]) {
+        tracker[key].value += val;
+      }
+    });
+
+    return Object.values(tracker).sort((a, b) => a.index - b.index);
+  }, [activeTeam, filteredMovimentacoes, materiais]);
+
+  const currentVsPrev = useMemo(() => {
+    if (activeTeamTimeline.length < 2) return { current: 0, prev: 0, diff: 0, percent: 0 };
+    const current = activeTeamTimeline[activeTeamTimeline.length - 1].value;
+    const prev = activeTeamTimeline[activeTeamTimeline.length - 2].value;
+    const diff = current - prev;
+    const percent = prev > 0 ? (diff / prev) * 100 : 0;
+    return { current, prev, diff, percent };
+  }, [activeTeamTimeline]);
 
   const totalEstoqueUnits = useMemo(() => materiais.reduce((acc, m) => acc + Number(m?.estoqueAtual || 0), 0), [materiais]);
   const totalMaterialTypes = materiais.length;
@@ -338,10 +352,10 @@ export const Dashboard: React.FC = () => {
               
               <div className="flex items-center gap-2">
                 <div className="flex flex-wrap gap-1 max-w-[100px] justify-end">
-                  {equipes.slice(0, 5).map((eq, idx) => (
+                  {sortedEquipesForCarousel.slice(0, 5).map((eq, idx) => (
                     <div 
                       key={eq.id}
-                      className={`w-1.5 h-1.5 rounded-full transition-all ${idx === (activeTeamIndex % equipes.length) ? 'bg-blue-600 scale-125' : 'bg-slate-200'}`}
+                      className={`w-1.5 h-1.5 rounded-full transition-all ${idx === (activeTeamIndex % sortedEquipesForCarousel.length) ? 'bg-blue-600 scale-125' : 'bg-slate-200'}`}
                     />
                   ))}
                 </div>
