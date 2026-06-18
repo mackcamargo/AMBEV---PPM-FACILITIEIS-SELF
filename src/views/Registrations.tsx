@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
+import { normalizeText } from '../lib/stringUtils';
 import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload, Package, Users, Truck, MapPin, FilterX, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { Material } from '../types';
 import { materialsToImport } from '../data/materials';
@@ -84,13 +85,14 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         result = result.filter(item => item.fornecedorId === activeFilters.fornecedorId);
       }
       if (activeFilters.localizacao) {
-        result = result.filter(item => item.localizacao?.toLowerCase().includes(activeFilters.localizacao.toLowerCase().trim()));
+        const locFilter = normalizeText(activeFilters.localizacao);
+        result = result.filter(item => normalizeText(item.localizacao || '').includes(locFilter));
       }
     }
 
     if (!s) return result;
     
-    const searchTerms = s.split(/\s+/);
+    const searchTerms = s.split(/\s+/).map(t => normalizeText(t)).filter(t => t);
 
     return result.filter(item => {
       // Create a unified string of searchable text for this item
@@ -107,7 +109,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           item.localizacao,
           item.unidade,
           item.detalhes
-        ].join(' ').toLowerCase();
+        ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
       } else if (type === 'colaboradores') {
         searchContent = [
           item.nome,
@@ -117,14 +119,14 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           item.cargo,
           item.contato,
           item.status
-        ].join(' ').toLowerCase();
+        ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
       } else if (type === 'equipes') {
         searchContent = [
           item.nome,
           item.centroCusto,
           item.gestor,
           item.codigoEquipe
-        ].join(' ').toLowerCase();
+        ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
       } else if (type === 'fornecedores') {
         searchContent = [
           item.nomeFantasia,
@@ -134,7 +136,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           item.telefone,
           item.categoria,
           item.detalhes
-        ].join(' ').toLowerCase();
+        ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
       } else if (type === 'empresas') {
         searchContent = [
           item.razaoSocial,
@@ -142,7 +144,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           item.numContrato,
           item.areaAtuacao,
           item.codigoEmpresa
-        ].join(' ').toLowerCase();
+        ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
       }
 
       // Every search term must be found in the search content (AND logic)

@@ -6,6 +6,7 @@ import {
   Play, Pause, RefreshCw, Coins
 } from 'lucide-react';
 import { useApp } from '../lib/store';
+import { normalizeText } from '../lib/stringUtils';
 
 export const ReportsView: React.FC = () => {
   const { equipes, movimentacoes, materiais, fornecedores } = useApp();
@@ -322,8 +323,8 @@ export const ReportsView: React.FC = () => {
       })
       .filter(item => {
         if (!reportSearchQuery) return true;
-        const q = reportSearchQuery.toLowerCase();
-        return item.descricao.toLowerCase().includes(q) || item.sap.toLowerCase().includes(q) || item.equipe.toLowerCase().includes(q);
+        const q = normalizeText(reportSearchQuery);
+        return normalizeText(item.descricao).includes(q) || normalizeText(item.sap).includes(q) || normalizeText(item.equipe).includes(q);
       });
   }, [materiais, reportSearchQuery, selectedEquipe]);
 
@@ -360,8 +361,8 @@ export const ReportsView: React.FC = () => {
       })
       .filter(item => {
         if (!reportSearchQuery) return true;
-        const q = reportSearchQuery.toLowerCase();
-        return item.equipe.toLowerCase().includes(q) || item.centroCusto.toLowerCase().includes(q) || item.gestor.toLowerCase().includes(q);
+        const q = normalizeText(reportSearchQuery);
+        return normalizeText(item.equipe).includes(q) || normalizeText(item.centroCusto).includes(q) || normalizeText(item.gestor).includes(q);
       });
   }, [equipes, filteredMovimentacoes, materiais, reportSearchQuery]);
 
@@ -409,8 +410,8 @@ export const ReportsView: React.FC = () => {
       })
       .filter(item => {
         if (!reportSearchQuery) return true;
-        const q = reportSearchQuery.toLowerCase();
-        return item.desc.toLowerCase().includes(q) || item.sap.toLowerCase().includes(q) || item.classe.toLowerCase().includes(q);
+        const q = normalizeText(reportSearchQuery);
+        return normalizeText(item.desc).includes(q) || normalizeText(item.sap).includes(q) || normalizeText(item.classe).includes(q);
       });
   }, [materiais, filteredMovimentacoes, reportSearchQuery]);
 
@@ -443,8 +444,8 @@ export const ReportsView: React.FC = () => {
       }))
       .filter(item => {
         if (!reportSearchQuery) return true;
-        const q = reportSearchQuery.toLowerCase();
-        return item.nome.toLowerCase().includes(q) || item.mainItemsStr.toLowerCase().includes(q);
+        const q = normalizeText(reportSearchQuery);
+        return normalizeText(item.nome).includes(q) || normalizeText(item.mainItemsStr).includes(q);
       });
   }, [fornecedores, filteredMovimentacoes, reportSearchQuery]);
 
@@ -475,8 +476,8 @@ export const ReportsView: React.FC = () => {
       })
       .filter(item => {
         if (!reportSearchQuery) return true;
-        const q = reportSearchQuery.toLowerCase();
-        return item.equipe.toLowerCase().includes(q) || item.gestor.toLowerCase().includes(q);
+        const q = normalizeText(reportSearchQuery);
+        return normalizeText(item.equipe).includes(q) || normalizeText(item.gestor).includes(q);
       });
   }, [equipes, filteredMovimentacoes, materiais, reportSearchQuery, selectedEquipe]);
 

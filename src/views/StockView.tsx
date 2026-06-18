@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, Filter, ArrowUpDown, Edit2, Trash2, X, Save, AlertTriangle, Share2, Download, Copy, Check, Mail, Package, DollarSign, Database } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { Material, formatUnit } from '../types';
+import { normalizeText } from '../lib/stringUtils';
 import { motion, AnimatePresence } from 'motion/react';
 import { playNotificationSound } from '../lib/audio';
 import { supabase } from '../lib/supabase';
@@ -58,11 +59,11 @@ export const StockView: React.FC = () => {
   const filtered = useMemo(() => {
     return materiais.filter(m => {
       // Search term match
-      const searchLower = searchTerm.toLowerCase();
+      const searchLower = normalizeText(searchTerm);
       const matchesSearch = 
-        m.descricao.toLowerCase().includes(searchLower) ||
-        m.sap.toLowerCase().includes(searchLower) ||
-        (m.codigoFornecedor && m.codigoFornecedor.toLowerCase().includes(searchLower));
+        normalizeText(m.descricao).includes(searchLower) ||
+        normalizeText(m.sap).includes(searchLower) ||
+        normalizeText(m.codigoFornecedor || '').includes(searchLower);
       
       if (!matchesSearch) return false;
 

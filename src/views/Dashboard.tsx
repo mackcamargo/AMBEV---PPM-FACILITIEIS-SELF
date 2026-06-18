@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Package, ArrowUpRight, ArrowDownLeft, AlertCircle, Coins, History, RefreshCw, Trophy, User } from 'lucide-react';
 import { useApp } from '../lib/store';
+import { normalizeText } from '../lib/stringUtils';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend, LabelList
@@ -57,12 +58,26 @@ export const Dashboard: React.FC = () => {
     return `${year}-${month}-${day}`;
   });
 
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Filtra as movimentações com base no tipo de filtro selecionado ou intervalo de datas personalizado
   const filteredMovimentacoes = useMemo(() => {
     return movimentacoes.filter(m => {
       if (!m.data) return false;
       const mDate = new Date(m.data);
       if (isNaN(mDate.getTime())) return false;
+
+      // Filtro de busca por material (Nome ou SAP)
+      if (searchQuery) {
+        const query = normalizeText(searchQuery);
+        const mat = materiais.find(mat => mat.id === m.materialId);
+        const matchesMaterial = 
+          normalizeText(m.materialDesc || '').includes(query) || 
+          normalizeText(mat?.descricao || '').includes(query) || 
+          normalizeText(mat?.sap || '').includes(query);
+        
+        if (!matchesMaterial) return false;
+      }
 
       if (filterType === 'day') {
         const today = new Date();
@@ -92,7 +107,7 @@ export const Dashboard: React.FC = () => {
       }
       return true;
     });
-  }, [movimentacoes, filterType, startDate, endDate]);
+  }, [movimentacoes, filterType, startDate, endDate, searchQuery, materiais]);
 
   // Timline de Gastos da Equipe Ativa (6 meses)
   const activeTeamTimeline = useMemo(() => {
@@ -210,8 +225,17 @@ export const Dashboard: React.FC = () => {
 
   // Cálculo de Estoque valorizado por Equipe e Total (Baseado no ESTOQUE ATUAL conforme solicitado)
   const teamValuedStock = useMemo(() => {
+    // Se houver busca por material, o valor do estoque deve refletir apenas os materiais filtrados
+    const materialsBase = searchQuery 
+      ? materiais.filter(m => {
+          const query = normalizeText(searchQuery);
+          return normalizeText(m.descricao).includes(query) || 
+                 normalizeText(m.sap || '').includes(query);
+        })
+      : materiais;
+
     // 1. Cálculo individual por material (Fonte da verdade: Materiais na base)
-    const materialValues = materiais.map(m => ({
+    const materialValues = materialsBase.map(m => ({
       id: m.id,
       equipe: m.equipe,
       valor: (Number(m.estoqueAtual) || 0) * (Number(m.precoUnitario) || 0),
@@ -248,24 +272,14 @@ export const Dashboard: React.FC = () => {
       globalTotalValue,
       asOfDate: new Date()
     };
-  }, [materiais, equipes]);
-
-  // Simulação de dados de retirada por mês (Dashboard Linear / Onda)
-  const withdrawalData = [
-    { month: 'Jan', value: 4200 },
-    { month: 'Fev', value: 3800 },
-    { month: 'Mar', value: 5100 },
-    { month: 'Abr', value: 4600 },
-    { month: 'Mai', value: 5900 },
-    { month: 'Jun', value: 4300 },
-  ];
+  }, [materiais, equipes, searchQuery]);
 
   return (
     <div className="view-container !p-0 overflow-hidden bg-brand-light">
       <div className="scroll-container p-5 space-y-6">
       {/* Header Filters - Compact */}
       <div className="card !p-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex bg-slate-100 p-0.5 rounded-lg">
             <button 
               onClick={() => setFilterType('day')}
@@ -298,6 +312,31 @@ export const Dashboard: React.FC = () => {
               />
             </div>
           )}
+
+          <div className="h-6 w-0.5 bg-slate-200 mx-1 hidden sm:block"></div>
+
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Package className="h-3 w-3 text-slate-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar pç/id..."
+              className="pl-8 !text-[9px] font-bold h-7 w-40 border border-slate-200 rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all uppercase"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 pr-2 flex items-center"
+              >
+                <div className="bg-slate-200 hover:bg-slate-300 rounded-full p-0.5 transition-colors">
+                  <ArrowUpRight className="h-2 w-2 text-slate-500 rotate-45" />
+                </div>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

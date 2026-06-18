@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useApp } from '../lib/store';
+import { normalizeText } from '../lib/stringUtils';
 import { 
   FileText, 
   Clock, 
@@ -771,8 +772,8 @@ export const MeetingHistory: React.FC = () => {
                       <div className="border border-slate-150 rounded-xl max-h-36 overflow-y-auto divide-y divide-slate-100 bg-white shadow-lg animate-in slide-in-from-top-1 duration-150 relative z-10">
                         {materiais
                           .filter(m => {
-                            const query = searchQuery.toLowerCase();
-                            return m.descricao.toLowerCase().includes(query) || m.sap.toLowerCase().includes(query);
+                            const query = normalizeText(searchQuery);
+                            return normalizeText(m.descricao).includes(query) || normalizeText(m.sap).includes(query);
                           })
                           .map(m => {
                             const alreadyAdded = editedItens[m.id] !== undefined;
@@ -808,8 +809,8 @@ export const MeetingHistory: React.FC = () => {
                             );
                           })}
                         {materiais.filter(m => {
-                          const query = searchQuery.toLowerCase();
-                          return m.descricao.toLowerCase().includes(query) || m.sap.toLowerCase().includes(query);
+                          const query = normalizeText(searchQuery);
+                          return normalizeText(m.descricao).includes(query) || normalizeText(m.sap).includes(query);
                         }).length === 0 && (
                           <div className="p-3 text-center text-xs text-slate-400 italic">
                             Nenhum material correspondente encontrado.

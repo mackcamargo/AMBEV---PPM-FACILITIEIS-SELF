@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
+import { normalizeText } from '../lib/stringUtils';
 import { Material, Equipe, AtaReuniao, Movimentacao, formatUnit } from '../types';
 import { Save, AlertCircle, ShoppingCart, Plus, Trash2, Download, Mail, Share2, Search } from 'lucide-react';
 
@@ -116,14 +117,14 @@ export const SelfMeeting: React.FC = () => {
   const tableData = materiais
     .filter(m => !selectedTeam || m.equipe === selectedTeam)
     .filter(m => {
-      const search = searchTerm.toLowerCase();
+      const search = normalizeText(searchTerm);
       const matchesSearch = !searchTerm || (
-        m.sap.toLowerCase().includes(search) ||
-        m.descricao.toLowerCase().includes(search) ||
-        m.equipe.toLowerCase().includes(search) ||
-        (m.codigoFornecedor || '').toLowerCase().includes(search) ||
-        (m.localizacao || '').toLowerCase().includes(search) ||
-        (m.detalhes || '').toLowerCase().includes(search)
+        normalizeText(m.sap).includes(search) ||
+        normalizeText(m.descricao).includes(search) ||
+        normalizeText(m.equipe).includes(search) ||
+        normalizeText(m.codigoFornecedor || '').includes(search) ||
+        normalizeText(m.localizacao || '').includes(search) ||
+        normalizeText(m.detalhes || '').includes(search)
       );
 
       const isZerado = m.estoqueAtual === 0;

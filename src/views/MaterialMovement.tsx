@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Rocket, Trash2, Search, CheckCircle2, AlertTriangle, X, ArrowUpRight, ArrowDownLeft, FileSpreadsheet } from 'lucide-react';
 import { useApp } from '../lib/store';
+import { normalizeText } from '../lib/stringUtils';
 import { generateId } from '../lib/idUtils';
 import { Material, ItemLote, Movimentacao, formatUnit, Fornecedor } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -21,10 +22,11 @@ const MaterialSelect = React.forwardRef<HTMLButtonElement, {
   const selectedMaterial = materials.find(m => m.id === selectedId);
 
   const filteredMaterials = materials
-    .filter(m => 
-      m.descricao.toLowerCase().includes(search.toLowerCase()) || 
-      m.sap.toLowerCase().includes(search.toLowerCase())
-    )
+    .filter(m => {
+      const s = normalizeText(search);
+      return normalizeText(m.descricao).includes(s) || 
+             normalizeText(m.sap).includes(s);
+    })
     .sort((a, b) => a.descricao.localeCompare(b.descricao));
 
   useEffect(() => {

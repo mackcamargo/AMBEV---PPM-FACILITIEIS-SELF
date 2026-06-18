@@ -49,6 +49,8 @@ interface AppContextType {
   setIsDeletionPasswordEnabled: (b: boolean) => void;
   isSyncing: boolean;
   setIsSyncing: (b: boolean) => void;
+  syncError: string | null;
+  setSyncError: (s: string | null) => void;
   
   addMovimentacao: (m: Movimentacao) => Promise<{ success: boolean; error?: string }>;
   deleteMovimentacao: (id: string) => Promise<{ success: boolean; error?: string }>;
@@ -71,6 +73,7 @@ interface AppContextType {
   deleteEmpresa: (id: string) => Promise<{ success: boolean; error?: string }>;
   seedTestData: () => void;
   refreshData: () => Promise<void>;
+  retrySync: () => void;
   clearAllData: () => void;
 }
 
@@ -230,31 +233,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [isSyncing, setIsSyncing] = useState(false);
-  // ✅ REALTIME: atualiza automaticamente quando qualquer mudança ocorre no banco
-  useEffect(() => {
-    if (!user) return;
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-    const channel = supabase
-      .channel('realtime-all-tables')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'movimentacoes' }, () => {
-        refreshData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'materiais' }, () => {
-        refreshData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'equipes' }, () => {
-        refreshData();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
+  const retrySync = () => setRetryCount(prev => prev + 1);
 
   // Background sync for pending items
   useEffect(() => {
     const syncPending = async () => {
+      if (!navigator.onLine) return;
       // 1. Colaboradores
       const pendingColabs = colaboradores.filter(c => c.syncStatus === 'pending');
       for (const c of pendingColabs) {
@@ -366,7 +353,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (authLoading) return;
       
       setIsSyncing(true);
+      setSyncError(null);
       try {
+        if (!navigator.onLine) {
+          throw new Error("Sem conexão com internet");
+        }
         const data = await syncToSupabase.fetchAll();
         
         // Helper to merge Supabase data with local state, preventing loss of local-only items
@@ -408,15 +399,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         mergeWithSupabase(data.movimentacoes, movimentacoes, setMovimentacoes);
         mergeWithSupabase(data.atas, atas, setAtas);
 
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load initial data from Supabase:", err);
+        setSyncError(err.message || "Erro de conexão com o servidor");
       } finally {
         setIsSyncing(false);
       }
     };
 
     loadFromSupabase();
-  }, [user, authLoading]);
+  }, [user, authLoading, retryCount]);
 
   // Revert any "REUNIÃO-SELF" movements and restore stocks & budgets automatically on load
   // Now depends on movimentacoes to ensure it runs even if data is fetched after mount
@@ -954,7 +946,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const refreshData = async () => {
     setIsSyncing(true);
+    setSyncError(null);
     try {
+      if (!navigator.onLine) {
+        throw new Error("Sem conexão com internet");
+      }
       const data = await syncToSupabase.fetchAll();
       const mergeWithSupabase = <T extends { id: string; syncStatus?: 'synced' | 'pending' }>(supabaseData: T[], currentLocal: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
         if (supabaseData.length > 0) {
@@ -981,8 +977,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       mergeWithSupabase(data.fornecedores, fornecedores, setFornecedores);
       mergeWithSupabase(data.movimentacoes, movimentacoes, setMovimentacoes);
       mergeWithSupabase(data.atas, atas, setAtas);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Manual refresh failed:", err);
+      setSyncError(err.message || "Erro ao atualizar dados");
     } finally {
       setIsSyncing(false);
     }
@@ -1036,6 +1033,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deletionPassword, setDeletionPassword,
       isDeletionPasswordEnabled, setIsDeletionPasswordEnabled,
       isSyncing, setIsSyncing,
+      syncError, setSyncError,
+      retrySync,
       addMovimentacao,
       deleteMovimentacao,
       updateMovimentacao,

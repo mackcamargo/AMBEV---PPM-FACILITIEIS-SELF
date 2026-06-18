@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Search, Check } from 'lucide-react';
 import { Colaborador } from '../types';
+import { normalizeText } from '../lib/stringUtils';
 
 interface ColaboradorSelectProps {
   value: string;
@@ -37,10 +38,11 @@ export const ColaboradorSelect = React.forwardRef<HTMLButtonElement, Colaborador
 
   const filtered = colaboradores
     .filter(c => c.status === 'Ativo')
-    .filter(c => 
-      c.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (c.empresa || '').toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(c => {
+      const search = normalizeText(searchTerm);
+      return normalizeText(c.nome).includes(search) || 
+             normalizeText(c.empresa || '').includes(search);
+    })
     .sort((a, b) => a.nome.localeCompare(b.nome));
 
   const renderEmpresa = (empresa: string | undefined) => {

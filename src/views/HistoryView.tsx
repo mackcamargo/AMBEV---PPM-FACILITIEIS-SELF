@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { useApp } from '../lib/store';
+import { normalizeText } from '../lib/stringUtils';
 import { playNotificationSound } from '../lib/audio';
 import { supabase } from '../lib/supabase';
 import { ColaboradorSelect } from '../components/ColaboradorSelect';
@@ -57,6 +58,7 @@ export const HistoryView: React.FC = () => {
   const [selectedMov, setSelectedMov] = useState<Movimentacao | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [showQtyWarning, setShowQtyWarning] = useState(false);
   const [deletionPasswordInput, setDeletionPasswordInput] = useState('');
   const [deleteError, setDeleteError] = useState('');
 
@@ -80,8 +82,8 @@ export const HistoryView: React.FC = () => {
   const teams = Array.from(new Set(equipes.map(e => e.nome))).sort();
   
   // Edit Form Fields State
-  const [editQty, setEditQty] = useState(0);
-  const [editPrecoUnitario, setEditPrecoUnitario] = useState(0);
+  const [editQty, setEditQty] = useState<string | number>(0);
+  const [editPrecoUnitario, setEditPrecoUnitario] = useState<string | number>(0);
   const [editOs, setEditOs] = useState('');
   const [editNf, setEditNf] = useState('');
   const [editPedidoCompra, setEditPedidoCompra] = useState('');
@@ -116,15 +118,24 @@ export const HistoryView: React.FC = () => {
     setIsEditing(false);
   };
 
-  const saveEdit = () => {
+  const saveEdit = (isConfirmed = false) => {
     if (!selectedMov) return;
-    if (editQty <= 0) {
-      alert("A quantidade deve ser maior que zero.");
+    
+    const finalQty = typeof editQty === 'string' ? (editQty.trim() === '' ? 0 : Number(editQty)) : editQty;
+    
+    if (isNaN(finalQty) || finalQty <= 0) {
+      alert("A quantidade deve ser um número maior que zero.");
+      return;
+    }
+
+    // Se a quantidade foi alterada e ainda não foi confirmada, exibe o aviso
+    if (!isConfirmed && finalQty !== selectedMov.quantidade) {
+      setShowQtyWarning(true);
       return;
     }
 
     const updatedFields: Partial<Movimentacao> = {
-      quantidade: Number(editQty),
+      quantidade: finalQty,
       precoUnitario: selectedMov.precoUnitario !== undefined ? Number(editPrecoUnitario) : undefined,
       os: selectedMov.tipo === 'Retirada' ? editOs : undefined,
       nf: selectedMov.tipo === 'Entrada' ? editNf : undefined,
@@ -142,6 +153,7 @@ export const HistoryView: React.FC = () => {
     updateMovimentacao(selectedMov.id, updatedFields);
     setSelectedMov({ ...selectedMov, ...updatedFields });
     setIsEditing(false);
+    setShowQtyWarning(false);
   };
 
   const handleConfirmBulkDelete = async () => {
@@ -178,13 +190,13 @@ export const HistoryView: React.FC = () => {
     const mat = materiais.find(mat => mat.id === m.materialId);
     
     // Global Search
-    const searchStr = searchTerm.toLowerCase();
+    const searchStr = normalizeText(searchTerm);
     const matchesSearch = 
-      m.materialDesc.toLowerCase().includes(searchStr) ||
-      (m.os?.toLowerCase().includes(searchStr)) ||
-      (m.pedidoSap?.toLowerCase().includes(searchStr)) ||
-      (m.colaborador?.toLowerCase().includes(searchStr)) ||
-      (mat?.sap?.toLowerCase().includes(searchStr));
+      normalizeText(m.materialDesc).includes(searchStr) ||
+      normalizeText(m.os || '').includes(searchStr) ||
+      normalizeText(m.pedidoSap || '').includes(searchStr) ||
+      normalizeText(m.colaborador || '').includes(searchStr) ||
+      normalizeText(mat?.sap || '').includes(searchStr);
 
     if (!matchesSearch) return false;
 
@@ -827,16 +839,28 @@ export const HistoryView: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider flex items-center gap-1">
-                      <Hash className="w-3.5 h-3.5 text-slate-400" /> Quantidade
-                    </label>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      value={editQty} 
-                      onChange={(e) => setEditQty(Math.max(1, Number(e.target.value) || 0))} 
-                      className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all font-mono"
-                    />
+                    <div className="flex justify-between items-center">
+                      <label className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                        <Hash className="w-3.5 h-3.5 text-slate-400" /> Quantidade
+                      </label>
+                      {selectedMaterial && (
+                        <span className="text-[8px] font-bold text-slate-400 uppercase">
+                          Estoque: {selectedMaterial.estoqueAtual} {formatUnit(selectedMaterial.unidade)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        min="1" 
+                        value={editQty} 
+                        onChange={(e) => setEditQty(e.target.value)} 
+                        className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all font-mono"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 uppercase pointer-events-none">
+                        {selectedMaterial ? formatUnit(selectedMaterial.unidade) : ''}
+                      </div>
+                    </div>
                   </div>
 
                   {selectedMov.precoUnitario !== undefined && (
@@ -849,7 +873,7 @@ export const HistoryView: React.FC = () => {
                         step="0.01" 
                         min="0" 
                         value={editPrecoUnitario} 
-                        onChange={(e) => setEditPrecoUnitario(Math.max(0, Number(e.target.value) || 0))} 
+                        onChange={(e) => setEditPrecoUnitario(e.target.value)} 
                         className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all font-mono"
                       />
                     </div>
@@ -1232,7 +1256,7 @@ export const HistoryView: React.FC = () => {
                     Cancelar
                   </button>
                   <button 
-                    onClick={saveEdit}
+                    onClick={() => saveEdit()}
                     className="px-5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 shadow-sm"
                   >
                     Salvar Alterações
@@ -1410,6 +1434,52 @@ export const HistoryView: React.FC = () => {
               Cancelar
             </button>
           </motion.div>
+        </div>
+      )}
+
+      {/* Quantity Warning Modal */}
+      {showQtyWarning && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-brand-dark/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-[32px] p-8 w-full max-w-sm shadow-2xl border border-white/20 animate-in zoom-in-95 duration-300">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mb-6 ring-8 ring-amber-50/50">
+                <AlertTriangle className="w-8 h-8 text-amber-600" />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight mb-3">Atenção: Quantidade Alterada</h3>
+              <p className="text-sm text-slate-600 font-medium leading-relaxed mb-8">
+                Por motivo da quantidade ter sido alterada, a quantidade respeitada na saída do estoque será essa que você editou neste tala.
+              </p>
+              
+              <div className="bg-slate-50 w-full p-4 rounded-2xl border border-slate-100 mb-8 flex justify-between items-center">
+                <div className="text-left">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Original</p>
+                  <p className="text-lg font-black text-slate-400 line-through">{selectedMov?.quantidade} {formatUnit(selectedMaterial?.unidade || 'un')}</p>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                  <ArrowUpRight className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Nova</p>
+                  <p className="text-lg font-black text-blue-600">{editQty} {formatUnit(selectedMaterial?.unidade || 'un')}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowQtyWarning(false)}
+                className="flex-1 px-4 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black uppercase tracking-widest transition-all cursor-pointer border border-slate-200"
+              >
+                Voltar
+              </button>
+              <button 
+                onClick={() => saveEdit(true)}
+                className="flex-1 px-4 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 cursor-pointer"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

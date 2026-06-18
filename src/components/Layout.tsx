@@ -42,7 +42,7 @@ const VIEW_TITLES: Record<ViewState, string> = {
 };
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { view, setView, setHasEntered, isSyncing, user, signOut } = useApp();
+    const { view, setView, setHasEntered, isSyncing, user, signOut, syncError, retrySync } = useApp();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const menuItems = [
@@ -73,10 +73,26 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   return (
     <div className="flex h-screen bg-brand-light overflow-hidden">
       {/* Syncing Indicator (Floating Overlay) */}
-      {isSyncing && (
+      {isSyncing && !syncError && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-brand-dark/95 backdrop-blur-sm text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
            <span className="text-[10px] font-bold uppercase tracking-wider">Sincronizando com Supabase...</span>
+        </div>
+      )}
+
+      {/* Sync Error Alert Overlay */}
+      {syncError && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-red-600 backdrop-blur-sm text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/20 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">Erro de Sincronização</span>
+            <span className="text-[10px] font-bold opacity-90 leading-tight">{syncError}</span>
+          </div>
+          <button 
+            onClick={retrySync}
+            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            Tentar Novamente
+          </button>
         </div>
       )}
       {/* Backdrop (Backdrop de fundo para fechar o menu ao tocar fora no mobile) */}

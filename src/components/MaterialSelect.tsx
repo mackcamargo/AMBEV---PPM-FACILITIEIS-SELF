@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Search, Check, Package } from 'lucide-react';
 import { Material } from '../types';
+import { normalizeText } from '../lib/stringUtils';
 
 interface MaterialSelectProps {
   value: string;
@@ -40,10 +41,11 @@ export const MaterialSelect: React.FC<MaterialSelectProps> = ({
   const selectedMaterial = materiais.find(m => m.id === value);
 
   const filtered = materiais
-    .filter(m => 
-      m.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (m.sap || '').toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(m => {
+      const search = normalizeText(searchTerm);
+      return normalizeText(m.descricao).includes(search) || 
+             normalizeText(m.sap || '').includes(search);
+    })
     .sort((a, b) => a.descricao.localeCompare(b.descricao));
 
   return (
