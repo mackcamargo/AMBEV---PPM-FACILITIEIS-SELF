@@ -230,6 +230,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [isSyncing, setIsSyncing] = useState(false);
+  // ✅ REALTIME: atualiza automaticamente quando qualquer mudança ocorre no banco
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('realtime-all-tables')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'movimentacoes' }, () => {
+        refreshData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'materiais' }, () => {
+        refreshData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'equipes' }, () => {
+        refreshData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // Background sync for pending items
   useEffect(() => {
