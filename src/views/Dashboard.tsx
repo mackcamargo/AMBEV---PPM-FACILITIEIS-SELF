@@ -190,73 +190,51 @@ export const Dashboard: React.FC = () => {
   const stats = [
     { label: 'Tipos de Materiais', value: totalMaterialTypes, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
     { label: 'Total Itens em Estoque', value: totalEstoqueUnits, icon: Coins, color: 'text-amber-500', bg: 'bg-amber-50' },
-    { label: 'Entradas (Valor)', value: `R$ ${teamPerformance.reduce((acc, c) => acc + (c?.entrada || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: ArrowUpRight, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { label: 'Entradas (Valor)', value: `R$ ${filteredMovimentacoes.filter(m => m.tipo === 'Entrada').reduce((acc, m) => acc + (Number(m.quantidade) * (Number(m.precoUnitario) || 0)), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: ArrowUpRight, color: 'text-emerald-500', bg: 'bg-emerald-50' },
     { label: 'Movimentações', value: filteredMovimentacoes.length, icon: History, color: 'text-brand-accent', bg: 'bg-slate-50' },
   ];
 
-  // Cálculo de Estoque valorizado por Equipe e Total (calculado retroativamente conforme o período / data limite)
+  // Cálculo de Estoque valorizado por Equipe e Total (Baseado no ESTOQUE ATUAL conforme solicitado)
   const teamValuedStock = useMemo(() => {
-    let asOfDate = new Date();
-    if (filterType === 'day') {
-      asOfDate = new Date();
-      asOfDate.setHours(23, 59, 59, 999);
-    } else if (filterType === 'month') {
-      asOfDate = new Date();
-      asOfDate.setHours(23, 59, 59, 999);
-    } else if (filterType === 'custom') {
-      if (endDate) {
-        const [eYear, eMonth, eDay] = endDate.split('-').map(Number);
-        asOfDate = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999);
-      }
-    }
+    // 1. Cálculo individual por material (Fonte da verdade: Materiais na base)
+    const materialValues = materiais.map(m => ({
+      id: m.id,
+      equipe: m.equipe,
+      valor: (Number(m.estoqueAtual) || 0) * (Number(m.precoUnitario) || 0),
+      quantidade: Number(m.estoqueAtual) || 0
+    }));
 
+    // 2. Valor Global (Soma tudo na base)
+    const globalTotalValue = materialValues.reduce((acc, mv) => acc + mv.valor, 0);
+
+    // 3. Decomposição por equipe
     const data = equipes.map(equipe => {
-      const teamMaterials = materiais.filter(m => m.equipe === equipe.nome);
-      
-      let valorTotal = 0;
-      let quantidadeTotal = 0;
-
-      teamMaterials.forEach(m => {
-        let quantityAsOf = Number(m.estoqueAtual);
-
-        // Encontra movimentações posteriores à asOfDate para desfazer seu efeito (rollback)
-        const postMovements = movimentacoes.filter(mov => {
-          if (mov.materialId === m.id && mov.data) {
-            const movDate = new Date(mov.data);
-            return !isNaN(movDate.getTime()) && movDate > asOfDate;
-          }
-          return false;
-        });
-
-        postMovements.forEach(mov => {
-          if (mov.tipo === 'Entrada') {
-            quantityAsOf -= Number(mov.quantidade);
-          } else if (mov.tipo === 'Retirada') {
-            quantityAsOf += Number(mov.quantidade);
-          }
-        });
-
-        const finalQty = Math.max(0, quantityAsOf);
-        quantidadeTotal += finalQty;
-        valorTotal += finalQty * (Number(m.precoUnitario) || 0);
-      });
-      
+      const teamMvs = materialValues.filter(mv => mv.equipe === equipe.nome);
       return {
         name: equipe.nome,
         color: equipe.cor,
-        valorTotal,
-        quantidadeTotal
+        valorTotal: teamMvs.reduce((acc, mv) => acc + mv.valor, 0),
+        quantidadeTotal: teamMvs.reduce((acc, mv) => acc + mv.quantidade, 0)
       };
     });
 
-    const globalTotalValue = data.reduce((acc, t) => acc + t.valorTotal, 0);
+    // 4. Materiais Sem Equipe (Garante que nada fique de fora do gráfico/lista se o total global for maior)
+    const materialsWithNoTeam = materialValues.filter(mv => !equipes.some(e => e.nome === mv.equipe));
+    if (materialsWithNoTeam.length > 0) {
+      data.push({
+        name: 'DIVERSOS / SEM EQUIPE',
+        color: '#94a3b8',
+        valorTotal: materialsWithNoTeam.reduce((acc, mv) => acc + mv.valor, 0),
+        quantidadeTotal: materialsWithNoTeam.reduce((acc, mv) => acc + mv.quantidade, 0)
+      });
+    }
 
     return {
-      teams: data,
+      teams: data.sort((a, b) => b.valorTotal - a.valorTotal),
       globalTotalValue,
-      asOfDate
+      asOfDate: new Date()
     };
-  }, [materiais, movimentacoes, equipes, filterType, endDate]);
+  }, [materiais, equipes]);
 
   // Simulação de dados de retirada por mês (Dashboard Linear / Onda)
   const withdrawalData = [
@@ -345,7 +323,7 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col">
                     <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tight">MÊS VIGENTE</span>
-                    <span className="text-xs font-black text-slate-800">R$ {currentVsPrev.current.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-xs font-black text-slate-800">R$ {currentVsPrev.current.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="h-5 w-px bg-slate-100 mx-1"></div>
                   <div className="flex flex-col">
@@ -396,7 +374,7 @@ export const Dashboard: React.FC = () => {
                   />
                   <Tooltip 
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
-                    formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']}
+                    formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Valor']}
                   />
                   <Area 
                     type="monotone" 
@@ -453,7 +431,7 @@ export const Dashboard: React.FC = () => {
                   <Tooltip 
                     cursor={{ fill: '#f1f5f9', opacity: 0.4 }}
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
-                    formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']}
+                    formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Valor']}
                   />
                   <Bar 
                     dataKey="retirada" 
@@ -513,7 +491,7 @@ export const Dashboard: React.FC = () => {
                       </div>
                       <div className="flex flex-col items-end">
                         <span className="text-[10px] font-bold text-slate-800 font-mono">
-                          R${team.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R${team.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         <span className="text-[8px] text-slate-400 font-bold">
                           {team.quantidadeTotal} un ({percentage}%)
@@ -547,7 +525,7 @@ export const Dashboard: React.FC = () => {
                 </span>
               </div>
               <span className="text-xs font-black text-slate-900 font-mono">
-                R${teamPerformance.reduce((acc, c) => acc + (c?.retirada || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R${teamPerformance.reduce((acc, c) => acc + (c?.retirada || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             
@@ -572,7 +550,7 @@ export const Dashboard: React.FC = () => {
                         </div>
                         <div className="flex flex-col items-end">
                           <span className="text-[10px] font-bold text-slate-800 font-mono">
-                            R${team.retirada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R${team.retirada.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span className="text-[8px] text-slate-400 font-bold">
                             {teamQty?.quantidade || 0} un ({percentage}%)

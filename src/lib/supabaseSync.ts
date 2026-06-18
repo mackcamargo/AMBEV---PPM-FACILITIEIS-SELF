@@ -82,7 +82,7 @@ export const syncToSupabase = {
         nome: c.nome || 'Colaborador Sem Nome',
         empresa: c.empresa || 'Não informada',
         equipe: c.equipe || 'Geral',
-        cargo: c.cargo || null,
+        cargo: c.cargo || 'OUTROS',
         contato: c.contato || null,
         status: c.status
       });
@@ -95,7 +95,8 @@ export const syncToSupabase = {
   async updateColaborador(id: string, c: Partial<Colaborador>): Promise<{ success: boolean; error?: string }> {
     if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
     try {
-      const { error } = await supabase.from('colaboradores').update(c).eq('id', id);
+      const { syncStatus, ...payload } = c;
+      const { error } = await supabase.from('colaboradores').update(payload).eq('id', id);
       if (error) return { success: false, error: error.message };
       return { success: true };
     } catch (err: any) {

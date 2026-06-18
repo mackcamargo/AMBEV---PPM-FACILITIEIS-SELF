@@ -343,7 +343,13 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   // Auto-fill matricula, codigoFornecedor, and codigoEquipe
   React.useEffect(() => {
     if (type === 'colaboradores' && !formData.matricula) {
-      const nextId = store.colaboradores.length + 1;
+      // Find the highest number in existing matriculas to avoid duplicates
+      const lastNumber = store.colaboradores.reduce((max, c) => {
+        const num = parseInt(c.matricula.replace(/\D/g, ''), 10);
+        return isNaN(num) ? max : Math.max(max, num);
+      }, 0);
+      
+      const nextId = lastNumber + 1;
       const autoMatricula = `COL-${nextId.toString().padStart(4, '0')}`;
       setFormData(prev => ({ ...prev, matricula: autoMatricula }));
     }
@@ -1927,8 +1933,17 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
             <div className="flex-none bg-white border-b border-slate-200 z-40">
               <div className="h-[52px] px-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-brand-accent" />
-                  <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-widest shrink-0">Materiais Cadastrados</h3>
+                  {type === 'materiais' && <Package className="w-4 h-4 text-brand-accent" />}
+                  {type === 'colaboradores' && <Users className="w-4 h-4 text-brand-accent" />}
+                  {type === 'equipes' && <Users className="w-4 h-4 text-brand-accent" />}
+                  {type === 'empresas' && <MapPin className="w-4 h-4 text-brand-accent" />}
+                  {type === 'fornecedores' && <Truck className="w-4 h-4 text-brand-accent" />}
+                  <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-widest shrink-0">
+                    {type === 'materiais' ? 'Materiais Cadastrados' : 
+                     type === 'colaboradores' ? 'Colaboradores Cadastrados' :
+                     type === 'equipes' ? 'Equipes Cadastradas' :
+                     type === 'empresas' ? 'Empresas Cadastradas' : 'Fornecedores Cadastrados'}
+                  </h3>
                 </div>
                 
                 <div className="flex items-center gap-2 flex-1 justify-end">
@@ -2349,9 +2364,10 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Matrícula / ID</label>
                     <input 
                       type="text" 
-                      className="input-field bg-slate-50 font-mono" 
+                      className={`input-field font-mono ${selectedItem?.syncStatus === 'pending' ? 'bg-white' : 'bg-slate-50 opacity-70'}`} 
                       value={editFormData.matricula || ''}
-                      readOnly
+                      onChange={(e) => setEditFormData({ ...editFormData, matricula: e.target.value })}
+                      readOnly={selectedItem?.syncStatus !== 'pending'}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
