@@ -313,14 +313,6 @@ export const Dashboard: React.FC = () => {
             </div>
           )}
         </div>
-
-        <button
-          onClick={signOut}
-          className="flex items-center gap-1.5 px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer"
-        >
-          <LogOut className="w-3 h-3" />
-          Sair
-        </button>
       </div>
 
       <div className="scroll-container space-y-4 pr-1">
