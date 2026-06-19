@@ -6,7 +6,6 @@ import { generateId } from '../lib/idUtils';
 import { Material, ItemLote, Movimentacao, formatUnit, Fornecedor } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { playNotificationSound } from '../lib/audio';
-import { logActivity } from '../activityLog';
 import { ColaboradorSelect } from '../components/ColaboradorSelect';
 
 const MaterialSelect = React.forwardRef<HTMLButtonElement, {
@@ -58,6 +57,12 @@ const MaterialSelect = React.forwardRef<HTMLButtonElement, {
               <span className="font-black text-slate-800 text-xs uppercase tracking-tight">{selectedMaterial.descricao}</span>
               <span className="text-slate-300 font-bold">-</span>
               <span className="text-slate-500 text-[10px] uppercase font-bold">SAP: {selectedMaterial.sap}</span>
+              {selectedMaterial.equipe && (
+                <>
+                  <span className="text-slate-300 font-bold">-</span>
+                  <span className="text-blue-500 text-[10px] uppercase font-bold">{selectedMaterial.equipe}</span>
+                </>
+              )}
               <span className="text-slate-300 font-bold">-</span>
               <span className={`text-[10px] font-black uppercase ${
                 selectedMaterial.estoqueAtual >= (selectedMaterial.estoqueIdeal || 0) ? 'text-emerald-600' :
@@ -124,6 +129,12 @@ const MaterialSelect = React.forwardRef<HTMLButtonElement, {
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SAP: {m.sap}</span>
+                      {m.equipe && (
+                        <>
+                          <span className="text-slate-200">•</span>
+                          <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{m.equipe}</span>
+                        </>
+                      )}
                       {fornName && (
                         <>
                           <span className="text-slate-200">•</span>
@@ -207,7 +218,8 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
     
     setBatchItems([]);
     setInvalidFields([]);
-    setNf('');
+    setNumNotaFiscal('');
+    setCodSapAutomatico('');
     setPedidoCompra('');
     setPedidoSap('');
     setFornecedor('');
@@ -257,7 +269,8 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
   };
   
   // Specific fields for Entrada
-  const [nf, setNf] = useState('');
+  const [numNotaFiscal, setNumNotaFiscal] = useState('');
+  const [codSapAutomatico, setCodSapAutomatico] = useState('');
   const [pedidoCompra, setPedidoCompra] = useState('');
   const [pedidoSap, setPedidoSap] = useState('');
   const [fornecedor, setFornecedor] = useState('');
@@ -297,6 +310,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
         setShowStockWarning(true);
       }
       setPrecoUnitario(mat.precoUnitario);
+      setCodSapAutomatico(mat.sap || '');
       // ALWAYS set quantity back to 1 for every new selection
       setQuantidade('1');
       
@@ -373,7 +387,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       materialDesc: selectedMaterial?.descricao || '',
       quantidade: finalQuantidade,
       precoUnitario: precoUnitario !== '' ? Number(precoUnitario) : undefined,
-      ...(type === 'Retirada' ? { os, colaborador, empresa, equipe, liberador, observacoes } : { nf, pedidoCompra, pedidoSap, fornecedor, conferente })
+      ...(type === 'Retirada' ? { os, colaborador, empresa, equipe, liberador, observacoes } : { nf: numNotaFiscal, pedidoCompra, pedidoSap, fornecedor, conferente })
     };
 
     const result = await addMovimentacao(movimento);
@@ -415,7 +429,8 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
     setQuantidade('1');
     setPrecoUnitario('');
     if (type === 'Entrada') {
-      setNf('');
+      setNumNotaFiscal('');
+      setCodSapAutomatico('');
       setPedidoCompra('');
       setPedidoSap('');
       setFornecedor('');
@@ -491,7 +506,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       materialDesc: selectedMaterial?.descricao || '',
       quantidade: finalQuantidade,
       precoUnitario: precoUnitario !== '' ? Number(precoUnitario) : undefined,
-      detalhesAdicionais: type === 'Retirada' ? { os, colaborador, empresa, equipe, liberador, observacoes } : { nf, pedidoCompra, pedidoSap, fornecedor, conferente },
+      detalhesAdicionais: type === 'Retirada' ? { os, colaborador, empresa, equipe, liberador, observacoes } : { nf: numNotaFiscal, pedidoCompra, pedidoSap, fornecedor, conferente },
       data: itemDate
     };
 
@@ -648,7 +663,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                     <input 
                       type="text" 
                       className="input-field bg-slate-50 text-slate-500 font-mono" 
-                      value={selectedMaterial?.sap || ''} 
+                      value={codSapAutomatico} 
                       readOnly 
                       placeholder="-"
                     />
@@ -717,13 +732,23 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Nº Nota Fiscal (NF)</label>
-                    <input type="text" className="input-field" value={nf} onChange={(e) => setNf(e.target.value)} />
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block italic">Cod SAP (Auto)</label>
+                    <input 
+                      type="text" 
+                      className="input-field bg-slate-50 text-slate-500 font-mono" 
+                      value={codSapAutomatico} 
+                      readOnly 
+                      placeholder="-"
+                    />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Nº PEDIDO COD SAP</label>
-                    <input type="text" className="input-field" value={pedidoSap} onChange={(e) => setPedidoSap(e.target.value)} placeholder="Ex: COD SAP-1234" />
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Nº Nota Fiscal (NF)</label>
+                    <input type="text" className="input-field" value={numNotaFiscal} onChange={(e) => setNumNotaFiscal(e.target.value)} />
                   </div>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Nº PEDIDO COD SAP</label>
+                  <input type="text" className="input-field" value={pedidoSap} onChange={(e) => setPedidoSap(e.target.value)} placeholder="Ex: COD SAP-1234" />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Fornecedor</label>
