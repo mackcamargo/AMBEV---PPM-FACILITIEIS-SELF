@@ -138,7 +138,7 @@ const MaterialSelect = React.forwardRef<HTMLButtonElement, {
                       {fornName && (
                         <>
                           <span className="text-slate-200">•</span>
-                          <span className="text-[9px] font-bold text-slate-300 uppercase italic">
+                          <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">
                             {fornName}
                           </span>
                         </>
