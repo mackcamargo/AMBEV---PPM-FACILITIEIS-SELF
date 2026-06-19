@@ -15,8 +15,8 @@ export const Login: React.FC = () => {
   useEffect(() => {
     const handleOAuthMessage = (event: MessageEvent) => {
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-        // Supabase session should update automatically via its own listener in store.tsx
-        console.log('OAuth success message received');
+        // Trigger manual session check to ensure immediate transition
+        supabase.auth.getSession();
       }
     };
     window.addEventListener('message', handleOAuthMessage);

@@ -30,13 +30,8 @@ function AppContent() {
   }, [user, pendingView, setView]);
 
   const handleEnter = (targetView: 'dashboard' | 'retirada-materiais' | 'reuniao-self') => {
-    if (user) {
-      setView(targetView);
-      setHasEntered(true);
-    } else {
-      setPendingView(targetView);
-      setHasEntered(true);
-    }
+    setView(targetView);
+    setHasEntered(true);
   };
 
   if (authLoading) {
@@ -47,12 +42,12 @@ function AppContent() {
     );
   }
 
-  if (!hasEntered) {
-    return <WelcomeView onEnter={handleEnter} />;
-  }
-
   if (!user) {
     return <Login />;
+  }
+
+  if (!hasEntered) {
+    return <WelcomeView onEnter={handleEnter} />;
   }
 
   const renderView = () => {
