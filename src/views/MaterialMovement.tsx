@@ -6,6 +6,7 @@ import { generateId } from '../lib/idUtils';
 import { Material, ItemLote, Movimentacao, formatUnit, Fornecedor } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { playNotificationSound } from '../lib/audio';
+import { logActivity } from '../activityLog';
 import { ColaboradorSelect } from '../components/ColaboradorSelect';
 
 const MaterialSelect = React.forwardRef<HTMLButtonElement, {
