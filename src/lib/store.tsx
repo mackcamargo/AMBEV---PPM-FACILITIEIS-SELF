@@ -362,42 +362,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         // Helper to merge Supabase data with local state, preventing loss of local-only items
         // while ensuring Supabase data (source of truth) is present
-        const mergeWithSupabase = <T extends { id: string; syncStatus?: 'synced' | 'pending' }>(supabaseData: T[], currentLocal: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
-          if (supabaseData.length > 0) {
-            // Keep items that are pending sync from local state
-            const pendingItems = currentLocal.filter(item => item.syncStatus === 'pending');
-            
-            // Create a map of synced items for fast lookup
-            const supabaseIds = new Set(supabaseData.map(item => item.id));
-            
-            // Filter out pending items that might have actually synced (same ID already in Supabase)
-            const remainingPending = pendingItems.filter(item => !supabaseIds.has(item.id));
-            
-            // Final set: Supabase data (truth) + remaining local pending items
-            setFn([...supabaseData, ...remainingPending]);
-          } else if (currentLocal.some(i => i.syncStatus === 'pending')) {
-            // If supabase returned nothing but we have pending, keep pending
-            setFn(currentLocal.filter(i => i.syncStatus === 'pending'));
-          }
+        const mergeWithSupabase = <T extends { id: string; syncStatus?: 'synced' | 'pending' }>(supabaseData: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
+          // As per AGENTS.md: Set state DIRECTLY with supabase data to ensure source of truth
+          // and avoid duplication with INITIAL_* hardcoded data.
+          setFn(supabaseData);
         };
 
         // 1. Materiais
-        if (data.materiais.length > 0) {
-          const sanitizedMaterials = data.materiais.map(m => ({
-            ...m,
-            unidade: m.unidade === 'UM' ? 'UNI' : m.unidade,
-            syncStatus: 'synced' as const
-          }));
-          mergeWithSupabase(sanitizedMaterials, materiais, setMateriais);
-        }
+        const sanitizedMaterials = data.materiais.map(m => ({
+          ...m,
+          unidade: m.unidade === 'UM' ? 'UNI' : m.unidade,
+          syncStatus: 'synced' as const
+        }));
+        mergeWithSupabase(sanitizedMaterials, setMateriais);
 
         // 2. Others
-        mergeWithSupabase(data.colaboradores.map(c => ({ ...c, syncStatus: 'synced' as const })), colaboradores, setColaboradores);
-        mergeWithSupabase(data.empresas, empresas, setEmpresas);
-        mergeWithSupabase(data.equipes, equipes, setEquipes);
-        mergeWithSupabase(data.fornecedores, fornecedores, setFornecedores);
-        mergeWithSupabase(data.movimentacoes, movimentacoes, setMovimentacoes);
-        mergeWithSupabase(data.atas, atas, setAtas);
+        mergeWithSupabase(data.colaboradores.map(c => ({ ...c, syncStatus: 'synced' as const })), setColaboradores);
+        mergeWithSupabase(data.empresas, setEmpresas);
+        mergeWithSupabase(data.equipes, setEquipes);
+        mergeWithSupabase(data.fornecedores, setFornecedores);
+        mergeWithSupabase(data.movimentacoes, setMovimentacoes);
+        mergeWithSupabase(data.atas, setAtas);
 
       } catch (err: any) {
         console.error("Failed to load initial data from Supabase:", err);
@@ -484,20 +469,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMovimentacoes(prev => [m, ...prev]);
     const result = await syncToSupabase.insertMovimentacao(m);
     
-    // Update material stock with strict numeric conversion and lower bound safety (>= 0)
-    setMateriais(prev => prev.map(mat => {
-      if (mat.id === m.materialId) {
-        const currentQty = Number(mat.estoqueAtual) || 0;
-        const deltaQty = Number(m.quantidade) || 0;
-        const newQty = m.tipo === 'Entrada' ? currentQty + deltaQty : currentQty - deltaQty;
-        syncToSupabase.updateMaterial(mat.id, { estoqueAtual: Math.max(0, newQty) });
-        return {
-          ...mat,
-          estoqueAtual: Math.max(0, newQty)
-        };
-      }
-      return mat;
-    }));
+    // Update material stock in DB FIRST
+    const mat = materiais.find(mat => mat.id === m.materialId);
+    if (mat) {
+      const currentQty = Number(mat.estoqueAtual) || 0;
+      const deltaQty = Number(m.quantidade) || 0;
+      const newQty = m.tipo === 'Entrada' ? currentQty + deltaQty : currentQty - deltaQty;
+      const finalQty = Math.max(0, newQty);
+      
+      // Update DB
+      await syncToSupabase.updateMaterial(mat.id, { estoqueAtual: finalQty });
+      
+      // Update State
+      setMateriais(prev => prev.map(item => item.id === mat.id ? { ...item, estoqueAtual: finalQty } : item));
+    }
 
     return result;
   };
@@ -506,35 +491,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const movToDelete = movimentacoes.find(m => m.id === id);
     if (!movToDelete) return { success: false, error: 'Movimentação não encontrada' };
 
+    // Optimistic Update
     setMovimentacoes(prev => prev.filter(m => m.id !== id));
+    
     const result = await syncToSupabase.deleteMovimentacao(id);
+    
+    if (!result.success) {
+      // Revert if failed
+      setMovimentacoes(prev => [movToDelete, ...prev].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()));
+      return result;
+    }
 
-    // Reverse action
-    setMateriais(prev => prev.map(mat => {
-      if (mat.id === movToDelete.materialId) {
-        const currentQty = Number(mat.estoqueAtual) || 0;
-        const deltaQty = Number(movToDelete.quantidade) || 0;
-        const newQty = movToDelete.tipo === 'Entrada' ? currentQty - deltaQty : currentQty + deltaQty;
-        syncToSupabase.updateMaterial(mat.id, { estoqueAtual: Math.max(0, newQty) });
-        return {
-          ...mat,
-          estoqueAtual: Math.max(0, newQty)
-        };
-      }
-      return mat;
-    }));
+    // Update material stock in DB FIRST
+    const mat = materiais.find(m => m.id === movToDelete.materialId);
+    if (mat) {
+      const currentQty = Number(mat.estoqueAtual) || 0;
+      const deltaQty = Number(movToDelete.quantidade) || 0;
+      const newQty = movToDelete.tipo === 'Entrada' ? currentQty - deltaQty : currentQty + deltaQty;
+      const finalQty = Math.max(0, newQty);
+      
+      // Update DB
+      await syncToSupabase.updateMaterial(mat.id, { estoqueAtual: finalQty });
+      
+      // Update State
+      setMateriais(prev => prev.map(m => m.id === mat.id ? { ...m, estoqueAtual: finalQty } : m));
+    }
 
     // Reverse budget adjustment if it was a withdrawal
     if (movToDelete.tipo === 'Retirada' && movToDelete.equipe) {
-      setEquipes(prev => prev.map(eq => {
-        if (eq.nome === movToDelete.equipe) {
-          const totalToRevert = Number(movToDelete.quantidade) * (Number(movToDelete.precoUnitario) || 0);
-          const newSaldo = eq.saldoAtualizado + totalToRevert;
-          syncToSupabase.updateEquipe(eq.id, { saldoAtualizado: newSaldo });
-          return { ...eq, saldoAtualizado: newSaldo };
-        }
-        return eq;
-      }));
+      const eq = equipes.find(ex => ex.nome === movToDelete.equipe);
+      if (eq) {
+        const totalToRevert = Number(movToDelete.quantidade) * (Number(movToDelete.precoUnitario) || 0);
+        const newSaldo = eq.saldoAtualizado + totalToRevert;
+        
+        // Update DB
+        await syncToSupabase.updateEquipe(eq.id, { saldoAtualizado: newSaldo });
+        
+        // Update State
+        setEquipes(prev => prev.map(e => e.id === eq.id ? { ...e, saldoAtualizado: newSaldo } : e));
+      }
     }
     return result;
   };
@@ -551,18 +546,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newPrice = updatedFields.precoUnitario !== undefined ? (Number(updatedFields.precoUnitario) || 0) : oldPrice;
 
     if (qtyDelta !== 0) {
-      setMateriais(prev => prev.map(mat => {
-        if (mat.id === original.materialId) {
-          const currentQty = Number(mat.estoqueAtual) || 0;
-          const stockAdjustment = original.tipo === 'Entrada' ? qtyDelta : -qtyDelta;
-          syncToSupabase.updateMaterial(mat.id, { estoqueAtual: Math.max(0, currentQty + stockAdjustment) });
-          return {
-            ...mat,
-            estoqueAtual: Math.max(0, currentQty + stockAdjustment)
-          };
-        }
-        return mat;
-      }));
+      const mat = materiais.find(m => m.id === original.materialId);
+      if (mat) {
+        const currentQty = Number(mat.estoqueAtual) || 0;
+        const stockAdjustment = original.tipo === 'Entrada' ? qtyDelta : -qtyDelta;
+        const finalQty = Math.max(0, currentQty + stockAdjustment);
+        
+        // Update DB
+        await syncToSupabase.updateMaterial(mat.id, { estoqueAtual: finalQty });
+        
+        // Update State
+        setMateriais(prev => prev.map(m => m.id === mat.id ? { ...m, estoqueAtual: finalQty } : m));
+      }
     }
 
     // Update budget if it was a withdrawal and values changed
@@ -572,14 +567,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const budgetDelta = newTotal - oldTotal;
 
       if (budgetDelta !== 0) {
-        setEquipes(prev => prev.map(eq => {
-          if (eq.nome === original.equipe) {
-            const newSaldo = eq.saldoAtualizado - budgetDelta;
-            syncToSupabase.updateEquipe(eq.id, { saldoAtualizado: newSaldo });
-            return { ...eq, saldoAtualizado: newSaldo };
-          }
-          return eq;
-        }));
+        const eq = equipes.find(ex => ex.nome === original.equipe);
+        if (eq) {
+          const newSaldo = eq.saldoAtualizado - budgetDelta;
+          
+          // Update DB
+          await syncToSupabase.updateEquipe(eq.id, { saldoAtualizado: newSaldo });
+          
+          // Update State
+          setEquipes(prev => prev.map(e => e.id === eq.id ? { ...e, saldoAtualizado: newSaldo } : e));
+        }
       }
     }
 
@@ -655,8 +652,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteMaterial = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    const original = materiais.find(m => m.id === id);
+    if (!original) return { success: false, error: 'Material não encontrado' };
+    
     setMateriais(prev => prev.filter(item => item.id !== id));
-    return await syncToSupabase.deleteMaterial(id);
+    const result = await syncToSupabase.deleteMaterial(id);
+    if (!result.success) {
+      setMateriais(prev => [...prev, original]);
+    }
+    return result;
   };
 
   const updateColaborador = async (id: string, c: Partial<Colaborador>): Promise<{ success: boolean; error?: string }> => {
@@ -665,8 +669,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteColaborador = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    const original = colaboradores.find(c => c.id === id);
+    if (!original) return { success: false, error: 'Colaborador não encontrado' };
+    
     setColaboradores(prev => prev.filter(item => item.id !== id));
-    return await syncToSupabase.deleteColaborador(id);
+    const result = await syncToSupabase.deleteColaborador(id);
+    if (!result.success) {
+      setColaboradores(prev => [...prev, original]);
+    }
+    return result;
   };
 
   const updateEquipe = async (id: string, e: Partial<Equipe>): Promise<{ success: boolean; error?: string }> => {
@@ -680,8 +691,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteEquipe = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    const original = equipes.find(e => e.id === id);
+    if (!original) return { success: false, error: 'Equipe não encontrada' };
+    
     setEquipes(prev => prev.filter(item => item.id !== id));
-    return await syncToSupabase.deleteEquipe(id);
+    const result = await syncToSupabase.deleteEquipe(id);
+    if (!result.success) {
+      setEquipes(prev => [...prev, original]);
+    }
+    return result;
   };
 
   const updateFornecedor = async (id: string, f: Partial<Fornecedor>): Promise<{ success: boolean; error?: string }> => {
@@ -690,8 +708,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteFornecedor = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    const original = fornecedores.find(f => f.id === id);
+    if (!original) return { success: false, error: 'Fornecedor não encontrado' };
+    
     setFornecedores(prev => prev.filter(item => item.id !== id));
-    return await syncToSupabase.deleteFornecedor(id);
+    const result = await syncToSupabase.deleteFornecedor(id);
+    if (!result.success) {
+      setFornecedores(prev => [...prev, original]);
+    }
+    return result;
   };
 
   const addFornecedor = async (f: Omit<Fornecedor, 'id'>): Promise<{ success: boolean; error?: string }> => {
@@ -712,8 +737,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteEmpresa = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    const original = empresas.find(e => e.id === id);
+    if (!original) return { success: false, error: 'Empresa não encontrada' };
+    
     setEmpresas(prev => prev.filter(item => item.id !== id));
-    return await syncToSupabase.deleteEmpresa(id);
+    const result = await syncToSupabase.deleteEmpresa(id);
+    if (!result.success) {
+      setEmpresas(prev => [...prev, original]);
+    }
+    return result;
   };
 
   const seedTestData = () => {
@@ -952,31 +984,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         throw new Error("Sem conexão com internet");
       }
       const data = await syncToSupabase.fetchAll();
-      const mergeWithSupabase = <T extends { id: string; syncStatus?: 'synced' | 'pending' }>(supabaseData: T[], currentLocal: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
-        if (supabaseData.length > 0) {
-          const pendingItems = currentLocal.filter(item => item.syncStatus === 'pending');
-          const supabaseIds = new Set(supabaseData.map(item => item.id));
-          const remainingPending = pendingItems.filter(item => !supabaseIds.has(item.id));
-          setFn([...supabaseData, ...remainingPending]);
-        } else if (currentLocal.some(i => i.syncStatus === 'pending')) {
-          setFn(currentLocal.filter(i => i.syncStatus === 'pending'));
-        }
+      
+      const mergeWithSupabase = <T extends { id: string; syncStatus?: 'synced' | 'pending' }>(supabaseData: T[], setFn: React.Dispatch<React.SetStateAction<T[]>>) => {
+        // As per AGENTS.md: Set state DIRECTLY with supabase data
+        setFn(supabaseData);
       };
 
-      if (data.materiais.length > 0) {
-        const sanitizedMaterials = data.materiais.map(m => ({
-          ...m,
-          unidade: m.unidade === 'UM' ? 'UNI' : m.unidade,
-          syncStatus: 'synced' as const
-        }));
-        mergeWithSupabase(sanitizedMaterials, materiais, setMateriais);
-      }
-      mergeWithSupabase(data.colaboradores.map(c => ({...c, syncStatus: 'synced' as const})), colaboradores, setColaboradores);
-      mergeWithSupabase(data.empresas, empresas, setEmpresas);
-      mergeWithSupabase(data.equipes, equipes, setEquipes);
-      mergeWithSupabase(data.fornecedores, fornecedores, setFornecedores);
-      mergeWithSupabase(data.movimentacoes, movimentacoes, setMovimentacoes);
-      mergeWithSupabase(data.atas, atas, setAtas);
+      const sanitizedMaterials = data.materiais.map(m => ({
+        ...m,
+        unidade: m.unidade === 'UM' ? 'UNI' : m.unidade,
+        syncStatus: 'synced' as const
+      }));
+      
+      mergeWithSupabase(sanitizedMaterials, setMateriais);
+      mergeWithSupabase(data.colaboradores.map(c => ({...c, syncStatus: 'synced' as const})), setColaboradores);
+      mergeWithSupabase(data.empresas, setEmpresas);
+      mergeWithSupabase(data.equipes, setEquipes);
+      mergeWithSupabase(data.fornecedores, setFornecedores);
+      mergeWithSupabase(data.movimentacoes, setMovimentacoes);
+      mergeWithSupabase(data.atas, setAtas);
     } catch (err: any) {
       console.error("Manual refresh failed:", err);
       setSyncError(err.message || "Erro ao atualizar dados");

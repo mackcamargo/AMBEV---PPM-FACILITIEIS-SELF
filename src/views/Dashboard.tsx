@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Package, ArrowUpRight, ArrowDownLeft, AlertCircle, Coins, History, RefreshCw, Trophy, User } from 'lucide-react';
+import { Package, ArrowUpRight, ArrowDownLeft, AlertCircle, Coins, History, RefreshCw, Trophy, User, LogOut } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { normalizeText } from '../lib/stringUtils';
 import { 
@@ -8,7 +8,7 @@ import {
 } from 'recharts';
 
 export const Dashboard: React.FC = () => {
-  const { materiais, movimentacoes, equipes } = useApp();
+  const { materiais, movimentacoes, equipes, signOut } = useApp();
   const [filterType, setFilterType] = useState<'day' | 'month' | 'custom'>('month');
 
   // ROTAÇÃO AUTOMÁTICA DAS EQUIPES (ESTILO RELATÓRIOS)
@@ -312,32 +312,15 @@ export const Dashboard: React.FC = () => {
               />
             </div>
           )}
-
-          <div className="h-6 w-0.5 bg-slate-200 mx-1 hidden sm:block"></div>
-
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Package className="h-3 w-3 text-slate-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Buscar pç/id..."
-              className="pl-8 !text-[9px] font-bold h-7 w-40 border border-slate-200 rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all uppercase"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 pr-2 flex items-center"
-              >
-                <div className="bg-slate-200 hover:bg-slate-300 rounded-full p-0.5 transition-colors">
-                  <ArrowUpRight className="h-2 w-2 text-slate-500 rotate-45" />
-                </div>
-              </button>
-            )}
-          </div>
         </div>
+
+        <button
+          onClick={signOut}
+          className="flex items-center gap-1.5 px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer"
+        >
+          <LogOut className="w-3 h-3" />
+          Sair
+        </button>
       </div>
 
       <div className="scroll-container space-y-4 pr-1">

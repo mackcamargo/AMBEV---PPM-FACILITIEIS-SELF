@@ -1,11 +1,15 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { useApp } from '../lib/store';
+import { LogOut } from 'lucide-react';
 
 interface WelcomeViewProps {
   onEnter: (targetView: 'dashboard' | 'retirada-materiais' | 'reuniao-self') => void;
 }
 
 export const WelcomeView: React.FC<WelcomeViewProps> = ({ onEnter }) => {
+  const { user, signOut } = useApp();
+
   return (
     <div className="fixed inset-0 z-[9999] bg-[#050b18] overflow-hidden flex flex-col items-center justify-center text-white font-sans">
       {/* Background Hexagon Pattern Overlay */}
@@ -112,6 +116,19 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onEnter }) => {
         </div>
 
       </motion.div>
+
+      {/* Subtle Log Off Button for Authenticated Users */}
+      {user && (
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          onClick={signOut}
+          className="absolute bottom-10 flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-slate-400 hover:text-white transition-all cursor-pointer group"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Sair da Conta</span>
+        </motion.button>
+      )}
 
       {/* Decorative lines */}
       <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />

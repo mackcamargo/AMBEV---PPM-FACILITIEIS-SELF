@@ -331,15 +331,7 @@ export const syncToSupabase = {
   },
 
   async fetchAll() {
-    const [
-      { data: materiais },
-      { data: colaboradores },
-      { data: empresas },
-      { data: equipes },
-      { data: fornecedores },
-      { data: movimentacoes },
-      { data: atas }
-    ] = await Promise.all([
+    const responses = await Promise.all([
       supabase.from('materiais').select('*'),
       supabase.from('colaboradores').select('*'),
       supabase.from('empresas').select('*'),
@@ -348,6 +340,23 @@ export const syncToSupabase = {
       supabase.from('movimentacoes').select('*').order('data', { ascending: false }),
       supabase.from('atas_reuniao').select('*').order('data', { ascending: false })
     ]);
+
+    // Check for errors in any of the responses
+    for (const res of responses) {
+      if (res.error) {
+        throw new Error(`Erro ao buscar dados: ${res.error.message}`);
+      }
+    }
+
+    const [
+      { data: materiais },
+      { data: colaboradores },
+      { data: empresas },
+      { data: equipes },
+      { data: fornecedores },
+      { data: movimentacoes },
+      { data: atas }
+    ] = responses;
 
     return {
       materiais: materiais?.map(m => ({
