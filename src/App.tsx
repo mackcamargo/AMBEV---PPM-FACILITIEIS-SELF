@@ -23,6 +23,18 @@ function AppContent() {
   const [pendingView, setPendingView] = React.useState<'dashboard' | 'retirada-materiais' | 'reuniao-self' | null>(null);
 
   React.useEffect(() => {
+    // Detect if this is an OAuth callback popup
+    if (window.opener && (window.location.hash.includes('access_token') || window.location.search.includes('code'))) {
+      try {
+        window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+        setTimeout(() => window.close(), 500); // Small delay to ensure message is sent
+      } catch (e) {
+        console.error('Error sending OAuth success message:', e);
+      }
+    }
+  }, []);
+
+  React.useEffect(() => {
     if (user && pendingView) {
       setView(pendingView);
       setPendingView(null);
