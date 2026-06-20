@@ -155,27 +155,15 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   const sortedData = useMemo(() => {
     // Sort logic
     return [...filteredData].sort((a, b) => {
-      // For materials, sort by registration order (newest first)
-      if (type === 'materiais') {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        
-        // If both have dates, newest first
-        if (dateA !== dateB) {
-          return dateB - dateA;
-        }
-        
-        // Secondary sort by description if dates are equal (or missing)
-        const descA = a.descricao || '';
-        const descB = b.descricao || '';
-        return descA.localeCompare(descB, 'pt-BR', { sensitivity: 'base' });
-      }
-
-      // Default alphabetical sorting for other types
+      // Alphabetical sorting for all types
       let nameA = '';
       let nameB = '';
 
       switch(type) {
+        case 'materiais':
+          nameA = a.descricao || '';
+          nameB = b.descricao || '';
+          break;
         case 'colaboradores':
           nameA = a.nome || '';
           nameB = b.nome || '';
