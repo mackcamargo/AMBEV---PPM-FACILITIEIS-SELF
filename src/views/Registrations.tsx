@@ -402,7 +402,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       
       setInvalidFields([]);
 
-      let result: { success: boolean; error?: string } = { success: true };
+      let result: { success: boolean; id?: string; error?: string } = { success: true };
       let label = '';
 
       switch(type) {
@@ -435,6 +435,16 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               'success',
               { sap: sapCode, equipe: equipeName }
             );
+
+            // Check if we need to return to movement screen
+            const returnTo = localStorage.getItem('return_to_view');
+            if (returnTo) {
+              if (result.id) {
+                localStorage.setItem('preselect_material_id', result.id);
+              }
+              localStorage.removeItem('return_to_view');
+              store.setView(returnTo as any);
+            }
           }
           break;
         }
@@ -601,7 +611,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         }
       }
 
-      let result: { success: boolean; error?: string } = { success: true };
+      let result: { success: boolean; id?: string; error?: string } = { success: true };
       let label = '';
       switch(type) {
         case 'materiais': {

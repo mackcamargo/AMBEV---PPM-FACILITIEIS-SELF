@@ -200,8 +200,12 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       const mat = materiais.find(m => m.id === preselectId);
       if (mat) {
         setPrecoUnitario(mat.precoUnitario || '');
+        setCodSapAutomatico(mat.sap || '');
         if (type === 'Retirada' && mat.equipe) {
           setEquipe(mat.equipe);
+        }
+        if (type === 'Entrada' && mat.fornecedorId) {
+          setFornecedor(mat.fornecedorId);
         }
       } else {
         setPrecoUnitario('');
@@ -599,14 +603,29 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
               <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
                 Material <span className="text-red-500">*</span>
               </label>
-              <MaterialSelect 
-                ref={materialRef}
-                materials={materiais}
-                selectedId={selectedMaterialId}
-                onSelect={(id) => handleMaterialChange(id)}
-                fornecedores={fornecedores}
-                invalid={invalidFields.includes('material')}
-              />
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <MaterialSelect 
+                    ref={materialRef}
+                    materials={materiais}
+                    selectedId={selectedMaterialId}
+                    onSelect={(id) => handleMaterialChange(id)}
+                    fornecedores={fornecedores}
+                    invalid={invalidFields.includes('material')}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem('return_to_view', type === 'Entrada' ? 'entrada-materiais' : 'retirada-materiais');
+                    setView('cad-materiais');
+                  }}
+                  className="shrink-0 w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all shadow-sm active:scale-95"
+                  title="Cadastrar novo material"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

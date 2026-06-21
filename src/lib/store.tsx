@@ -55,7 +55,7 @@ interface AppContextType {
   addMovimentacao: (m: Movimentacao) => Promise<{ success: boolean; error?: string }>;
   deleteMovimentacao: (id: string) => Promise<{ success: boolean; error?: string }>;
   updateMovimentacao: (id: string, m: Partial<Movimentacao>) => Promise<{ success: boolean; error?: string }>;
-  addMaterial: (m: Omit<Material, 'id'>) => Promise<{ success: boolean; error?: string }>;
+  addMaterial: (m: Omit<Material, 'id'>) => Promise<{ success: boolean; id?: string; error?: string }>;
   addColaborador: (c: Omit<Colaborador, 'id'>) => Promise<{ success: boolean; error?: string }>;
   addEquipe: (e: Omit<Equipe, 'id'>) => Promise<{ success: boolean; error?: string }>;
   addAta: (a: AtaReuniao) => Promise<{ success: boolean; error?: string }>;
@@ -584,7 +584,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return await syncToSupabase.updateMovimentacao(id, updatedFields);
   };
 
-  const addMaterial = async (m: Omit<Material, 'id'>): Promise<{ success: boolean; error?: string }> => {
+  const addMaterial = async (m: Omit<Material, 'id'>): Promise<{ success: boolean; id?: string; error?: string }> => {
     const newItem: Material = { 
       ...m, 
       id: generateId(),
@@ -601,10 +601,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const result = await syncToSupabase.insertMaterial(newItem);
       if (result.success) {
         setMateriais(prev => prev.map(item => item.id === newItem.id ? { ...item, syncStatus: 'synced' } : item));
+        return { ...result, id: newItem.id };
       }
       return result;
     } catch (err) {
-      return { success: false, error: 'Erro de conexão. O material foi salvo localmente.' };
+      return { success: false, error: 'Erro de conexão. O material foi salvo localmente.', id: newItem.id };
     }
   };
 
