@@ -362,7 +362,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   }, [type, formData.matricula, formData.codigoFornecedor, formData.codigoEquipe, formData.codigoEmpresa, store.colaboradores.length, store.fornecedores.length, store.equipes.length, store.empresas.length]);
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    const finalValue = (type === 'materiais' && typeof value === 'string') ? value.toUpperCase() : value;
+    setFormData(prev => ({ ...prev, [field]: finalValue }));
   };
 
   const handleSave = async () => {
@@ -2002,7 +2003,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                         className="w-full h-8 pl-9 pr-8 bg-transparent text-[11px] font-bold text-slate-700 placeholder:text-slate-400 outline-none" 
                         placeholder="PESQUISAR MATERIAL, SAP, FORNECEDOR, CÓD. FORN, EQUIPE..." 
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => setSearchTerm(e.target.value.toUpperCase())}
                         onFocus={() => setIsSearchExpanded(true)}
                         onBlur={() => { if (!searchTerm) setIsSearchExpanded(false); }}
                       />
@@ -2071,7 +2072,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                               placeholder="FILTRAR POR LOCAL..."
                               className="w-full h-9 bg-white border border-slate-200 rounded-lg px-3 text-[11px] font-bold text-slate-700 placeholder:text-slate-300 outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/5 transition-all"
                               value={activeFilters.localizacao}
-                              onChange={(e) => setActiveFilters({ ...activeFilters, localizacao: e.target.value })}
+                              onChange={(e) => setActiveFilters({ ...activeFilters, localizacao: e.target.value.toUpperCase() })}
                             />
                             {activeFilters.localizacao && (
                               <button 
@@ -2228,7 +2229,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       type="text" 
                       className="input-field" 
                       value={editFormData.sap || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, sap: e.target.value })}
+                      onChange={(e) => setEditFormData({ ...editFormData, sap: e.target.value.toUpperCase() })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
@@ -2258,7 +2259,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       type="text" 
                       className="input-field" 
                       value={editFormData.codigoFornecedor || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, codigoFornecedor: e.target.value })}
+                      onChange={(e) => setEditFormData({ ...editFormData, codigoFornecedor: e.target.value.toUpperCase() })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
@@ -2301,7 +2302,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       type="text" 
                       className="input-field" 
                       value={editFormData.descricao || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, descricao: e.target.value })}
+                      onChange={(e) => setEditFormData({ ...editFormData, descricao: e.target.value.toUpperCase() })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
@@ -2337,7 +2338,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       type="text" 
                       className="input-field" 
                       value={editFormData.localizacao || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, localizacao: e.target.value })}
+                      onChange={(e) => setEditFormData({ ...editFormData, localizacao: e.target.value.toUpperCase() })}
                     />
                   </div>
                   <div className="col-span-2">
@@ -2345,7 +2346,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     <textarea 
                       className="input-field min-h-[60px] py-2" 
                       value={editFormData.detalhes || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, detalhes: e.target.value })}
+                      onChange={(e) => setEditFormData({ ...editFormData, detalhes: e.target.value.toUpperCase() })}
                     ></textarea>
                   </div>
                 </div>
