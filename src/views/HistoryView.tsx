@@ -359,7 +359,18 @@ export const HistoryView: React.FC = () => {
 
   const totalEntradas = React.useMemo(() => filteredMovs.filter(m => m.tipo === 'Entrada').reduce((acc, m) => acc + m.quantidade, 0), [filteredMovs]);
   const totalSaidas = React.useMemo(() => filteredMovs.filter(m => m.tipo === 'Retirada').reduce((acc, m) => acc + m.quantidade, 0), [filteredMovs]);
-  const totalValue = filteredMovs.reduce((acc, m) => acc + (m.quantidade * (m.precoUnitario || 0)), 0);
+  
+  const totalValueEntradas = React.useMemo(() => 
+    filteredMovs.filter(m => m.tipo === 'Entrada').reduce((acc, m) => acc + (m.quantidade * (m.precoUnitario || 0)), 0), 
+    [filteredMovs]
+  );
+  
+  const totalValueSaidas = React.useMemo(() => 
+    filteredMovs.filter(m => m.tipo === 'Retirada').reduce((acc, m) => acc + (m.quantidade * (m.precoUnitario || 0)), 0), 
+    [filteredMovs]
+  );
+
+  const totalValue = totalValueEntradas - totalValueSaidas;
 
   return (
     <div className="view-container">
@@ -464,19 +475,34 @@ export const HistoryView: React.FC = () => {
             {/* Stats Cards Dashboard */}
             <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 flex flex-col xl:flex-row xl:items-center justify-between gap-4 text-xs shadow-sm mb-1">
               <div className="flex flex-wrap items-center gap-4 text-slate-600 shrink-0">
-                <div className="flex items-center gap-1.5 px-2 py-1">
-                  <ArrowDownLeft className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Entradas: <strong>{totalEntradas.toLocaleString('pt-BR')}</strong> unids</span>
+                <div className="flex flex-col gap-0.5 px-2 py-1">
+                  <div className="flex items-center gap-1.5">
+                    <ArrowDownLeft className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Entradas: <strong className="text-slate-800">{totalEntradas.toLocaleString('pt-BR')}</strong> unids</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-blue-600/70 ml-5">R$ {totalValueEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="h-3 w-px bg-slate-200 hidden sm:block" />
-                <div className="flex items-center gap-1.5 px-2 py-1">
-                  <ArrowUpRight className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Saídas: <strong>{totalSaidas.toLocaleString('pt-BR')}</strong> unids</span>
+                
+                <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+                
+                <div className="flex flex-col gap-0.5 px-2 py-1">
+                  <div className="flex items-center gap-1.5">
+                    <ArrowUpRight className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Saídas: <strong className="text-slate-800">{totalSaidas.toLocaleString('pt-BR')}</strong> unids</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-600/70 ml-5">R$ {totalValueSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="h-3 w-px bg-slate-200 hidden sm:block" />
-                <div className="flex items-center gap-1.5 px-2 py-1">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>Valor do Período: <strong className="text-emerald-700">R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+                
+                <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+                
+                <div className="flex flex-col gap-0.5 px-2 py-1">
+                  <div className="flex items-center gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="font-bold text-slate-500 uppercase text-[9px] tracking-wider">Saldo do Período</span>
+                  </div>
+                  <strong className={`text-xs ml-5 ${totalValue >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                    R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </strong>
                 </div>
               </div>
               
