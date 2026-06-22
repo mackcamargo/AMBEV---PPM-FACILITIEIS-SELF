@@ -641,6 +641,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateMaterial = async (id: string, m: Partial<Material>): Promise<{ success: boolean; error?: string }> => {
+    const originalMaterial = materiais.find(item => item.id === id);
+    const hasPriceChange = m.precoUnitario !== undefined && Number(m.precoUnitario) !== originalMaterial?.precoUnitario;
+
     setMateriais(prev => prev.map(item => item.id === id ? { 
       ...item, 
       ...m,
@@ -649,7 +652,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       estoqueAtual: m.estoqueAtual !== undefined ? Number(m.estoqueAtual) || 0 : item.estoqueAtual,
       precoUnitario: m.precoUnitario !== undefined ? Number(m.precoUnitario) || 0 : item.precoUnitario
     } : item));
-    return await syncToSupabase.updateMaterial(id, m);
+    const result = await syncToSupabase.updateMaterial(id, m);
+
+    if (result.success && hasPriceChange) {
+      const newPrice = Number(m.precoUnitario);
+      const movsToUpdate = movimentacoes.filter(mov => mov.materialId === id);
+      
+      if (movsToUpdate.length > 0) {
+        setMovimentacoes(prev => prev.map(mov => 
+          mov.materialId === id ? { ...mov, precoUnitario: newPrice } : mov
+        ));
+        
+        Promise.all(movsToUpdate.map(mov => 
+          syncToSupabase.updateMovimentacao(mov.id, { precoUnitario: newPrice })
+        )).catch(console.error);
+      }
+    }
+
+    return result;
   };
 
   const deleteMaterial = async (id: string): Promise<{ success: boolean; error?: string }> => {

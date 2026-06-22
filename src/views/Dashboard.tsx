@@ -434,15 +434,15 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Withdrawal by Team (Horizontal Bar - Gasto R$) */}
+    {/* Investment by Team (Horizontal Bar - Gasto R$) */}
           <div className="card !p-4 flex flex-col">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">RETIRADAS POR EQUIPE (R$)</h3>
+              <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">INVESTIMENTO POR EQUIPE (R$)</h3>
             </div>
             <div className="h-48 sm:h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart 
-                  data={[...teamPerformance].sort((a, b) => b.retirada - a.retirada)} 
+                  data={[...teamPerformance].sort((a, b) => b.entrada - a.entrada)} 
                   layout="vertical" 
                   margin={{ left: 0, right: 30, top: 0, bottom: 0 }}
                 >
@@ -459,11 +459,11 @@ export const Dashboard: React.FC = () => {
                   <Tooltip 
                     cursor={{ fill: '#f1f5f9', opacity: 0.4 }}
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
-                    formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Valor']}
+                    formatter={(value: any) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Investimento']}
                   />
                   <Bar 
-                    dataKey="retirada" 
-                    fill="#EF4444" 
+                    dataKey="entrada" 
+                    fill="#10B981" 
                     radius={[0, 4, 4, 0]} 
                     barSize={12}
                     label={{ 
