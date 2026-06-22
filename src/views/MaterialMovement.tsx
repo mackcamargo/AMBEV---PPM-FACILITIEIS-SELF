@@ -103,7 +103,6 @@ const MaterialSelect = React.forwardRef<HTMLButtonElement, {
               {filteredMaterials.map(m => {
                 const isBelowIdeal = m.estoqueAtual < (m.estoqueIdeal || 0);
                 const isZero = m.estoqueAtual === 0;
-                const fornName = fornecedores.find(f => f.id === m.fornecedorId)?.nomeFantasia;
                 
                 return (
                   <button
@@ -133,14 +132,6 @@ const MaterialSelect = React.forwardRef<HTMLButtonElement, {
                         <>
                           <span className="text-slate-200">•</span>
                           <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{m.equipe}</span>
-                        </>
-                      )}
-                      {fornName && (
-                        <>
-                          <span className="text-slate-200">•</span>
-                          <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">
-                            {fornName}
-                          </span>
                         </>
                       )}
                     </div>

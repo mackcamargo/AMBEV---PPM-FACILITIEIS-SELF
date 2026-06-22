@@ -580,6 +580,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
+    if (newPrice !== oldPrice && updatedFields.precoUnitario !== undefined) {
+      const mat = materiais.find(m => m.id === original.materialId);
+      if (mat) {
+        // Automatically sync this new price back to the Material definition
+        syncToSupabase.updateMaterial(mat.id, { precoUnitario: newPrice }).catch(console.error);
+        setMateriais(prev => prev.map(m => m.id === mat.id ? { ...m, precoUnitario: newPrice } : m));
+
+        // And automatically sync this new price backwards to all OTHER movements of this same material!
+        const movsToUpdate = movimentacoes.filter(mov => mov.materialId === mat.id && mov.id !== id);
+        if (movsToUpdate.length > 0) {
+          setMovimentacoes(prev => prev.map(mov => 
+            mov.materialId === mat.id && mov.id !== id ? { ...mov, precoUnitario: newPrice } : mov
+          ));
+          Promise.all(movsToUpdate.map(mov => 
+            syncToSupabase.updateMovimentacao(mov.id, { precoUnitario: newPrice })
+          )).catch(console.error);
+        }
+      }
+    }
+
     setMovimentacoes(prev => prev.map(m => m.id === id ? { ...m, ...updatedFields } : m));
     return await syncToSupabase.updateMovimentacao(id, updatedFields);
   };

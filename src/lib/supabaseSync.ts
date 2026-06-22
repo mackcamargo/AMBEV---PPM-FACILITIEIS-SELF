@@ -302,8 +302,23 @@ export const syncToSupabase = {
     if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
     const payload: any = {};
     if (m.data !== undefined) payload.data = m.data;
+    if (m.tipo !== undefined) payload.tipo = m.tipo;
+    if (m.materialId !== undefined) payload.material_id = m.materialId;
+    if (m.materialDesc !== undefined) payload.material_desc = m.materialDesc;
     if (m.quantidade !== undefined) payload.quantidade = m.quantidade;
+    if (m.colaborador !== undefined) payload.colaborador = m.colaborador;
+    if (m.os !== undefined) payload.os = m.os;
+    if (m.nf !== undefined) payload.nf = m.nf;
+    if (m.pedidoCompra !== undefined) payload.pedido_compra = m.pedidoCompra;
+    if (m.pedidoSap !== undefined) payload.pedido_sap = m.pedidoSap;
+    if (m.fornecedor !== undefined) payload.fornecedor = m.fornecedor;
+    if (m.conferente !== undefined) payload.conferente = m.conferente;
+    if (m.liberador !== undefined) payload.liberador = m.liberador;
     if (m.observacoes !== undefined) payload.observacoes = m.observacoes;
+    if (m.precoUnitario !== undefined) payload.preco_unitario = m.precoUnitario;
+    if (m.empresa !== undefined) payload.empresa = m.empresa;
+    if (m.equipe !== undefined) payload.equipe = m.equipe;
+
     try {
       const { error } = await supabase.from('movimentacoes').update(payload).eq('id', id);
       if (error) return { success: false, error: error.message };
