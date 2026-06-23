@@ -378,7 +378,7 @@ export const Dashboard: React.FC = () => {
 
             <div className="h-48 sm:h-56">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={activeTeamTimeline} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
+                <AreaChart data={activeTeamTimeline} margin={{ top: 20, right: 40, left: 0, bottom: 20 }}>
                   <defs>
                     <linearGradient id="colorGasto" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
@@ -444,7 +444,7 @@ export const Dashboard: React.FC = () => {
                 <BarChart 
                   data={[...teamPerformance].sort((a, b) => b.entrada - a.entrada)} 
                   layout="vertical" 
-                  margin={{ left: 0, right: 30, top: 0, bottom: 0 }}
+                  margin={{ left: 0, right: 60, top: 0, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                   <XAxis type="number" hide />
