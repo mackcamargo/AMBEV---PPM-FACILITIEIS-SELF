@@ -220,6 +220,7 @@ export const Dashboard: React.FC = () => {
     { label: 'Tipos de Materiais', value: totalMaterialTypes, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
     { label: 'Total Itens em Estoque', value: totalEstoqueUnits, icon: Coins, color: 'text-amber-500', bg: 'bg-amber-50' },
     { label: 'Entradas (Valor)', value: `R$ ${filteredMovimentacoes.filter(m => m.tipo === 'Entrada').reduce((acc, m) => acc + (Number(m.quantidade) * (Number(m.precoUnitario) || 0)), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: ArrowUpRight, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { label: 'Saídas (Valor)', value: `R$ ${filteredMovimentacoes.filter(m => m.tipo === 'Retirada').reduce((acc, m) => acc + (Number(m.quantidade) * (Number(m.precoUnitario) || 0)), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: ArrowDownLeft, color: 'text-red-500', bg: 'bg-red-50' },
     { label: 'Movimentações', value: filteredMovimentacoes.length, icon: History, color: 'text-brand-accent', bg: 'bg-slate-50' },
   ];
 
@@ -316,7 +317,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <div className="scroll-container space-y-4 pr-1">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {stats.map((stat, idx) => (
             <div key={idx} className="card !p-3 flex items-center gap-3 group transition-all">
               <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center transition-all duration-300 group-hover:scale-105 shrink-0`}>
