@@ -1219,6 +1219,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           <option value="KG">KG</option>
           <option value="MT">MT</option>
           <option value="SC">SC</option>
+          <option value="PC">PC</option>
           <option value="UNI">UNI</option>
         </select>
       </div>
@@ -2318,6 +2319,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       <option value="KG">KG</option>
                       <option value="MT">MT</option>
                       <option value="SC">SC</option>
+                      <option value="PC">PC</option>
                       <option value="UNI">UNI</option>
                     </select>
                   </div>

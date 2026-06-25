@@ -876,6 +876,7 @@ export const StockView: React.FC = () => {
                     <option value="GL">GL</option>
                     <option value="M3">M3</option>
                     <option value="SC">SC</option>
+                    <option value="PC">PC</option>
                     <option value="UNI">UNI</option>
                   </select>
                 </div>
