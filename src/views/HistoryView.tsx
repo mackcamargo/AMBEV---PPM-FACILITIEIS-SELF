@@ -339,19 +339,26 @@ export const HistoryView: React.FC = () => {
   };
 
   const teamStats = React.useMemo(() => {
-    const stats: Record<string, { entradas: number, saidas: number, cor: string }> = {};
+    const stats: Record<string, { entradas: number, saidas: number, vEntradas: number, vSaidas: number, cor: string }> = {};
     equipes.forEach(e => {
-      stats[e.nome] = { entradas: 0, saidas: 0, cor: e.cor };
+      stats[e.nome] = { entradas: 0, saidas: 0, vEntradas: 0, vSaidas: 0, cor: e.cor };
     });
     filteredMovs.forEach(m => {
       const eq = m.equipe || 'Outros';
       if (!stats[eq]) {
-        stats[eq] = { entradas: 0, saidas: 0, cor: '#ccc' };
+        stats[eq] = { entradas: 0, saidas: 0, vEntradas: 0, vSaidas: 0, cor: '#ccc' };
       }
+
+      const qty = m.quantidade || 0;
+      const price = m.precoUnitario || 0;
+      const totalVal = qty * price;
+
       if (m.tipo === 'Entrada') {
-        stats[eq].entradas += m.quantidade;
+        stats[eq].entradas += qty;
+        stats[eq].vEntradas += totalVal;
       } else if (m.tipo === 'Retirada') {
-        stats[eq].saidas += m.quantidade;
+        stats[eq].saidas += qty;
+        stats[eq].vSaidas += totalVal;
       }
     });
     return stats;
@@ -503,36 +510,6 @@ export const HistoryView: React.FC = () => {
                   <strong className={`text-xs ml-5 ${totalValue >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                     R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </strong>
-                </div>
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-1.5 overflow-hidden">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block shrink-0">Movimentações por Equipe:</span>
-                <div className="flex flex-wrap gap-1">
-                  {Object.entries(teamStats).map(([eqName, stats]: [string, { entradas: number, saidas: number, cor: string }]) => {
-                    if (stats.entradas === 0 && stats.saidas === 0) return null;
-                    const isActive = filterTeam === eqName;
-                    return (
-                      <button 
-                        key={eqName}
-                        onClick={() => setFilterTeam(prev => prev === eqName ? 'Tudo' : eqName)}
-                        className={`inline-flex items-center gap-1.5 border rounded-lg px-2 py-0.5 text-[10px] shadow-2xs transition-all cursor-pointer ${
-                          isActive 
-                            ? 'bg-emerald-50 border-emerald-300 text-emerald-800 ring-1 ring-emerald-200' 
-                            : 'bg-white border-slate-200/60 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span 
-                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'animate-[pulse_1s_ease-in-out_infinite] bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]' : ''}`} 
-                          style={isActive ? undefined : { backgroundColor: stats.cor || '#94a3b8' }} 
-                        />
-                        <span className={`font-bold ${isActive ? 'text-emerald-700' : 'text-slate-700'}`}>{eqName}:</span>
-                        <span className={`text-[9px] font-medium ${isActive ? 'text-emerald-600' : 'text-slate-500'}`}>
-                          <span className={isActive ? "text-blue-500" : "text-blue-600"}>+{stats.entradas}</span> <span className={isActive ? "text-emerald-500/70" : "opacity-60"}>un</span> / <span className={isActive ? "text-amber-500" : "text-amber-600"}>-{stats.saidas}</span> <span className={isActive ? "text-emerald-500/70" : "opacity-60"}>un</span>
-                        </span>
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
             </div>
