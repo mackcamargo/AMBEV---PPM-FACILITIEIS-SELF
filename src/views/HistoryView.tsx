@@ -379,17 +379,6 @@ export const HistoryView: React.FC = () => {
           <div className="flex flex-col gap-4">
             
             <div className="flex items-center gap-3 w-full">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Pesquisar por Material, COD SAP, OS ou Colaborador..."
-                  className="w-full h-11 pl-11 pr-4 bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-[11px] font-medium transition-all shadow-sm"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-
               <div className="flex items-center gap-2 shrink-0">
                 <div className="relative">
                   <button 
@@ -405,7 +394,7 @@ export const HistoryView: React.FC = () => {
                   </button>
 
                   {showSharePopup && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 animate-in fade-in zoom-in-95 duration-100 p-1.5">
+                    <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 animate-in fade-in zoom-in-95 duration-100 p-1.5">
                       <div className="p-2 mb-1">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Opções de Exportação</p>
                       </div>
@@ -469,6 +458,17 @@ export const HistoryView: React.FC = () => {
                     </span>
                   </button>
                 )}
+              </div>
+
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Pesquisar por Material, COD SAP, OS ou Colaborador..."
+                  className="w-full h-11 pl-11 pr-4 bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-[11px] font-medium transition-all shadow-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
             </div>
 
