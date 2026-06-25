@@ -46,7 +46,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   const [activeFilters, setActiveFilters] = useState({
     equipe: '',
     fornecedorId: '',
-    localizacao: ''
+    localizacao: '',
+    ordemValor: ''
   });
 
   const data = useMemo(() => {
@@ -155,7 +156,21 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   const sortedData = useMemo(() => {
     // Sort logic
     return [...filteredData].sort((a, b) => {
-      // Alphabetical sorting for all types
+      // Sort by value if selected
+      if (type === 'materiais' && activeFilters.ordemValor) {
+        if (activeFilters.ordemValor === 'maior' || activeFilters.ordemValor === 'menor') {
+          const valA = (Number(a.estoqueAtual) || 0) * (Number(a.precoUnitario) || 0);
+          const valB = (Number(b.estoqueAtual) || 0) * (Number(b.precoUnitario) || 0);
+          return activeFilters.ordemValor === 'maior' ? valB - valA : valA - valB;
+        }
+        if (activeFilters.ordemValor === 'preco_maior' || activeFilters.ordemValor === 'preco_menor') {
+          const valA = Number(a.precoUnitario) || 0;
+          const valB = Number(b.precoUnitario) || 0;
+          return activeFilters.ordemValor === 'preco_maior' ? valB - valA : valA - valB;
+        }
+      }
+
+      // Alphabetical sorting for all types (default)
       let nameA = '';
       let nameB = '';
 
@@ -186,7 +201,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
       return nameA.localeCompare(nameB, 'pt-BR', { sensitivity: 'base' });
     });
-  }, [filteredData, type]);
+  }, [filteredData, type, activeFilters.ordemValor]);
 
   const sortedFornecedoresList = useMemo(() => {
     return [...store.fornecedores].sort((a, b) => 
@@ -2038,7 +2053,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     exit={{ height: 0, opacity: 0 }}
                     className="bg-slate-50/80 border-t border-slate-200"
                   >
-                    <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="space-y-1.5">
                           <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest pl-1 flex items-center gap-1.5">
                             <Users className="w-3 h-3 text-brand-accent" />
@@ -2094,11 +2109,30 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                             )}
                           </div>
                         </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest pl-1 flex items-center gap-1.5">
+                            <Sparkles className="w-3 h-3 text-brand-accent" />
+                            Filtrar por Valor
+                          </label>
+                          <select 
+                            className="w-full h-9 bg-white border border-slate-200 rounded-lg px-3 text-[11px] font-bold text-slate-700 focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/5 transition-all appearance-none cursor-pointer"
+                            value={activeFilters.ordemValor}
+                            onChange={(e) => setActiveFilters({ ...activeFilters, ordemValor: e.target.value })}
+                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '0.8rem' }}
+                          >
+                            <option value="">Ordem Alfabética</option>
+                            <option value="maior">Maior Valor em Estoque</option>
+                            <option value="menor">Menor Valor em Estoque</option>
+                            <option value="preco_maior">Maior Preço Unitário</option>
+                            <option value="preco_menor">Menor Preço Unitário</option>
+                          </select>
+                        </div>
                     </div>
                     
                     <div className="px-4 pb-4 flex justify-end gap-2">
                         <button 
-                          onClick={() => setActiveFilters({ equipe: '', fornecedorId: '', localizacao: '' })}
+                          onClick={() => setActiveFilters({ equipe: '', fornecedorId: '', localizacao: '', ordemValor: '' })}
                           className="px-4 h-8 text-[9px] font-black text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all uppercase tracking-widest border border-transparent hover:border-red-100"
                         >
                           Limpar
