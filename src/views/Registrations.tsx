@@ -2122,8 +2122,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                             style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '0.8rem' }}
                           >
                             <option value="">Ordem Alfabética</option>
-                            <option value="maior">Maior Valor em Estoque</option>
-                            <option value="menor">Menor Valor em Estoque</option>
+                            <option value="maior">Maior Valor Total</option>
+                            <option value="menor">Menor Valor Total</option>
                             <option value="preco_maior">Maior Preço Unitário</option>
                             <option value="preco_menor">Menor Preço Unitário</option>
                           </select>
