@@ -19,6 +19,7 @@ export interface Material {
   localizacao?: string;
   ultimaMovimentacao?: string;
   detalhes?: string;
+  ncm?: string;
   createdAt?: string;
   syncStatus?: 'synced' | 'pending';
 }

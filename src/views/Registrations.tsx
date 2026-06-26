@@ -63,7 +63,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
   const headers = useMemo(() => {
     switch(type) {
-      case 'materiais': return ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'DESCRIÇÃO COMPLETA', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO', 'AÇÕES'];
+      case 'materiais': return ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'NCM', 'DESCRIÇÃO COMPLETA', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO', 'AÇÕES'];
       case 'colaboradores': return ['Matrícula', 'Nome', 'Empresa', 'Cargo', 'Equipe', 'Ações'];
       case 'empresas': return ['Razão Social', 'CNPJ', 'Contrato', 'Ações'];
       case 'fornecedores': return ['Cód.', 'Nome Fantasia', 'CNPJ', 'Email', 'Ações'];
@@ -109,6 +109,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           item.codigoFornecedor,
           item.localizacao,
           item.unidade,
+          item.ncm,
           item.detalhes
         ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
       } else if (type === 'colaboradores') {
@@ -439,6 +440,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
             equipe: equipeName,
             localizacao: formData.localizacao || '',
             detalhes: formData.detalhes || '',
+            ncm: formData.ncm || '',
             ultimaMovimentacao: new Date().toLocaleDateString('pt-BR')
           });
 
@@ -557,7 +559,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   };
 
   const exportMaterialsCSV = () => {
-    const headers = ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'DESCRIÇÃO COMPLETA', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO'];
+    const headers = ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'NCM', 'DESCRIÇÃO COMPLETA', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO'];
     const csvHeaders = headers.map(h => `"${h}"`).join(';');
 
     const rows = store.materiais.map(item => {
@@ -566,6 +568,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         item.sap,
         fornecedorName,
         item.codigoFornecedor || '-',
+        item.ncm || '-',
         item.descricao,
         item.equipe,
         item.estoqueAtual.toString(),
@@ -1178,6 +1181,17 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         />
       </div>
       <div className="col-span-2 md:col-span-1">
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">NCM</label>
+        <input 
+          type="text" 
+          className="input-field" 
+          placeholder="Ex: 8481.80.19"
+          value={formData.ncm || ''}
+          onChange={(e) => handleInputChange('ncm', e.target.value)}
+        />
+      </div>
+
+      <div className="col-span-2 md:col-span-1">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">FORNECEDOR</label>
         <select 
           className="input-field pr-8"
@@ -1194,7 +1208,6 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         >
           <option value="">Selecione...</option>
           {sortedFornecedoresList.map((f, idx) => <option key={`${f.id}_${idx}`} value={f.id}>{f.nomeFantasia}</option>)}
-
         </select>
       </div>
       <div className="col-span-2 md:col-span-1">
@@ -1206,6 +1219,18 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           value={formData.codigoFornecedor || ''}
           onChange={(e) => handleInputChange('codigoFornecedor', e.target.value)}
         />
+      </div>
+
+      <div className="col-span-2 md:col-span-1">
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">EQUIPE</label>
+        <select
+          className="input-field pr-8"
+          value={formData.equipe || ''}
+          onChange={(e) => handleInputChange('equipe', e.target.value)}
+        >
+          <option value="">Selecione...</option>
+          {sortedEquipesList.map((e, idx) => <option key={`${e.id}_${idx}`} value={e.nome}>{e.nome}</option>)}
+        </select>
       </div>
       <div className="col-span-2 md:col-span-1">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">UNIDADE</label>
@@ -1220,31 +1245,11 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           <option value="MT">MT</option>
           <option value="SC">SC</option>
           <option value="PC">PC</option>
+          <option value="LT">LT</option>
           <option value="UNI">UNI</option>
         </select>
       </div>
-      <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">EQUIPE</label>
-        <select
-          className="input-field pr-8"
-          value={formData.equipe || ''}
-          onChange={(e) => handleInputChange('equipe', e.target.value)}
-        >
-          <option value="">Selecione...</option>
-          {sortedEquipesList.map((e, idx) => <option key={`${e.id}_${idx}`} value={e.nome}>{e.nome}</option>)}
-        </select>
 
-      </div>
-      <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ESTOQUE ATUAL</label>
-        <input 
-          type="text" 
-          className="input-field" 
-          placeholder="0" 
-          value={String(formData.estoqueAtual ?? '').replace('.', ',')}
-          onChange={(e) => handleInputChange('estoqueAtual', e.target.value)}
-        />
-      </div>
       <div className="col-span-2">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
           DESCRIÇÃO COMPLETA
@@ -1257,6 +1262,28 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           onChange={(e) => handleInputChange('descricao', e.target.value)}
         />
       </div>
+
+      <div className="col-span-2 md:col-span-1">
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ESTOQUE ATUAL</label>
+        <input 
+          type="text" 
+          className="input-field" 
+          placeholder="0" 
+          value={String(formData.estoqueAtual ?? '').replace('.', ',')}
+          onChange={(e) => handleInputChange('estoqueAtual', e.target.value)}
+        />
+      </div>
+      <div className="col-span-2 md:col-span-1">
+        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">PREÇO UNITÁRIO (R$)</label>
+        <input 
+          type="text" 
+          className="input-field" 
+          placeholder="0,00" 
+          value={String(formData.precoUnitario ?? '').replace('.', ',')}
+          onChange={(e) => handleInputChange('precoUnitario', e.target.value)}
+        />
+      </div>
+
       <div className="col-span-2 md:col-span-1">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ESTOQUE MIN.</label>
         <input 
@@ -1277,17 +1304,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           onChange={(e) => handleInputChange('estoqueIdeal', e.target.value)}
         />
       </div>
-      <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">PREÇO UNITÁRIO (R$)</label>
-        <input 
-          type="text" 
-          className="input-field" 
-          placeholder="0,00" 
-          value={String(formData.precoUnitario ?? '').replace('.', ',')}
-          onChange={(e) => handleInputChange('precoUnitario', e.target.value)}
-        />
-      </div>
-      <div className="col-span-2 md:col-span-1">
+
+      <div className="col-span-2">
         <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">LOCALIZAÇÃO</label>
         <input 
           type="text" 
@@ -1689,6 +1707,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
                         <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-slate-100">
                           {item.codigoFornecedor || '-'}
+                        </td>
+                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-slate-100">
+                          {item.ncm || '-'}
                         </td>
                         <td className="px-1 py-1 border-b border-slate-100 min-w-[100px] max-w-[140px]">
                           <p className="font-bold text-slate-800 text-[10px] leading-tight mb-0.5 truncate" title={item.descricao}>{item.descricao}</p>
@@ -2320,6 +2341,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                       <option value="MT">MT</option>
                       <option value="SC">SC</option>
                       <option value="PC">PC</option>
+                      <option value="LT">LT</option>
                       <option value="UNI">UNI</option>
                     </select>
                   </div>
@@ -2332,6 +2354,15 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     >
                       {store.equipes.map((e, idx) => <option key={`${e.id}_${idx}`} value={e.nome}>{e.nome}</option>)}
                     </select>
+                  </div>
+                  <div className="col-span-2 md:col-span-1">
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">NCM</label>
+                    <input 
+                      type="text" 
+                      className="input-field" 
+                      value={editFormData.ncm || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, ncm: e.target.value.toUpperCase() })}
+                    />
                   </div>
                   <div className="col-span-2 md:col-span-1">
                     <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">ESTOQUE ATUAL</label>

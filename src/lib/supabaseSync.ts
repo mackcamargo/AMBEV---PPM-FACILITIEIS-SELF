@@ -21,7 +21,8 @@ export const syncToSupabase = {
         preco_unitario: m.precoUnitario || 0,
         equipe: m.equipe || 'Geral',
         localizacao: m.localizacao || null,
-        detalhes: m.detalhes || null
+        detalhes: m.detalhes || null,
+        ncm: m.ncm || null
       }, { onConflict: 'id' });
       
       if (error) {
@@ -49,6 +50,7 @@ export const syncToSupabase = {
     if (m.localizacao !== undefined) payload.localizacao = m.localizacao;
     if (m.fornecedorId !== undefined) payload.fornecedor_id = isUUID(m.fornecedorId || '') ? m.fornecedorId : null;
     if (m.detalhes !== undefined) payload.detalhes = m.detalhes;
+    if (m.ncm !== undefined) payload.ncm = m.ncm;
 
     try {
       const { error } = await supabase.from('materiais').update(payload).eq('id', id);
@@ -389,6 +391,7 @@ export const syncToSupabase = {
         localizacao: m.localizacao,
         ultimaMovimentacao: m.ultima_movimentacao,
         detalhes: m.detalhes,
+        ncm: m.ncm,
         createdAt: m.created_at
       })) || [],
       colaboradores: colaboradores || [],

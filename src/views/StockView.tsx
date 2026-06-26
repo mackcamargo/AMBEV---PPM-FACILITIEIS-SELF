@@ -63,7 +63,8 @@ export const StockView: React.FC = () => {
       const matchesSearch = 
         normalizeText(m.descricao).includes(searchLower) ||
         normalizeText(m.sap).includes(searchLower) ||
-        normalizeText(m.codigoFornecedor || '').includes(searchLower);
+        normalizeText(m.codigoFornecedor || '').includes(searchLower) ||
+        normalizeText(m.ncm || '').includes(searchLower);
       
       if (!matchesSearch) return false;
 
@@ -609,6 +610,7 @@ export const StockView: React.FC = () => {
                   <th className="table-header w-20 py-3 border-b border-slate-200">COD SAP</th>
                   <th className="table-header w-32 py-3 border-b border-slate-200">FORNECEDOR</th>
                   <th className="table-header w-24 py-3 border-b border-slate-200">CÓD. FORN.</th>
+                  <th className="table-header w-24 py-3 border-b border-slate-200">NCM</th>
                   <th className="table-header py-3 border-b border-slate-200">DESCRIÇÃO COMPLETA</th>
                   <th className="table-header py-3 border-b border-slate-200">EQUIPE</th>
                   <th className="table-header py-3 border-b border-slate-200 text-center">EST. ATUAL</th>
@@ -664,6 +666,9 @@ export const StockView: React.FC = () => {
                     </td>
                     <td className="px-3 py-2 text-slate-400 font-medium text-[10px]">
                       {m.codigoFornecedor || '-'}
+                    </td>
+                    <td className="px-3 py-2 text-slate-400 font-medium text-[10px]">
+                      {m.ncm || '-'}
                     </td>
                     <td className="px-3 py-3">
                       <p className="font-semibold text-brand-dark leading-tight">{m.descricao}</p>
@@ -867,6 +872,15 @@ export const StockView: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-2 md:col-span-1">
+                  <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">NCM</label>
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    value={editFormData.ncm || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, ncm: e.target.value })}
+                  />
+                </div>
+                <div className="col-span-2 md:col-span-1">
                   <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block uppercase">UNIDADE</label>
                   <select 
                     className="input-field"
@@ -877,6 +891,7 @@ export const StockView: React.FC = () => {
                     <option value="M3">M3</option>
                     <option value="SC">SC</option>
                     <option value="PC">PC</option>
+                    <option value="LT">LT</option>
                     <option value="UNI">UNI</option>
                   </select>
                 </div>
