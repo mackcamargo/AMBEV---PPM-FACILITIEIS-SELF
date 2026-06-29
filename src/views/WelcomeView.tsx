@@ -4,7 +4,7 @@ import { useApp } from '../lib/store';
 import { LogOut } from 'lucide-react';
 
 interface WelcomeViewProps {
-  onEnter: (targetView: 'dashboard' | 'retirada-materiais' | 'reuniao-self') => void;
+  onEnter: (targetView: 'dashboard' | 'retirada-materiais' | 'reuniao-self' | 'entrada-materiais') => void;
 }
 
 export const WelcomeView: React.FC<WelcomeViewProps> = ({ onEnter }) => {
@@ -113,6 +113,17 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onEnter }) => {
               <span className="relative z-10">Reunião de Self</span>
             </motion.button>
           </div>
+
+          {/* Entrada de Peças button (Full width below the grid) */}
+          <motion.button
+            whileHover={{ scale: 1.02, backgroundColor: "rgba(30, 41, 59, 0.8)", borderColor: "rgba(59, 130, 246, 0.4)" }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onEnter('entrada-materiais')}
+            className="group relative cursor-pointer py-3.5 bg-slate-900/60 border border-slate-800 rounded-xl font-bold uppercase tracking-[0.15em] text-[9px] overflow-hidden transition-all text-emerald-400 hover:text-white w-full"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/10 to-emerald-500/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <span className="relative z-10">Entrada de Peças</span>
+          </motion.button>
         </div>
 
       </motion.div>

@@ -20,7 +20,7 @@ import { Login } from './views/Login';
 
 function AppContent() {
   const { user, authLoading, view, setView, hasEntered, setHasEntered } = useApp();
-  const [pendingView, setPendingView] = React.useState<'dashboard' | 'retirada-materiais' | 'reuniao-self' | null>(null);
+  const [pendingView, setPendingView] = React.useState<'dashboard' | 'retirada-materiais' | 'reuniao-self' | 'entrada-materiais' | null>(null);
 
   React.useEffect(() => {
     if (user && pendingView) {
@@ -29,7 +29,7 @@ function AppContent() {
     }
   }, [user, pendingView, setView]);
 
-  const handleEnter = (targetView: 'dashboard' | 'retirada-materiais' | 'reuniao-self') => {
+  const handleEnter = (targetView: 'dashboard' | 'retirada-materiais' | 'reuniao-self' | 'entrada-materiais') => {
     setView(targetView);
     setHasEntered(true);
   };
