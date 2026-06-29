@@ -780,9 +780,9 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                 <div>
                   <ColaboradorSelect
                     ref={conferenteRef}
-                    label="Recebedor"
+                    label="Conferente"
                     required
-                    placeholder="Selecione o recebedor"
+                    placeholder="Selecione o conferente"
                     value={conferente}
                     onChange={(val) => {
                       setConferente(val);

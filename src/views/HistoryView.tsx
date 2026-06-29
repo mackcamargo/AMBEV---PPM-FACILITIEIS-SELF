@@ -1226,7 +1226,7 @@ export const HistoryView: React.FC = () => {
                       )}
                       {selectedMov.conferente && (
                         <div className="sm:col-span-2">
-                          <p className="text-[8.5px] font-extrabold text-slate-400 uppercase">Conferidor no Sistema</p>
+                          <p className="text-[8.5px] font-extrabold text-slate-400 uppercase">Conferente</p>
                           <p className="text-xs font-bold text-slate-700 mt-0.5">{selectedMov.conferente}</p>
                         </div>
                       )}
