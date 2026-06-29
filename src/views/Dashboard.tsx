@@ -438,7 +438,7 @@ export const Dashboard: React.FC = () => {
     {/* Investment by Team (Horizontal Bar - Gasto R$) */}
           <div className="card !p-4 flex flex-col">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">INVESTIMENTO POR EQUIPE (R$)</h3>
+              <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">ENTRADAS POR EQUIPE (R$)</h3>
             </div>
             <div className="h-48 sm:h-56">
               <ResponsiveContainer width="100%" height="100%">
@@ -469,7 +469,7 @@ export const Dashboard: React.FC = () => {
                     barSize={12}
                     label={{ 
                       position: 'right', 
-                      formatter: (val: any) => `R$${Math.round(val).toLocaleString('pt-BR')}`,
+                      formatter: (val: any) => `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                       fontSize: 8,
                       fontWeight: 800,
                       fill: '#64748B'

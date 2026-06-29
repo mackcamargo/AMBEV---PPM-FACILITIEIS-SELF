@@ -204,18 +204,23 @@ export const HistoryView: React.FC = () => {
     if (filterType !== 'Tudo' && m.tipo !== filterType) return false;
 
     // Date Filter
+    const mDate = new Date(m.data);
+    const mYear = mDate.getFullYear();
+    const mMonth = String(mDate.getMonth() + 1).padStart(2, '0');
+    const mDay = String(mDate.getDate()).padStart(2, '0');
+    const localMovDate = `${mYear}-${mMonth}-${mDay}`;
+
     if (startDate) {
-      const movDate = new Date(m.data).toISOString().split('T')[0];
-      if (movDate < startDate) return false;
+      if (localMovDate < startDate) return false;
     }
     if (endDate) {
-      const movDate = new Date(m.data).toISOString().split('T')[0];
-      if (movDate > endDate) return false;
+      if (localMovDate > endDate) return false;
     }
 
     // Team Filter
     if (filterTeam !== 'Tudo') {
-      if (m.equipe !== filterTeam) return false;
+      const mEquipe = m.equipe || mat?.equipe;
+      if (mEquipe !== filterTeam) return false;
     }
 
     // Material Filter
@@ -581,9 +586,19 @@ export const HistoryView: React.FC = () => {
                         <span className="text-xs font-black text-slate-700">{filteredMovs.length} itens</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[8px] font-bold text-slate-400 uppercase">Valor do Filtro</span>
-                        <span className="text-xs font-black text-blue-600">
-                          R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        <span className="text-[8px] font-bold text-slate-400 uppercase">
+                          {filterType === 'Entrada' ? 'Total Entradas' : filterType === 'Retirada' ? 'Total Saídas' : 'Saldo do Período'}
+                        </span>
+                        <span className={`text-xs font-black ${
+                          filterType === 'Entrada' ? 'text-blue-600' : filterType === 'Retirada' ? 'text-amber-600' : 'text-emerald-600'
+                        }`}>
+                          R$ {
+                            filterType === 'Entrada' 
+                              ? totalValueEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                              : filterType === 'Retirada'
+                                ? totalValueSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                : totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          }
                         </span>
                       </div>
                     </div>

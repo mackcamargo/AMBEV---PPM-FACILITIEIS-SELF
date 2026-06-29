@@ -382,7 +382,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       materialDesc: selectedMaterial?.descricao || '',
       quantidade: finalQuantidade,
       precoUnitario: precoUnitario !== '' ? Number(precoUnitario) : undefined,
-      ...(type === 'Retirada' ? { os, colaborador, empresa, equipe, liberador, observacoes } : { nf: numNotaFiscal, pedidoCompra, pedidoSap, fornecedor, conferente })
+      ...(type === 'Retirada' ? { os, colaborador, empresa, equipe, liberador, observacoes } : { nf: numNotaFiscal, pedidoCompra, pedidoSap, fornecedor, conferente, equipe: selectedMaterial?.equipe })
     };
 
     const result = await addMovimentacao(movimento);
@@ -501,7 +501,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       materialDesc: selectedMaterial?.descricao || '',
       quantidade: finalQuantidade,
       precoUnitario: precoUnitario !== '' ? Number(precoUnitario) : undefined,
-      detalhesAdicionais: type === 'Retirada' ? { os, colaborador, empresa, equipe, liberador, observacoes } : { nf: numNotaFiscal, pedidoCompra, pedidoSap, fornecedor, conferente },
+      detalhesAdicionais: type === 'Retirada' ? { os, colaborador, empresa, equipe, liberador, observacoes } : { nf: numNotaFiscal, pedidoCompra, pedidoSap, fornecedor, conferente, equipe: selectedMaterial?.equipe },
       data: itemDate
     };
 
