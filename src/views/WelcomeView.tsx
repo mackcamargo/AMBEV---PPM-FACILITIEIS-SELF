@@ -114,12 +114,12 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onEnter }) => {
             </motion.button>
           </div>
 
-          {/* Entrada de Peças button (Full width below the grid) */}
+          {/* Entrada de Peças button (Reduced width below the grid) */}
           <motion.button
             whileHover={{ scale: 1.02, backgroundColor: "rgba(30, 41, 59, 0.8)", borderColor: "rgba(59, 130, 246, 0.4)" }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onEnter('entrada-materiais')}
-            className="group relative cursor-pointer py-3.5 bg-slate-900/60 border border-slate-800 rounded-xl font-bold uppercase tracking-[0.15em] text-[9px] overflow-hidden transition-all text-emerald-400 hover:text-white w-full"
+            className="group relative cursor-pointer py-3.5 bg-slate-900/60 border border-slate-800 rounded-xl font-bold uppercase tracking-[0.15em] text-[9px] overflow-hidden transition-all text-emerald-400 hover:text-white w-2/3 mx-auto block"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/10 to-emerald-500/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
             <span className="relative z-10">Entrada de Peças</span>
