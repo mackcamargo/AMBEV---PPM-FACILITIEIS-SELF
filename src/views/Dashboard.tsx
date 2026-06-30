@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { Package, ArrowUpRight, ArrowDownLeft, AlertCircle, Coins, History, RefreshCw, Trophy, User, LogOut } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { normalizeText } from '../lib/stringUtils';
@@ -484,7 +485,7 @@ export const Dashboard: React.FC = () => {
         {/* Third Row: Health + Critical + Ranking */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pb-4">
           {/* Estoque valorizado */}
-          <div className="card !p-4">
+          <div className="card !p-4 h-[340px] flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Coins className="w-3.5 h-3.5 text-blue-500" />
@@ -505,7 +506,7 @@ export const Dashboard: React.FC = () => {
               </span>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-y-auto pr-1 scrollbar-thin">
               {teamValuedStock.teams.map((team, idx) => {
                 const percentage = teamValuedStock.globalTotalValue > 0 
                   ? Math.round((team.valorTotal / teamValuedStock.globalTotalValue) * 100) 
@@ -537,7 +538,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Consumo por Equipe (R$) - Identical style to Valued Stock */}
-          <div className="card !p-4">
+          <div className="card !p-4 h-[340px] flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <ArrowDownLeft className="w-3.5 h-3.5 text-red-500" />
@@ -558,7 +559,7 @@ export const Dashboard: React.FC = () => {
               </span>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-y-auto pr-1 scrollbar-thin">
               {[...teamPerformance]
                 .sort((a, b) => b.retirada - a.retirada)
                 .map((team, idx) => {
@@ -596,27 +597,59 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Critical Alerts */}
-          <div className="card !p-4">
-            <h3 className="text-[10px] font-black text-slate-700 uppercase mb-3 tracking-widest flex items-center gap-2">
+          <div className="card !p-4 flex flex-col h-[340px] overflow-hidden">
+            <h3 className="text-[10px] font-black text-slate-700 uppercase mb-3 tracking-widest flex items-center gap-2 shrink-0">
               <AlertCircle className="w-3.5 h-3.5 text-red-500" />
               ALERTAS CRÍTICOS
             </h3>
-            <div className="space-y-1.5">
-              {materiais
-                .filter(m => m.estoqueAtual < m.estoqueMinimo)
-                .sort((a, b) => (b.estoqueMinimo - b.estoqueAtual) - (a.estoqueMinimo - a.estoqueAtual))
-                .slice(0, 6)
-                .map(m => (
-                  <div key={m.id} className="p-1.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
-                     <div className="flex flex-col min-w-0">
-                       <span className="text-[9px] font-black text-slate-700 truncate">{m.descricao}</span>
-                       <span className="text-[8px] text-slate-400 font-bold">QTD: <b className="text-red-500">{m.estoqueAtual}</b> / {m.estoqueMinimo}</span>
-                     </div>
-                     <span className={`text-[7px] font-black px-1 py-0.5 rounded shrink-0 ${m.estoqueAtual === 0 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
-                       {m.estoqueAtual === 0 ? 'ZERADO' : 'CRÍTICO'}
-                     </span>
-                  </div>
-                ))}
+            
+            <div className="flex-1 relative overflow-hidden">
+              <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-b from-white via-transparent to-white opacity-20" />
+              <motion.div
+                animate={{ 
+                  y: materiais.filter(m => m.estoqueAtual < m.estoqueMinimo).length > 6 ? [0, -(materiais.filter(m => m.estoqueAtual < m.estoqueMinimo).length * 40)] : 0 
+                }}
+                transition={{ 
+                  duration: materiais.filter(m => m.estoqueAtual < m.estoqueMinimo).length * 4, 
+                  repeat: Infinity, 
+                  ease: "linear"
+                }}
+                className="space-y-1.5"
+              >
+                {/* List of alerts */}
+                {materiais
+                  .filter(m => m.estoqueAtual < m.estoqueMinimo)
+                  .sort((a, b) => (b.estoqueMinimo - b.estoqueAtual) - (a.estoqueMinimo - a.estoqueAtual))
+                  .map(m => (
+                    <div key={m.id} className="p-1.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between h-[34px]">
+                       <div className="flex flex-col min-w-0 mr-2">
+                         <span className="text-[9px] font-black text-slate-700 truncate">{m.descricao}</span>
+                         <span className="text-[8px] text-slate-400 font-bold">QTD: <b className="text-red-500">{m.estoqueAtual}</b> / {m.estoqueMinimo}</span>
+                       </div>
+                       <span className={`text-[7px] font-black px-1 py-0.5 rounded shrink-0 ${m.estoqueAtual === 0 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                         {m.estoqueAtual === 0 ? 'ZERADO' : 'CRÍTICO'}
+                       </span>
+                    </div>
+                  ))}
+                
+                {/* Duplicate items for seamless scrolling if many items */}
+                {materiais.filter(m => m.estoqueAtual < m.estoqueMinimo).length > 6 && 
+                  materiais
+                    .filter(m => m.estoqueAtual < m.estoqueMinimo)
+                    .sort((a, b) => (b.estoqueMinimo - b.estoqueAtual) - (a.estoqueMinimo - a.estoqueAtual))
+                    .map(m => (
+                      <div key={`${m.id}-duplicate`} className="p-1.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between h-[34px]">
+                         <div className="flex flex-col min-w-0 mr-2">
+                           <span className="text-[9px] font-black text-slate-700 truncate">{m.descricao}</span>
+                           <span className="text-[8px] text-slate-400 font-bold">QTD: <b className="text-red-500">{m.estoqueAtual}</b> / {m.estoqueMinimo}</span>
+                         </div>
+                         <span className={`text-[7px] font-black px-1 py-0.5 rounded shrink-0 ${m.estoqueAtual === 0 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                           {m.estoqueAtual === 0 ? 'ZERADO' : 'CRÍTICO'}
+                         </span>
+                      </div>
+                    ))
+                }
+              </motion.div>
             </div>
           </div>
         </div>
