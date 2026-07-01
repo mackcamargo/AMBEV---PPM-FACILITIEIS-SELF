@@ -353,6 +353,7 @@ export const SelfMeeting: React.FC = () => {
     const text = generateShareMessage();
     
     // Prepare items to generate the CSV rows
+    let totalValue = 0;
     const items = Object.entries(compras)
       .filter(([id, q]) => {
         const isSelected = (q as number) > 0;
@@ -363,16 +364,19 @@ export const SelfMeeting: React.FC = () => {
       })
       .map(([id, q]) => {
         const m = materiais.find(mat => mat.id === id);
+        const subtotal = (q as number) * (m?.precoUnitario || 0);
+        totalValue += subtotal;
         return {
           COD_SAP: m?.sap,
           Equipe: m?.equipe,
           Descricao: m?.descricao,
           Quantidade: q,
-          Unidade: formatUnit(m?.unidade)
+          Unidade: formatUnit(m?.unidade),
+          Subtotal: subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
         };
       });
 
-    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade'];
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade', 'Valor Total'];
     const csvRows = [
       headers.join(';'),
       ...items.map(row => 
@@ -381,9 +385,11 @@ export const SelfMeeting: React.FC = () => {
           row.Equipe,
           `"${row.Descricao}"`,
           row.Quantidade,
-          row.Unidade
+          row.Unidade,
+          row.Subtotal
         ].join(';')
-      )
+      ),
+      ['', '', 'TOTAL GERAL', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
     ];
 
     const csvContent = "\uFEFF" + csvRows.join('\n');
@@ -452,6 +458,7 @@ export const SelfMeeting: React.FC = () => {
   };
 
   const generateShareMessage = () => {
+    let totalValue = 0;
     const items = Object.entries(compras)
       .filter(([id, q]) => {
         const isSelected = (q as number) > 0;
@@ -462,13 +469,18 @@ export const SelfMeeting: React.FC = () => {
       })
       .map(([id, q]) => {
         const m = materiais.find(mat => mat.id === id);
-        return `• ${m?.descricao}\n  - COD SAP: ${m?.sap}\n  - Qtd: ${q} ${formatUnit(m?.unidade)}`;
+        const subtotal = (q as number) * (m?.precoUnitario || 0);
+        totalValue += subtotal;
+        return `• ${m?.descricao}\n  - COD SAP: ${m?.sap}\n  - Qtd: ${q} ${formatUnit(m?.unidade)}\n  - Valor Total: R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
       });
     
-    return `Ola Espero que esteja Tudo Bem!\n\nSolicitamos o orçamento para os materiais e peças listados abaixo, referentes à nossa Reunião de Self.\nPedimos que o retorno com valores, disponibilidade e condições comerciais seja enviado em até 48 horas após o recebimento deste e-mail ou WhatsApp.\nÉ imprescindível que a proposta contemple o prazo de entrega após a geração do pedido de compra, para que possamos avaliar e dar prosseguimento ao processo de aquisição.\nSegue lista abaixo!\n\n${items.length > 0 ? items.join('\n\n') : 'Nenhum material selecionado para esta equipe.'}`;
+    const footer = items.length > 0 ? `\n\nVALOR TOTAL DA SOLICITAÇÃO: R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '';
+    
+    return `Ola Espero que esteja Tudo Bem!\n\nSolicitamos o orçamento para os materiais e peças listados abaixo, referentes à nossa Reunião de Self.\nPedimos que o retorno com valores, disponibilidade e condições comerciais seja enviado em até 48 horas após o recebimento deste e-mail ou WhatsApp.\nÉ imprescindível que a proposta contemple o prazo de entrega após a geração do pedido de compra, para que possamos avaliar e dar prosseguimento ao processo de aquisição.\nSegue lista abaixo!\n\n${items.length > 0 ? items.join('\n\n') : 'Nenhum material selecionado para esta equipe.'}${footer}`;
   };
 
   const downloadSpreadsheet = () => {
+    let totalValue = 0;
     const items = Object.entries(compras)
       .filter(([id, q]) => {
         const isSelected = (q as number) > 0;
@@ -479,16 +491,19 @@ export const SelfMeeting: React.FC = () => {
       })
       .map(([id, q]) => {
         const m = materiais.find(mat => mat.id === id);
+        const subtotal = (q as number) * (m?.precoUnitario || 0);
+        totalValue += subtotal;
         return {
           COD_SAP: m?.sap,
           Equipe: m?.equipe,
           Descricao: m?.descricao,
           Quantidade: q,
-          Unidade: formatUnit(m?.unidade)
+          Unidade: formatUnit(m?.unidade),
+          Subtotal: subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
         };
       });
 
-    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade'];
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade', 'Valor Total'];
     const csvRows = [
       headers.join(';'),
       ...items.map(row => 
@@ -497,9 +512,11 @@ export const SelfMeeting: React.FC = () => {
           row.Equipe,
           `"${row.Descricao}"`,
           row.Quantidade,
-          row.Unidade
+          row.Unidade,
+          row.Subtotal
         ].join(';')
-      )
+      ),
+      ['', '', 'TOTAL GERAL', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
     ];
 
     const csvContent = "\uFEFF" + csvRows.join('\n');
