@@ -6,7 +6,7 @@ import { Material, Equipe, AtaReuniao, Movimentacao, formatUnit } from '../types
 import { Save, AlertCircle, ShoppingCart, Plus, Trash2, Download, Mail, Share2, Search } from 'lucide-react';
 
 export const SelfMeeting: React.FC = () => {
-  const { materiais, equipes, setEquipes, atas, setAtas, addMovimentacao, colaboradores, updateMaterial, updateEquipe } = useApp();
+  const { materiais, equipes, setEquipes, atas, addAta, addMovimentacao, colaboradores, updateMaterial, updateEquipe } = useApp();
   
   // Local state for shopping list items: { materialId: quantity }
   const [compras, setCompras] = useState<Record<string, number>>(() => {
@@ -79,6 +79,8 @@ export const SelfMeeting: React.FC = () => {
   // States for duplicate check and save handling
   const [isSaving, setIsSaving] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [showSaveNameModal, setShowSaveNameModal] = useState(false);
+  const [meetingName, setMeetingName] = useState('');
   const [customAtaName, setCustomAtaName] = useState(() => {
     return localStorage.getItem('selfMeeting_customAtaName') || '';
   });
@@ -209,8 +211,14 @@ export const SelfMeeting: React.FC = () => {
 
   const handleSaveAndNewMeeting = () => {
     setClearOnShareClose(true);
-    checkDuplicateAndSave();
+    setShowSaveNameModal(true);
     setShowConfirmNewMeeting(false);
+  };
+
+  const initiateSave = () => {
+    if (totalGeral === 0 || isSaving) return;
+    setMeetingName(`Reunião ${new Date().toLocaleDateString('pt-BR')} - ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`);
+    setShowSaveNameModal(true);
   };
 
   const checkDuplicateAndSave = () => {
@@ -238,7 +246,7 @@ export const SelfMeeting: React.FC = () => {
       return;
     }
 
-    handleSaveReuniao();
+    handleSaveReuniao(meetingName);
   };
 
   const handleSaveReuniao = (customName?: string) => {
@@ -270,12 +278,14 @@ export const SelfMeeting: React.FC = () => {
           }))
       };
 
-      setAtas(prev => [novaAta, ...prev]);
+      addAta(novaAta);
       setShowShareModal(true);
     } finally {
       setIsSaving(false);
       setShowDuplicateModal(false);
+      setShowSaveNameModal(false);
       setCustomAtaName('');
+      setMeetingName('');
     }
   };
 
@@ -802,6 +812,13 @@ export const SelfMeeting: React.FC = () => {
                     <div className={`w-1 h-1 rounded-full ${filterStatuses.includes('CRITICO') ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`} />
                     Críticos
                   </button>
+                  <button 
+                    onClick={() => setFilterStatuses(prev => prev.includes('OK') ? prev.filter(s => s !== 'OK') : [...prev, 'OK'])}
+                    className={`px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider rounded transition-all flex items-center gap-1 ${filterStatuses.includes('OK') ? 'bg-white shadow-sm text-emerald-600 border border-emerald-100' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <div className={`w-1 h-1 rounded-full ${filterStatuses.includes('OK') ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                    OK
+                  </button>
                 </div>
               </div>
 
@@ -825,7 +842,7 @@ export const SelfMeeting: React.FC = () => {
                     </button>
 
                     <button 
-                      onClick={checkDuplicateAndSave}
+                      onClick={initiateSave}
                       disabled={totalGeral === 0 || isSaving}
                       className="px-2 bg-slate-900 hover:bg-black text-white rounded text-[9px] font-black uppercase tracking-tight transition-all flex items-center gap-1 h-full whitespace-nowrap disabled:opacity-50"
                     >
@@ -852,6 +869,7 @@ export const SelfMeeting: React.FC = () => {
                   <th className="table-header !px-4 border-b border-slate-100">COD SAP</th>
                   <th className="table-header !px-4 border-b border-slate-100">Cód. Forn.</th>
                   <th className="table-header !px-4 border-b border-slate-100">Material</th>
+                  <th className="table-header !px-4 text-center border-b border-slate-100">Unid.</th>
                   <th className="table-header !px-4 text-right border-b border-slate-100">Local</th>
                   <th className="table-header !px-4 text-right border-b border-slate-100">Estoque</th>
                   <th className="table-header !px-4 text-right border-b border-slate-100">Mín/Ideal</th>
@@ -865,7 +883,7 @@ export const SelfMeeting: React.FC = () => {
               <tbody>
                 {tableData.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="px-4 py-8 text-center text-slate-500 font-medium bg-slate-50/50">
+                    <td colSpan={12} className="px-4 py-8 text-center text-slate-500 font-medium bg-slate-50/50">
                       Nenhum material encontrado com os filtros atuais.
                     </td>
                   </tr>
@@ -896,6 +914,9 @@ export const SelfMeeting: React.FC = () => {
                               <p className={`text-[9.5px] font-normal ${isActive ? 'text-blue-400' : 'text-slate-300'}`}>| {item.ultimaMovimentacao}</p>
                             )}
                           </div>
+                        </td>
+                        <td className={`px-4 py-3 text-[11px] font-bold uppercase tracking-tighter text-center border-b transition-all ${isActive ? 'text-blue-900 border-blue-900/10' : 'text-slate-500 border-slate-200'}`}>
+                          {formatUnit(item.unidade)}
                         </td>
                         <td className={`px-4 py-3 text-[11px] font-bold uppercase tracking-tighter text-right border-b transition-all ${isActive ? 'text-blue-900 border-blue-900/10' : 'text-slate-500 border-slate-200'}`}>{item.localizacao || '-'}</td>
                         <td className={`px-4 py-3 text-[11px] font-medium text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
@@ -1156,6 +1177,61 @@ export const SelfMeeting: React.FC = () => {
         </div>
       )}
 
+      {/* Save Meeting Name Modal */}
+      {showSaveNameModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-slate-100">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                <Save className="w-6 h-6 text-blue-600" />
+              </div>
+              <h3 className="text-sm font-black text-[#0F172A] uppercase tracking-widest mb-2 font-sans underline decoration-2 decoration-[#0F172A]/20">SALVAR REUNIÃO</h3>
+              <p className="text-[11px] text-slate-500 mb-6 leading-relaxed">
+                Informe um nome ou identificador para esta ata de reunião.
+              </p>
+
+              <div className="w-full space-y-4">
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] font-black text-[#0F172A] uppercase tracking-tighter ml-1">NOME DA REUNIÃO:</label>
+                  <input 
+                    type="text"
+                    placeholder="Ex: Reunião Semanal, Ajuste de Estoque..."
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 outline-none transition-all placeholder:font-normal"
+                    value={meetingName}
+                    onChange={(e) => setMeetingName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && meetingName.trim()) {
+                        checkDuplicateAndSave();
+                      }
+                    }}
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    onClick={() => {
+                      setShowSaveNameModal(false);
+                      setMeetingName('');
+                    }}
+                    className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all cursor-pointer font-sans"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={checkDuplicateAndSave}
+                    disabled={!meetingName.trim() || isSaving}
+                    className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all cursor-pointer shadow-lg shadow-blue-200 font-sans disabled:opacity-50"
+                  >
+                    Confirmar e Salvar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Duplicate Meeting Warning Modal */}
       {showDuplicateModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1265,7 +1341,7 @@ export const SelfMeeting: React.FC = () => {
                 <button 
                   onClick={() => {
                     setClearOnShareClose(true);
-                    handleSaveReuniao();
+                    initiateSave();
                     setShowConfirmClear(false);
                   }}
                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-2.5 rounded-xl transition-all shadow-md active:scale-98 cursor-pointer uppercase tracking-wider flex items-center justify-center gap-2"

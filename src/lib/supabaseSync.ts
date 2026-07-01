@@ -347,6 +347,34 @@ export const syncToSupabase = {
     }
   },
 
+  async updateAta(id: string, a: Partial<AtaReuniao>): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
+    const payload: any = {};
+    if (a.data !== undefined) payload.data = a.data;
+    if (a.descricao !== undefined) payload.descricao = a.descricao;
+    if (a.orcamentosSnapshot !== undefined) payload.orcamentos_snapshot = a.orcamentosSnapshot;
+    if (a.itensComprados !== undefined) payload.itens_comprados = a.itensComprados;
+
+    try {
+      const { error } = await supabase.from('atas_reuniao').update(payload).eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  },
+
+  async deleteAta(id: string): Promise<{ success: boolean; error?: string }> {
+    if (!isUUID(id)) return { success: false, error: 'Invalid UUID' };
+    try {
+      const { error } = await supabase.from('atas_reuniao').delete().eq('id', id);
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  },
+
   async fetchAll() {
     const responses = await Promise.all([
       supabase.from('materiais').select('*'),

@@ -59,6 +59,8 @@ interface AppContextType {
   addColaborador: (c: Omit<Colaborador, 'id'>) => Promise<{ success: boolean; error?: string }>;
   addEquipe: (e: Omit<Equipe, 'id'>) => Promise<{ success: boolean; error?: string }>;
   addAta: (a: AtaReuniao) => Promise<{ success: boolean; error?: string }>;
+  updateAta: (id: string, a: Partial<AtaReuniao>) => Promise<{ success: boolean; error?: string }>;
+  deleteAta: (id: string) => Promise<{ success: boolean; error?: string }>;
   updateMaterial: (id: string, m: Partial<Material>) => Promise<{ success: boolean; error?: string }>;
   deleteMaterial: (id: string) => Promise<{ success: boolean; error?: string }>;
   updateColaborador: (id: string, c: Partial<Colaborador>) => Promise<{ success: boolean; error?: string }>;
@@ -660,6 +662,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return await syncToSupabase.insertAta(a);
   };
 
+  const updateAta = async (id: string, a: Partial<AtaReuniao>): Promise<{ success: boolean; error?: string }> => {
+    setAtas(prev => prev.map(item => item.id === id ? { ...item, ...a } : item));
+    return await syncToSupabase.updateAta(id, a);
+  };
+
+  const deleteAta = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    setAtas(prev => prev.filter(item => item.id !== id));
+    return await syncToSupabase.deleteAta(id);
+  };
+
   const updateMaterial = async (id: string, m: Partial<Material>): Promise<{ success: boolean; error?: string }> => {
     const originalMaterial = materiais.find(item => item.id === id);
     const hasPriceChange = m.precoUnitario !== undefined && Number(m.precoUnitario) !== originalMaterial?.precoUnitario;
@@ -1109,6 +1121,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addColaborador,
       addEquipe,
       addAta,
+      updateAta,
+      deleteAta,
       updateMaterial,
       deleteMaterial,
       updateColaborador,

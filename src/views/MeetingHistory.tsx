@@ -26,7 +26,8 @@ export const MeetingHistory: React.FC = () => {
     atas, 
     materiais, 
     equipes, 
-    setAtas, 
+    updateAta,
+    deleteAta, 
     setEquipes, 
     setMateriais, 
     setMovimentacoes, 
@@ -141,7 +142,7 @@ export const MeetingHistory: React.FC = () => {
     }
     
     // Remove meeting from history list
-    setAtas(prev => prev.filter(a => a.id !== ata.id));
+    deleteAta(ata.id);
     setAtaToDelete(null);
     setDeletionPasswordInput('');
     setDeleteError('');
@@ -156,7 +157,7 @@ export const MeetingHistory: React.FC = () => {
       return;
     }
 
-    setAtas(prev => prev.filter(a => !selectedIds.includes(a.id)));
+    selectedIds.forEach(id => deleteAta(id));
     if (selectedAta && selectedIds.includes(selectedAta.id)) {
       setSelectedAta(null);
     }
@@ -179,39 +180,35 @@ export const MeetingHistory: React.FC = () => {
     });
 
     // Update the AtaReuniao object
-    setAtas(prev => prev.map(a => {
-      if (a.id === selectedAta.id) {
+    const updatedAta = {
+      descricao: editedDesc,
+      orcamentosSnapshot: equipes.map(e => {
+        const newSpent = editedImpactPerTeam[e.nome] || 0;
+        const originalSpent = originalImpactPerTeam[e.nome] || 0;
+        const currentActualBalance = e.saldoAtualizado; // balance after other transactions
+        // Reconstruct prior balance relative to this meeting
+        const saldoAnteriorEst = currentActualBalance + originalSpent;
+        const isOverspent = newSpent > saldoAnteriorEst;
         return {
-          ...a,
-          descricao: editedDesc,
-          orcamentosSnapshot: equipes.map(e => {
-            const newSpent = editedImpactPerTeam[e.nome] || 0;
-            const originalSpent = originalImpactPerTeam[e.nome] || 0;
-            const currentActualBalance = e.saldoAtualizado; // balance after other transactions
-            // Reconstruct prior balance relative to this meeting
-            const saldoAnteriorEst = currentActualBalance + originalSpent;
-            const isOverspent = newSpent > saldoAnteriorEst;
-            return {
-              equipe: e.nome,
-              saldoAnterior: saldoAnteriorEst,
-              saldoNovo: saldoAnteriorEst - newSpent,
-              estouro: isOverspent ? newSpent - saldoAnteriorEst : 0
-            };
-          }),
-          itensComprados: Object.keys(editedItens)
-            .filter(id => editedItens[id] > 0)
-            .map(id => {
-              const q = editedItens[id];
-              return {
-                materialId: id,
-                quantidade: q,
-                custoTotal: q * (materiais.find(m => m.id === id)?.precoUnitario || 0)
-              };
-            })
+          equipe: e.nome,
+          saldoAnterior: saldoAnteriorEst,
+          saldoNovo: saldoAnteriorEst - newSpent,
+          estouro: isOverspent ? newSpent - saldoAnteriorEst : 0
         };
-      }
-      return a;
-    }));
+      }),
+      itensComprados: Object.keys(editedItens)
+        .filter(id => editedItens[id] > 0)
+        .map(id => {
+          const q = editedItens[id];
+          return {
+            materialId: id,
+            quantidade: q,
+            custoTotal: q * (materiais.find(m => m.id === id)?.precoUnitario || 0)
+          };
+        })
+    };
+
+    updateAta(selectedAta.id, updatedAta);
 
     setIsEditing(false);
     setSelectedAta(null);
