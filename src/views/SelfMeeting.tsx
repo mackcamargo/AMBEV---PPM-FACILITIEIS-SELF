@@ -372,11 +372,12 @@ export const SelfMeeting: React.FC = () => {
           Descricao: m?.descricao,
           Quantidade: q,
           Unidade: formatUnit(m?.unidade),
+          PrecoUnit: (m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
           Subtotal: subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
         };
       });
 
-    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade', 'Valor Total'];
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade', 'Valor Unitário', 'Valor Total'];
     const csvRows = [
       headers.join(';'),
       ...items.map(row => 
@@ -386,10 +387,11 @@ export const SelfMeeting: React.FC = () => {
           `"${row.Descricao}"`,
           row.Quantidade,
           row.Unidade,
+          row.PrecoUnit,
           row.Subtotal
         ].join(';')
       ),
-      ['', '', 'TOTAL GERAL', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
+      ['', '', 'TOTAL GERAL', '', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
     ];
 
     const csvContent = "\uFEFF" + csvRows.join('\n');
@@ -471,7 +473,7 @@ export const SelfMeeting: React.FC = () => {
         const m = materiais.find(mat => mat.id === id);
         const subtotal = (q as number) * (m?.precoUnitario || 0);
         totalValue += subtotal;
-        return `• ${m?.descricao}\n  - COD SAP: ${m?.sap}\n  - Qtd: ${q} ${formatUnit(m?.unidade)}\n  - Valor Total: R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        return `• ${m?.descricao}\n  - COD SAP: ${m?.sap}\n  - Qtd: ${q} ${formatUnit(m?.unidade)}\n  - Valor Unit: R$ ${(m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n  - Valor Total: R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
       });
     
     const footer = items.length > 0 ? `\n\nVALOR TOTAL DA SOLICITAÇÃO: R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '';
@@ -499,11 +501,12 @@ export const SelfMeeting: React.FC = () => {
           Descricao: m?.descricao,
           Quantidade: q,
           Unidade: formatUnit(m?.unidade),
+          PrecoUnit: (m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
           Subtotal: subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
         };
       });
 
-    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade', 'Valor Total'];
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade', 'Valor Unitário', 'Valor Total'];
     const csvRows = [
       headers.join(';'),
       ...items.map(row => 
@@ -513,10 +516,11 @@ export const SelfMeeting: React.FC = () => {
           `"${row.Descricao}"`,
           row.Quantidade,
           row.Unidade,
+          row.PrecoUnit,
           row.Subtotal
         ].join(';')
       ),
-      ['', '', 'TOTAL GERAL', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
+      ['', '', 'TOTAL GERAL', '', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
     ];
 
     const csvContent = "\uFEFF" + csvRows.join('\n');
