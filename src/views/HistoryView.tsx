@@ -387,7 +387,7 @@ export const HistoryView: React.FC = () => {
   return (
     <div className="view-container">
       <div className="card !p-0 flex-1 flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-white sticky top-0 z-30 shadow-sm shrink-0">
+        <div className="p-4 border-b border-brand-dark/10 bg-white sticky top-0 z-30 shadow-sm shrink-0">
           <div className="flex flex-col gap-4">
             
             <div className="flex items-center gap-3 w-full">
@@ -398,7 +398,7 @@ export const HistoryView: React.FC = () => {
                     className={`btn-secondary !h-9 !py-0 px-3 flex items-center gap-2 transition-all ${
                       showSharePopup 
                         ? 'bg-slate-900 border-slate-900 text-white' 
-                        : 'hover:bg-slate-50 border-slate-200'
+                        : 'hover:bg-slate-50 border-brand-dark/20'
                     }`}
                   >
                     <Share2 className="w-3.5 h-3.5" />
@@ -406,7 +406,7 @@ export const HistoryView: React.FC = () => {
                   </button>
 
                   {showSharePopup && (
-                    <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 animate-in fade-in zoom-in-95 duration-100 p-1.5">
+                    <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-brand-dark/10 z-50 animate-in fade-in zoom-in-95 duration-100 p-1.5">
                       <div className="p-2 mb-1">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Opções de Exportação</p>
                       </div>
@@ -477,7 +477,7 @@ export const HistoryView: React.FC = () => {
                 <input 
                   type="text" 
                   placeholder="Pesquisar por Material, COD SAP, OS ou Colaborador..."
-                  className="w-full h-11 pl-11 pr-4 bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-[11px] font-medium transition-all shadow-sm"
+                  className="w-full h-11 pl-11 pr-4 bg-white border border-brand-dark/20 hover:border-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-[11px] font-medium transition-all shadow-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -485,7 +485,7 @@ export const HistoryView: React.FC = () => {
             </div>
 
             {/* Stats Cards Dashboard */}
-            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 flex flex-col xl:flex-row xl:items-center justify-between gap-4 text-xs shadow-sm mb-1">
+            <div className="bg-slate-50 border border-brand-dark/20/60 rounded-xl p-3 flex flex-col xl:flex-row xl:items-center justify-between gap-4 text-xs shadow-sm mb-1">
               <div className="flex flex-wrap items-center gap-4 text-slate-600 shrink-0">
                 <div className="flex flex-col gap-0.5 px-2 py-1">
                   <div className="flex items-center gap-1.5">
@@ -521,7 +521,7 @@ export const HistoryView: React.FC = () => {
 
             {showFilters && (
               <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 animate-in slide-in-from-top-2 duration-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-3 bg-slate-50 rounded-xl border border-brand-dark/10 animate-in slide-in-from-top-2 duration-200">
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-slate-500 uppercase">Tipo</label>
                     <select 
@@ -579,7 +579,7 @@ export const HistoryView: React.FC = () => {
                     />
                   </div>
                   
-                  <div className="sm:col-span-2 lg:col-span-5 flex justify-between items-center bg-white p-2 rounded-xl border border-slate-200/50">
+                  <div className="sm:col-span-2 lg:col-span-5 flex justify-between items-center bg-white p-2 rounded-xl border border-brand-dark/20/50">
                     <div className="flex gap-4">
                       <div className="flex flex-col">
                         <span className="text-[8px] font-bold text-slate-400 uppercase">Total Movimentado</span>
@@ -623,7 +623,7 @@ export const HistoryView: React.FC = () => {
                   <motion.div 
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm"
+                    className="bg-white border border-brand-dark/10 rounded-xl p-4 shadow-sm"
                   >
                     <div className="flex items-center gap-2 mb-4">
                       <BarChart2 className="w-4 h-4 text-blue-600" />
@@ -691,7 +691,7 @@ export const HistoryView: React.FC = () => {
               Nenhuma movimentação encontrada com estes filtros.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-brand-dark/10">
               {filteredMovs.map((m) => (
                 <div 
                   key={m.id} 
@@ -725,16 +725,16 @@ export const HistoryView: React.FC = () => {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-4">
-                      <p className="text-[12px] font-extrabold text-slate-800 truncate group-hover:text-blue-600 transition-colors">
-                        {m.tipo} de {m.materialDesc}
-                      </p>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(m.data).toLocaleString('pt-BR')}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[9px] font-bold text-slate-400/80 whitespace-nowrap shrink-0 flex items-center gap-1.5 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200/50">
+                          <Clock className="w-2.5 h-2.5" />
+                          {new Date(m.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                        <p className="text-[12px] font-extrabold text-slate-800 truncate group-hover:text-blue-600 transition-colors">
+                          {m.tipo} de {m.materialDesc}
+                        </p>
                       </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
                     </div>
                     
                     <div className="mt-1 flex flex-wrap items-center gap-3">
@@ -747,27 +747,27 @@ export const HistoryView: React.FC = () => {
                         </span>
                       )}
                       {m.equipe && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-500 font-medium">
+                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 border border-brand-dark/20 rounded text-slate-500 font-medium">
                           Equipe: {m.equipe}
                         </span>
                       )}
                       {m.os && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-500 font-medium">
+                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 border border-brand-dark/20 rounded text-slate-500 font-medium">
                           OS: {m.os}
                         </span>
                       )}
                       {m.pedidoCompra && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-500 font-medium">
+                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 border border-brand-dark/20 rounded text-slate-500 font-medium">
                           Pedido: {m.pedidoCompra}
                         </span>
                       )}
                       {m.pedidoSap && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-500 font-medium">
+                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 border border-brand-dark/20 rounded text-slate-500 font-medium">
                           COD SAP: {m.pedidoSap}
                         </span>
                       )}
                       {m.nf && !m.pedidoCompra && !m.pedidoSap && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-500 font-medium">
+                        <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 border border-brand-dark/20 rounded text-slate-500 font-medium">
                           NF: {m.nf}
                         </span>
                       )}
@@ -802,11 +802,11 @@ export const HistoryView: React.FC = () => {
           onClick={handleClose}
         >
           <div 
-            className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col animate-in zoom-in-95 duration-200"
+            className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-brand-dark/10 flex flex-col animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="p-4 border-b border-brand-dark/10 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
                   selectedMov.tipo === 'Entrada' ? 'bg-emerald-100' : 'bg-blue-100'
@@ -846,7 +846,7 @@ export const HistoryView: React.FC = () => {
             {isEditing ? (
               /* Modal Edit Form */
               <div className="p-5 space-y-4">
-                <div className="bg-slate-50/50 p-3.5 rounded-xl border border-slate-100 flex items-start gap-3">
+                <div className="bg-slate-50/50 p-3.5 rounded-xl border border-brand-dark/10 flex items-start gap-3">
                   <Info className="w-4.5 h-4.5 text-slate-400 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <p className="text-[8.5px] font-extrabold uppercase text-slate-400 tracking-wider">Material Associado</p>
@@ -873,7 +873,7 @@ export const HistoryView: React.FC = () => {
                         min="1" 
                         value={editQty} 
                         onChange={(e) => setEditQty(e.target.value)} 
-                        className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all font-mono"
+                        className="w-full px-3 py-2 bg-slate-50/50 border border-brand-dark/20 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all font-mono"
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 uppercase pointer-events-none">
                         {selectedMaterial ? formatUnit(selectedMaterial.unidade) : ''}
@@ -892,7 +892,7 @@ export const HistoryView: React.FC = () => {
                         min="0" 
                         value={editPrecoUnitario} 
                         onChange={(e) => setEditPrecoUnitario(e.target.value)} 
-                        className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all font-mono"
+                        className="w-full px-3 py-2 bg-slate-50/50 border border-brand-dark/20 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all font-mono"
                       />
                     </div>
                   )}
@@ -908,7 +908,7 @@ export const HistoryView: React.FC = () => {
                           placeholder="EX: NF-1029"
                           value={editNf} 
                           onChange={(e) => setEditNf(e.target.value)} 
-                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                          className="w-full px-3 py-2 bg-slate-50/50 border border-brand-dark/20 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
                         />
                       </div>
 
@@ -921,7 +921,7 @@ export const HistoryView: React.FC = () => {
                           placeholder="EX: COD SAP-1234"
                           value={editPedidoSap} 
                           onChange={(e) => setEditPedidoSap(e.target.value)} 
-                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                          className="w-full px-3 py-2 bg-slate-50/50 border border-brand-dark/20 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
                         />
                       </div>
 
@@ -932,7 +932,7 @@ export const HistoryView: React.FC = () => {
                         <select 
                           value={editFornecedor} 
                           onChange={(e) => setEditFornecedor(e.target.value)} 
-                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 transition-all"
+                          className="w-full px-3 py-2 bg-slate-50/50 border border-brand-dark/20 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 transition-all"
                         >
                           <option value="">Selecione um fornecedor...</option>
                           {fornecedores.map(f => (
@@ -965,7 +965,7 @@ export const HistoryView: React.FC = () => {
                           placeholder="EX: OS-9982"
                           value={editOs} 
                           onChange={(e) => setEditOs(e.target.value)} 
-                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                          className="w-full px-3 py-2 bg-slate-50/50 border border-brand-dark/20 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
                         />
                       </div>
 
@@ -992,7 +992,7 @@ export const HistoryView: React.FC = () => {
                         <select 
                           value={editEmpresa} 
                           onChange={(e) => setEditEmpresa(e.target.value)} 
-                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 transition-all"
+                          className="w-full px-3 py-2 bg-slate-50/50 border border-brand-dark/20 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 transition-all"
                         >
                           <option value="">Selecione a Empresa...</option>
                           {['Vision', 'BCM'].map(name => (
@@ -1014,7 +1014,7 @@ export const HistoryView: React.FC = () => {
                         <select 
                           value={editEquipe} 
                           onChange={(e) => setEditEquipe(e.target.value)} 
-                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 transition-all font-mono"
+                          className="w-full px-3 py-2 bg-slate-50/50 border border-brand-dark/20 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 transition-all font-mono"
                         >
                           <option value="">Selecione a Equipe...</option>
                           {equipes.map(eq => (
@@ -1048,7 +1048,7 @@ export const HistoryView: React.FC = () => {
                     onChange={(e) => setEditObservacoes(e.target.value)} 
                     rows={2}
                     placeholder="Adicione observações ou justificativas do reparo..."
-                    className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 transition-all resize-none"
+                    className="w-full px-3 py-2 bg-slate-50/50 border border-brand-dark/20 hover:border-slate-300 focus:bg-white rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 transition-all resize-none"
                   />
                 </div>
               </div>
@@ -1056,8 +1056,8 @@ export const HistoryView: React.FC = () => {
               /* Modal Details Read-Only View */
               <div className="p-5 space-y-5">
                 {/* Material Info Card */}
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-start gap-4">
-                  <div className="w-10 h-10 bg-white rounded-lg border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
+                <div className="bg-slate-50 p-4 rounded-xl border border-brand-dark/10 flex items-start gap-4">
+                  <div className="w-10 h-10 bg-white rounded-lg border border-brand-dark/20 flex items-center justify-center shrink-0 shadow-sm">
                     <ShoppingBag className="w-5 h-5 text-slate-400" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -1155,7 +1155,7 @@ export const HistoryView: React.FC = () => {
                       <FileText className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                       <div>
                         <p className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">Nota Fiscal (NF)</p>
-                        <p className="text-[10px] font-bold text-slate-700 mt-0.5 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block font-mono">
+                        <p className="text-[10px] font-bold text-slate-700 mt-0.5 bg-slate-100 px-2 py-0.5 rounded border border-brand-dark/20 inline-block font-mono">
                           {selectedMov.nf}
                         </p>
                       </div>
@@ -1179,7 +1179,7 @@ export const HistoryView: React.FC = () => {
                       <ShoppingBag className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                       <div>
                         <p className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">Pedido de Compra</p>
-                        <p className="text-[10px] font-bold text-slate-700 mt-0.5 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block font-mono">
+                        <p className="text-[10px] font-bold text-slate-700 mt-0.5 bg-slate-100 px-2 py-0.5 rounded border border-brand-dark/20 inline-block font-mono">
                           {selectedMov.pedidoCompra}
                         </p>
                       </div>
@@ -1221,7 +1221,7 @@ export const HistoryView: React.FC = () => {
 
                 {/* Responsibles Header Panel */}
                 {(selectedMov.colaborador || selectedMov.liberador || selectedMov.conferente) && (
-                  <div className="border border-slate-100 rounded-xl p-3.5 bg-slate-50/50 space-y-2.5">
+                  <div className="border border-brand-dark/10 rounded-xl p-3.5 bg-slate-50/50 space-y-2.5">
                     <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5 text-slate-400" /> Responsáveis pela Operação
                     </h5>
@@ -1255,7 +1255,7 @@ export const HistoryView: React.FC = () => {
                     <p className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider flex items-center gap-1">
                       <MessageSquare className="w-3.5 h-3.5 text-slate-400" /> Observações da Operação
                     </p>
-                    <p className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-xs text-slate-600 leading-relaxed max-h-24 overflow-y-auto">
+                    <p className="bg-slate-50 p-3 rounded-lg border border-brand-dark/10 text-xs text-slate-600 leading-relaxed max-h-24 overflow-y-auto">
                       {selectedMov.observacoes}
                     </p>
                   </div>
@@ -1264,12 +1264,12 @@ export const HistoryView: React.FC = () => {
             )}
 
             {/* Modal Footer */}
-            <div className="p-3 border-t border-slate-100 flex justify-between">
+            <div className="p-3 border-t border-brand-dark/10 flex justify-between">
               {isEditing ? (
                 <>
                   <button 
                     onClick={() => setIsEditing(false)}
-                    className="px-5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1"
+                    className="px-5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-brand-dark/20 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1"
                   >
                     Cancelar
                   </button>
@@ -1351,7 +1351,7 @@ export const HistoryView: React.FC = () => {
                   setIsDeleteModalOpen(false);
                   setDeleteError('');
                 }}
-                className="flex-1 btn-secondary cursor-pointer h-10 text-[11px] font-bold uppercase tracking-wider rounded-xl border border-slate-200"
+                className="flex-1 btn-secondary cursor-pointer h-10 text-[11px] font-bold uppercase tracking-wider rounded-xl border border-brand-dark/20"
               >
                 Cancelar
               </button>
@@ -1406,7 +1406,7 @@ export const HistoryView: React.FC = () => {
                   setDeleteError('');
                   setDeletionPasswordInput('');
                 }}
-                className="flex-1 btn-secondary cursor-pointer h-10 text-[11px] font-bold uppercase tracking-wider rounded-xl border border-slate-200"
+                className="flex-1 btn-secondary cursor-pointer h-10 text-[11px] font-bold uppercase tracking-wider rounded-xl border border-brand-dark/20"
               >
                 Cancelar
               </button>
@@ -1434,13 +1434,13 @@ export const HistoryView: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <button 
                 onClick={(e) => shareViaEmailChoice(e, 'gmail')}
-                className="p-4 rounded-xl border border-slate-200 hover:bg-red-50 hover:border-red-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
+                className="p-4 rounded-xl border border-brand-dark/20 hover:bg-red-50 hover:border-red-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
               >
                 Gmail
               </button>
               <button 
                 onClick={(e) => shareViaEmailChoice(e, 'outlook')}
-                className="p-4 rounded-xl border border-slate-200 hover:bg-blue-50 hover:border-blue-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
+                className="p-4 rounded-xl border border-brand-dark/20 hover:bg-blue-50 hover:border-blue-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
               >
                 Outlook
               </button>
@@ -1468,7 +1468,7 @@ export const HistoryView: React.FC = () => {
                 Por motivo da quantidade ter sido alterada, a quantidade respeitada na saída do estoque será essa que você editou neste tala.
               </p>
               
-              <div className="bg-slate-50 w-full p-4 rounded-2xl border border-slate-100 mb-8 flex justify-between items-center">
+              <div className="bg-slate-50 w-full p-4 rounded-2xl border border-brand-dark/10 mb-8 flex justify-between items-center">
                 <div className="text-left">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Original</p>
                   <p className="text-lg font-black text-slate-400 line-through">{selectedMov?.quantidade} {formatUnit(selectedMaterial?.unidade || 'un')}</p>
@@ -1486,7 +1486,7 @@ export const HistoryView: React.FC = () => {
             <div className="flex gap-3">
               <button 
                 onClick={() => setShowQtyWarning(false)}
-                className="flex-1 px-4 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black uppercase tracking-widest transition-all cursor-pointer border border-slate-200"
+                className="flex-1 px-4 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black uppercase tracking-widest transition-all cursor-pointer border border-brand-dark/20"
               >
                 Voltar
               </button>

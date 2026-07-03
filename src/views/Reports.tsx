@@ -575,7 +575,7 @@ export const ReportsView: React.FC = () => {
       {/* Advanced Filters Panel */}
       {showFilters && (
         <div className="card border-dashed ring-2 ring-slate-100 bg-slate-50/50 space-y-4 p-5 animate-in fade-in slide-in-from-top-4 duration-200">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div className="flex items-center justify-between border-b border-brand-dark/10 pb-2">
             <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Filtros Avançados</h4>
             {hasActiveFilters && (
               <button 
@@ -592,7 +592,7 @@ export const ReportsView: React.FC = () => {
               <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Início do Período</label>
               <input 
                 type="date" 
-                className="p-1 px-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-white w-full shadow-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                className="p-1 px-2 border border-brand-dark/20 rounded-lg text-xs font-medium text-slate-700 bg-white w-full shadow-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
               />
@@ -602,7 +602,7 @@ export const ReportsView: React.FC = () => {
               <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Fim do Período</label>
               <input 
                 type="date" 
-                className="p-1 px-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 bg-white w-full shadow-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                className="p-1 px-2 border border-brand-dark/20 rounded-lg text-xs font-medium text-slate-700 bg-white w-full shadow-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
               />
@@ -611,7 +611,7 @@ export const ReportsView: React.FC = () => {
             <div>
               <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Equipe/Área Técnica</label>
               <select
-                className="p-1 px-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 bg-white w-full shadow-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                className="p-1 px-2 border border-brand-dark/20 rounded-lg text-xs font-semibold text-slate-700 bg-white w-full shadow-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
                 value={selectedEquipe}
                 onChange={(e) => setSelectedEquipe(e.target.value)}
               >
@@ -625,7 +625,7 @@ export const ReportsView: React.FC = () => {
             <div>
               <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Tipo de Movimentação</label>
               <select
-                className="p-1 px-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 bg-white w-full shadow-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
+                className="p-1 px-2 border border-brand-dark/20 rounded-lg text-xs font-semibold text-slate-700 bg-white w-full shadow-sm focus:outline-none focus:ring-1 focus:ring-brand-accent"
                 value={selectedTipo}
                 onChange={(e) => setSelectedTipo(e.target.value)}
               >
@@ -636,7 +636,7 @@ export const ReportsView: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex bg-slate-100/60 p-2.5 rounded-lg items-center gap-2 border border-slate-200/50 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+          <div className="flex bg-slate-100/60 p-2.5 rounded-lg items-center gap-2 border border-brand-dark/20/50 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
             <Info className="w-4 h-4 text-slate-400 flex-shrink-0" />
             <span>Filtro ativo: {filteredMovimentacoes.length} movimentações no período selecionado.</span>
           </div>
@@ -653,7 +653,7 @@ export const ReportsView: React.FC = () => {
           {!selectedReport ? (
             <>
               {/* Auto-Rotating Team Investment Timeline Card (Exibido acima por solicitação do usuário) */}
-              <div className="card shadow-sm border border-slate-100 relative overflow-hidden bg-white">
+              <div className="card shadow-sm border border-brand-dark/10 relative overflow-hidden bg-white">
                 {/* Inline CSS animation for the progress bar */}
                 <style>{`
                   @keyframes teamProgress {
@@ -689,7 +689,7 @@ export const ReportsView: React.FC = () => {
                       onClick={() => setIsAutoplay(!isAutoplay)}
                       className={`p-1.5 px-3 rounded-lg border transition-all cursor-pointer flex items-center justify-center ${
                         isAutoplay 
-                          ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-600' 
+                          ? 'bg-slate-50 hover:bg-slate-100 border-brand-dark/20 text-slate-600' 
                           : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700 font-bold shadow-sm'
                       }`}
                       title={isAutoplay ? "Pausar rotação automática" : "Iniciar rotação automática (10s)"}
@@ -716,7 +716,7 @@ export const ReportsView: React.FC = () => {
                 </div>
 
                 {/* Horizontal row of interactive team selectors */}
-                <div className="bg-slate-50/60 p-2.5 rounded-xl border border-slate-100/80 mb-5">
+                <div className="bg-slate-50/60 p-2.5 rounded-xl border border-brand-dark/10/80 mb-5">
                   <span className="text-[9px] uppercase font-bold text-slate-400 mb-2 block tracking-wider">Selecione para fixar no gráfico:</span>
                   <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto scrollbar-hide">
                     {equipes.map((eq, idx) => {
@@ -731,7 +731,7 @@ export const ReportsView: React.FC = () => {
                           className={`px-2.5 py-1 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
                             isSelected
                               ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-500/20 scale-105 font-black'
-                              : 'bg-white hover:bg-slate-100/80 text-slate-500 border border-slate-200/60'
+                              : 'bg-white hover:bg-slate-100/80 text-slate-500 border border-brand-dark/20/60'
                           }`}
                         >
                           {eq.nome}
@@ -814,7 +814,7 @@ export const ReportsView: React.FC = () => {
               </div>
 
               {/* Dynamic Chart card (Exibido abaixo por solicitação do usuário) */}
-              <div className="card shadow-sm border border-slate-100">
+              <div className="card shadow-sm border border-brand-dark/10">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
                   <div>
                     <h3 className="text-xs font-black text-slate-700 uppercase tracking-widest">Consumo vs. Abastecimento (Fluxo Dinâmico)</h3>
@@ -852,9 +852,9 @@ export const ReportsView: React.FC = () => {
           ) : (
             
             /* DYNAMIC SELECTED TABLE EXCHANGER */
-            <div className="card shadow-lg border border-slate-200/60 p-5 space-y-4 animate-in fade-in duration-200">
+            <div className="card shadow-lg border border-brand-dark/20/60 p-5 space-y-4 animate-in fade-in duration-200">
               
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-brand-dark/10 pb-4 gap-3">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
                     <FileText className="w-5 h-5 text-blue-600" />
@@ -892,7 +892,7 @@ export const ReportsView: React.FC = () => {
                 <input 
                   type="text" 
                   placeholder={`Pesquisar dados neste relatório...`}
-                  className="p-2 pl-9 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 bg-white w-full focus:outline-none focus:ring-1 focus:ring-brand-accent transition-all placeholder:text-slate-400"
+                  className="p-2 pl-9 border border-brand-dark/20 rounded-xl text-xs font-semibold text-slate-700 bg-white w-full focus:outline-none focus:ring-1 focus:ring-brand-accent transition-all placeholder:text-slate-400"
                   value={reportSearchQuery}
                   onChange={(e) => setReportSearchQuery(e.target.value)}
                 />
@@ -907,7 +907,7 @@ export const ReportsView: React.FC = () => {
               </div>
 
               {/* --- TABULAR DATA RENDERING ACCORDING TO USER REPORT SELECTION --- */}
-              <div className="overflow-x-auto rounded-xl border border-slate-100 max-h-[500px]">
+              <div className="overflow-x-auto rounded-xl border border-brand-dark/10 max-h-[500px]">
                 
                 {selectedReport === 'inventario_geral' && (
                   <table className="min-w-full divide-y divide-slate-100">
@@ -1042,7 +1042,7 @@ export const ReportsView: React.FC = () => {
                               <span className={`inline-flex items-center justify-center font-black rounded-lg w-7 h-7 text-xs ${
                                 item.classe === 'A' ? 'bg-red-50 text-red-600 border border-red-100' :
                                 item.classe === 'B' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                                'bg-slate-50 text-slate-500 border border-slate-100'
+                                'bg-slate-50 text-slate-500 border border-brand-dark/10'
                               }`}>
                                 {item.classe}
                               </span>
@@ -1167,7 +1167,7 @@ export const ReportsView: React.FC = () => {
 
         {/* Sidebar displaying available report templates */}
         <div className="space-y-4 order-first lg:order-last">
-          <div className="card shadow-sm border border-slate-100 space-y-4">
+          <div className="card shadow-sm border border-brand-dark/10 space-y-4">
             <h3 className="text-xs font-black text-slate-700 uppercase tracking-widest mb-4">Relatórios Gerais e BI</h3>
             
             {[
@@ -1184,7 +1184,7 @@ export const ReportsView: React.FC = () => {
                   className={`p-3.5 rounded-xl border transition-all cursor-pointer group flex items-start justify-between ${
                     isActive 
                       ? 'bg-blue-50/60 border-blue-300 ring-1 ring-blue-200' 
-                      : 'border-slate-100 bg-white hover:border-slate-300 hover:shadow-md hover:shadow-slate-100/60'
+                      : 'border-brand-dark/10 bg-white hover:border-slate-300 hover:shadow-md hover:shadow-slate-100/60'
                   }`}
                   onClick={() => {
                     setSelectedReport(isActive ? null : report.id);
@@ -1210,7 +1210,7 @@ export const ReportsView: React.FC = () => {
           </div>
 
           {/* Quick instructions widget card */}
-          <div className="bg-slate-50/60 border border-slate-100 rounded-2xl p-5 space-y-3.5">
+          <div className="bg-slate-50/60 border border-brand-dark/10 rounded-2xl p-5 space-y-3.5">
             <div className="flex items-center gap-2.5 text-slate-700">
               <Award className="w-5 h-5 text-brand-accent flex-shrink-0" />
               <h5 className="text-xs font-black uppercase tracking-wider">Como utilizar os relatórios</h5>
@@ -1243,7 +1243,7 @@ export const ReportsView: React.FC = () => {
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setDetailFilter(null)}></div>
           <div className="relative bg-white w-full max-w-5xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+            <div className="p-6 border-b border-brand-dark/10 flex items-center justify-between bg-white sticky top-0 z-10">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
                   <RefreshCw className="w-6 h-6 text-blue-600" />

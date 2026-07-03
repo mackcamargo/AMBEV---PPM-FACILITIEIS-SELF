@@ -20,6 +20,8 @@ export interface Material {
   ultimaMovimentacao?: string;
   detalhes?: string;
   ncm?: string;
+  descricaoSimplesSap?: string;
+  descricaoCompletaSap?: string;
   createdAt?: string;
   syncStatus?: 'synced' | 'pending';
 }

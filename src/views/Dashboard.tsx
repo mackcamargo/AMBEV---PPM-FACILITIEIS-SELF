@@ -301,14 +301,14 @@ export const Dashboard: React.FC = () => {
             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
               <input 
                 type="date" 
-                className="text-[9px] font-bold border border-slate-200 rounded px-2 py-1 outline-none focus:border-brand-accent transition-all" 
+                className="text-[9px] font-bold border border-brand-dark/20 rounded px-2 py-1 outline-none focus:border-brand-accent transition-all" 
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
               />
               <span className="text-slate-300 text-[9px] font-bold">A</span>
               <input 
                 type="date" 
-                className="text-[9px] font-bold border border-slate-200 rounded px-2 py-1 outline-none focus:border-brand-accent transition-all" 
+                className="text-[9px] font-bold border border-brand-dark/20 rounded px-2 py-1 outline-none focus:border-brand-accent transition-all" 
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
               />
@@ -334,7 +334,7 @@ export const Dashboard: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* GRÁFICO ROTATIVO: Gastos por Equipe (Linha do Tempo) */}
-          <div className="card !p-4 flex flex-col relative overflow-hidden group/moving bg-white border border-slate-100 shadow-sm">
+          <div className="card !p-4 flex flex-col relative overflow-hidden group/moving bg-white border border-brand-dark/10 shadow-sm">
             {/* Progress Indicator line */}
             <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-50 overflow-hidden z-20">
               <div 
@@ -494,7 +494,7 @@ export const Dashboard: React.FC = () => {
               <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">POR EQUIPE</span>
             </div>
 
-            <div className="mb-3 p-2 bg-slate-50 border border-slate-100/80 rounded-xl flex items-center justify-between">
+            <div className="mb-3 p-2 bg-slate-50 border border-brand-dark/10/80 rounded-xl flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="text-[9px] font-black text-slate-500 uppercase">VALOR TOTAL</span>
                 <span className="text-[8px] font-bold text-brand-accent uppercase tracking-wider">
@@ -621,7 +621,7 @@ export const Dashboard: React.FC = () => {
                   .filter(m => m.estoqueAtual < m.estoqueMinimo)
                   .sort((a, b) => (b.estoqueMinimo - b.estoqueAtual) - (a.estoqueMinimo - a.estoqueAtual))
                   .map(m => (
-                    <div key={m.id} className="p-1.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between h-[34px]">
+                    <div key={m.id} className="p-1.5 rounded-lg bg-slate-50 border border-brand-dark/10 flex items-center justify-between h-[34px]">
                        <div className="flex flex-col min-w-0 mr-2">
                          <span className="text-[9px] font-black text-slate-700 truncate">{m.descricao}</span>
                          <span className="text-[8px] text-slate-400 font-bold">QTD: <b className="text-red-500">{m.estoqueAtual}</b> / {m.estoqueMinimo}</span>
@@ -638,7 +638,7 @@ export const Dashboard: React.FC = () => {
                     .filter(m => m.estoqueAtual < m.estoqueMinimo)
                     .sort((a, b) => (b.estoqueMinimo - b.estoqueAtual) - (a.estoqueMinimo - a.estoqueAtual))
                     .map(m => (
-                      <div key={`${m.id}-duplicate`} className="p-1.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between h-[34px]">
+                      <div key={`${m.id}-duplicate`} className="p-1.5 rounded-lg bg-slate-50 border border-brand-dark/10 flex items-center justify-between h-[34px]">
                          <div className="flex flex-col min-w-0 mr-2">
                            <span className="text-[9px] font-black text-slate-700 truncate">{m.descricao}</span>
                            <span className="text-[8px] text-slate-400 font-bold">QTD: <b className="text-red-500">{m.estoqueAtual}</b> / {m.estoqueMinimo}</span>

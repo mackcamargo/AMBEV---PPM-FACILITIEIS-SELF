@@ -13,8 +13,9 @@ export const SelfMeeting: React.FC = () => {
     const saved = localStorage.getItem('selfMeeting_compras');
     return saved ? JSON.parse(saved) : {};
   });
-  const [selectedTeam, setSelectedTeam] = useState<string | null>(() => {
-    return localStorage.getItem('selfMeeting_selectedTeam');
+  const [selectedTeams, setSelectedTeams] = useState<string[]>(() => {
+    const saved = localStorage.getItem('selfMeeting_selectedTeams');
+    return saved ? JSON.parse(saved) : [];
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [externalSearchTerm, setExternalSearchTerm] = useState('');
@@ -63,12 +64,8 @@ export const SelfMeeting: React.FC = () => {
   }, [isTimerRunning]);
 
   useEffect(() => {
-    if (selectedTeam) {
-      localStorage.setItem('selfMeeting_selectedTeam', selectedTeam);
-    } else {
-      localStorage.removeItem('selfMeeting_selectedTeam');
-    }
-  }, [selectedTeam]);
+    localStorage.setItem('selfMeeting_selectedTeams', JSON.stringify(selectedTeams));
+  }, [selectedTeams]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isEmailChoiceModalOpen, setIsEmailChoiceModalOpen] = useState(false);
   const [shareTeam, setShareTeam] = useState<string>('Todas');
@@ -108,16 +105,16 @@ export const SelfMeeting: React.FC = () => {
     return () => window.removeEventListener('keydown', handleShortcut);
   }, []);
 
-  // Reset scroll position to top when selected team changes
+  // Reset scroll position to top when selected teams change
   useEffect(() => {
     if (tableContainerRef.current) {
       tableContainerRef.current.scrollTop = 0;
     }
-  }, [selectedTeam]);
+  }, [selectedTeams]);
   
   // Materials list for the table
   const tableData = materiais
-    .filter(m => !selectedTeam || m.equipe === selectedTeam)
+    .filter(m => selectedTeams.length === 0 || selectedTeams.includes(m.equipe))
     .filter(m => {
       const search = normalizeText(searchTerm);
       const matchesSearch = !searchTerm || (
@@ -151,14 +148,14 @@ export const SelfMeeting: React.FC = () => {
 
   // Auto-focus first item when team is selected
   useEffect(() => {
-    if (selectedTeam && tableData.length > 0) {
+    if (selectedTeams.length > 0 && tableData.length > 0) {
       const firstItem = tableData[0];
       setActiveRowId(firstItem.id);
       setTimeout(() => {
         buttonRefs.current[firstItem.id]?.focus();
       }, 100);
     }
-  }, [selectedTeam]);
+  }, [selectedTeams]);
 
   // Calculate totals per team based on all materials in compras (unfiltered)
   const impactPerTeam = useMemo(() => {
@@ -181,7 +178,9 @@ export const SelfMeeting: React.FC = () => {
 
   const totalGeral: number = (Object.values(impactPerTeam) as number[]).reduce((a, b) => a + b, 0);
   const totalSaldoEquipes: number = useMemo(() => equipes?.reduce((acc, e) => acc + (Number(e.saldoAtualizado) || 0), 0) || 0, [equipes]);
-  const totalExibido = selectedTeam ? (impactPerTeam[selectedTeam] || 0) : totalGeral;
+  const totalExibido = selectedTeams.length > 0 
+    ? selectedTeams.reduce((acc, teamName) => acc + (impactPerTeam[teamName] || 0), 0) 
+    : totalGeral;
 
   const handleUpdateQtd = (id: string, val: string) => {
     const q = Math.max(0, parseInt(val) || 0);
@@ -194,7 +193,7 @@ export const SelfMeeting: React.FC = () => {
       setShowConfirmNewMeeting(true);
     } else {
       setCompras({});
-      setSelectedTeam(null);
+      setSelectedTeams([]);
       setElapsed(0);
       setIsTimerRunning(true); // Start timer on new meeting
     }
@@ -202,7 +201,7 @@ export const SelfMeeting: React.FC = () => {
 
   const handleDiscardAndNewMeeting = () => {
     setCompras({});
-    setSelectedTeam(null);
+    setSelectedTeams([]);
     setElapsed(0);
     setIsTimerRunning(true);
     setCustomAtaName('');
@@ -370,6 +369,8 @@ export const SelfMeeting: React.FC = () => {
           COD_SAP: m?.sap,
           Equipe: m?.equipe,
           Descricao: m?.descricao,
+          DescricaoSimples: m?.descricaoSimplesSap || '-',
+          DescricaoCompleta: m?.descricaoCompletaSap || '-',
           Quantidade: q,
           Unidade: formatUnit(m?.unidade),
           PrecoUnit: (m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
@@ -377,7 +378,7 @@ export const SelfMeeting: React.FC = () => {
         };
       });
 
-    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade', 'Valor Unitário', 'Valor Total'];
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Descrição Simples SAP', 'Descrição Completa SAP', 'Quantidade', 'Unidade', 'Valor Unitário', 'Valor Total'];
     const csvRows = [
       headers.join(';'),
       ...items.map(row => 
@@ -385,13 +386,15 @@ export const SelfMeeting: React.FC = () => {
           row.COD_SAP,
           row.Equipe,
           `"${row.Descricao}"`,
+          `"${row.DescricaoSimples}"`,
+          `"${row.DescricaoCompleta}"`,
           row.Quantidade,
           row.Unidade,
           row.PrecoUnit,
           row.Subtotal
         ].join(';')
       ),
-      ['', '', 'TOTAL GERAL', '', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
+      ['', '', '', '', 'TOTAL GERAL', '', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
     ];
 
     const csvContent = "\uFEFF" + csvRows.join('\n');
@@ -473,7 +476,7 @@ export const SelfMeeting: React.FC = () => {
         const m = materiais.find(mat => mat.id === id);
         const subtotal = (q as number) * (m?.precoUnitario || 0);
         totalValue += subtotal;
-        return `• ${m?.descricao}\n  - COD SAP: ${m?.sap}\n  - Qtd: ${q} ${formatUnit(m?.unidade)}\n  - Valor Unit: R$ ${(m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n  - Valor Total: R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        return `• ${m?.descricao}\n  - COD SAP: ${m?.sap}\n  - DESC. SIMPLES SAP: ${m?.descricaoSimplesSap || '-'}\n  - DESC. COMPLETA SAP: ${m?.descricaoCompletaSap || '-'}\n  - Qtd: ${q} ${formatUnit(m?.unidade)}\n  - Valor Unit: R$ ${(m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n  - Valor Total: R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
       });
     
     const footer = items.length > 0 ? `\n\nVALOR TOTAL DA SOLICITAÇÃO: R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '';
@@ -499,6 +502,8 @@ export const SelfMeeting: React.FC = () => {
           COD_SAP: m?.sap,
           Equipe: m?.equipe,
           Descricao: m?.descricao,
+          DescricaoSimples: m?.descricaoSimplesSap || '-',
+          DescricaoCompleta: m?.descricaoCompletaSap || '-',
           Quantidade: q,
           Unidade: formatUnit(m?.unidade),
           PrecoUnit: (m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
@@ -506,7 +511,7 @@ export const SelfMeeting: React.FC = () => {
         };
       });
 
-    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Quantidade', 'Unidade', 'Valor Unitário', 'Valor Total'];
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Descrição Simples SAP', 'Descrição Completa SAP', 'Quantidade', 'Unidade', 'Valor Unitário', 'Valor Total'];
     const csvRows = [
       headers.join(';'),
       ...items.map(row => 
@@ -514,13 +519,15 @@ export const SelfMeeting: React.FC = () => {
           row.COD_SAP,
           row.Equipe,
           `"${row.Descricao}"`,
+          `"${row.DescricaoSimples}"`,
+          `"${row.DescricaoCompleta}"`,
           row.Quantidade,
           row.Unidade,
           row.PrecoUnit,
           row.Subtotal
         ].join(';')
       ),
-      ['', '', 'TOTAL GERAL', '', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
+      ['', '', '', '', 'TOTAL GERAL', '', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
     ];
 
     const csvContent = "\uFEFF" + csvRows.join('\n');
@@ -539,7 +546,7 @@ export const SelfMeeting: React.FC = () => {
     setShowShareModal(false);
     if (clearOnShareClose) {
       setCompras({});
-      setSelectedTeam(null);
+      setSelectedTeams([]);
       setElapsed(0);
       setIsTimerRunning(true);
       setCustomAtaName('');
@@ -633,13 +640,13 @@ export const SelfMeeting: React.FC = () => {
         <div className="flex overflow-x-auto sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 pb-2 sm:pb-0 shrink-0 snap-x scrollbar-hide">
           {/* Todas as Equipes Card */}
           <div 
-            onClick={() => setSelectedTeam(null)}
-            className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${selectedTeam === null ? 'ring-2 ring-[#1E3A8A] ring-offset-2 bg-slate-50/50' : 'bg-white'}`} 
+            onClick={() => setSelectedTeams([])}
+            className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${selectedTeams.length === 0 ? 'ring-2 ring-[#1E3A8A] ring-offset-2 bg-slate-50/50' : 'bg-white'}`} 
             style={{ borderLeftColor: '#1E3A8A' }}
           >
             <div className="flex justify-between items-center bg-transparent">
               <p className="text-[9px] font-extrabold text-black uppercase tracking-wider">Todas as Equipes</p>
-              {selectedTeam === null && <div className="w-2.5 h-2.5 rounded-full bg-[#1e3a8a] animate-pulse" />}
+              {selectedTeams.length === 0 && <div className="w-2.5 h-2.5 rounded-full bg-[#1e3a8a] animate-pulse" />}
             </div>
             <div className="mt-1 flex justify-between items-end">
               <div>
@@ -674,13 +681,19 @@ export const SelfMeeting: React.FC = () => {
             const impact = impactPerTeam[e.nome] || 0;
             const novoSaldo = (e.saldoAtualizado || 0) - impact;
             const isNegative = novoSaldo < 0;
-            const isSelected = selectedTeam === e.nome;
+            const isSelected = selectedTeams.includes(e.nome);
 
             return (
               <div 
                 key={e.id || `equipe-${idx}`} 
-                onClick={() => setSelectedTeam(e.nome)}
-                className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${isSelected ? 'ring-2 ring-[#1E3A8A] ring-offset-2' : ''}`} 
+                onClick={() => {
+                  setSelectedTeams(prev => 
+                    prev.includes(e.nome) 
+                      ? prev.filter(t => t !== e.nome) 
+                      : [...prev, e.nome]
+                  );
+                }}
+                className={`card card-equipe border-l-4 cursor-pointer transition-all hover:shadow-md shrink-0 snap-start w-[240px] sm:w-auto ${isSelected ? 'ring-2 ring-[#1E3A8A] ring-offset-2 bg-slate-50/50' : 'bg-white'}`} 
                 style={{ borderLeftColor: '#1E3A8A' }}
               >
                 <div className="flex justify-between items-center bg-transparent">
@@ -757,7 +770,7 @@ export const SelfMeeting: React.FC = () => {
             <div className="flex items-center justify-between">
               <h3 className="text-[10px] font-black text-black uppercase tracking-widest flex items-center gap-2">
                 <div className="w-1 h-3 rounded-full bg-[#1e3a8a]" />
-                Área de Decisão {selectedTeam ? ` - ${selectedTeam}` : ''}
+                Área de Decisão {selectedTeams.length > 0 ? ` - ${selectedTeams.join(', ')}` : ''}
               </h3>
               <div className="flex items-center gap-4">
                 <div className="text-right">
@@ -769,7 +782,7 @@ export const SelfMeeting: React.FC = () => {
             </div>
 
             {/* Search and Filters Strip Compacted */}
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 bg-white p-1.5 rounded-lg border border-slate-100 shrink-0">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 bg-white p-1.5 rounded-lg border border-brand-dark/10 shrink-0">
               <div className="flex flex-col md:flex-row flex-1 items-stretch md:items-center gap-2">
                 <div className="flex items-center gap-2 flex-1 md:max-w-md">
                   {/* Busca Externa - Slim */}
@@ -785,7 +798,7 @@ export const SelfMeeting: React.FC = () => {
                       <input 
                         type="text" 
                         placeholder="Google..."
-                        className="w-full pl-2 pr-6 py-0.5 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:ring-0 rounded text-[9px] font-bold text-slate-900 placeholder:text-slate-400 transition-all h-full"
+                        className="w-full pl-2 pr-6 py-0.5 bg-slate-50 border border-brand-dark/20 focus:border-emerald-500 focus:bg-white focus:ring-0 rounded text-[9px] font-bold text-slate-900 placeholder:text-slate-400 transition-all h-full"
                         value={externalSearchTerm}
                         onChange={(e) => setExternalSearchTerm(e.target.value)}
                       />
@@ -803,7 +816,7 @@ export const SelfMeeting: React.FC = () => {
                         ref={searchInputRef}
                         type="text" 
                         placeholder="Pesquisar material, SAP..."
-                        className="w-full pl-7 pr-3 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded text-[9px] font-bold text-slate-900 placeholder:text-slate-400 transition-all h-full"
+                        className="w-full pl-7 pr-3 bg-slate-50 border border-brand-dark/20 focus:border-blue-500 focus:bg-white rounded text-[9px] font-bold text-slate-900 placeholder:text-slate-400 transition-all h-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
@@ -811,10 +824,10 @@ export const SelfMeeting: React.FC = () => {
                 </div>
 
                 {/* Status Filter Chips - Slim */}
-                <div className="flex items-center bg-slate-50 p-0.5 rounded border border-slate-200 h-7 overflow-x-auto scrollbar-hide">
+                <div className="flex items-center bg-slate-50 p-0.5 rounded border border-brand-dark/20 h-7 overflow-x-auto scrollbar-hide">
                   <button 
                     onClick={() => setFilterStatuses([])}
-                    className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded transition-all ${filterStatuses.length === 0 ? 'bg-white shadow-sm text-slate-900 border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded transition-all ${filterStatuses.length === 0 ? 'bg-white shadow-sm text-slate-900 border border-brand-dark/20' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     Ver Tudo
                   </button>
@@ -848,7 +861,7 @@ export const SelfMeeting: React.FC = () => {
                     <button 
                       onClick={() => setShowConfirmClear(true)}
                       disabled={totalGeral === 0}
-                      className="px-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-red-600 rounded text-[9px] font-black uppercase tracking-tight transition-all flex items-center gap-1 h-full whitespace-nowrap disabled:opacity-50"
+                      className="px-2 bg-white border border-brand-dark/20 hover:bg-slate-50 text-slate-500 hover:text-red-600 rounded text-[9px] font-black uppercase tracking-tight transition-all flex items-center gap-1 h-full whitespace-nowrap disabled:opacity-50"
                     >
                       <Trash2 className="w-3 h-3" />
                       <span>Limpar</span>
@@ -887,18 +900,18 @@ export const SelfMeeting: React.FC = () => {
             <table className="w-full text-left">
               <thead className="sticky top-0 z-20 bg-slate-50 shadow-[0_1px_0_rgba(15,23,42,0.06)]">
                 <tr className="bg-slate-50">
-                  <th className="table-header !px-4 border-b border-slate-100">COD SAP</th>
-                  <th className="table-header !px-4 border-b border-slate-100">Cód. Forn.</th>
-                  <th className="table-header !px-4 border-b border-slate-100">Material</th>
-                  <th className="table-header !px-4 text-center border-b border-slate-100">Unid.</th>
-                  <th className="table-header !px-4 text-right border-b border-slate-100">Local</th>
-                  <th className="table-header !px-4 text-right border-b border-slate-100">Estoque</th>
-                  <th className="table-header !px-4 text-right border-b border-slate-100">Mín/Ideal</th>
-                  <th className="table-header !px-4 text-center border-b border-slate-100">Status</th>
-                  <th className="table-header !px-4 text-center border-b border-slate-100">Comprar?</th>
-                  <th className="table-header !px-4 text-right border-b border-slate-100">Preço Un.</th>
-                  <th className="table-header !px-4 text-right w-24 border-b border-slate-100">Qtd Comprar</th>
-                  <th className="table-header !px-4 text-right border-b border-slate-100">Subtotal</th>
+                  <th className="table-header !px-4 border-b border-brand-dark/10">COD SAP</th>
+                  <th className="table-header !px-4 border-b border-brand-dark/10">Cód. Forn.</th>
+                  <th className="table-header !px-4 border-b border-brand-dark/10">Material</th>
+                  <th className="table-header !px-4 text-center border-b border-brand-dark/10">Unid.</th>
+                  <th className="table-header !px-4 text-right border-b border-brand-dark/10">Local</th>
+                  <th className="table-header !px-4 text-right border-b border-brand-dark/10">Estoque</th>
+                  <th className="table-header !px-4 text-right border-b border-brand-dark/10">Mín/Ideal</th>
+                  <th className="table-header !px-4 text-center border-b border-brand-dark/10">Status</th>
+                  <th className="table-header !px-4 text-center border-b border-brand-dark/10">Comprar?</th>
+                  <th className="table-header !px-4 text-right border-b border-brand-dark/10">Preço Un.</th>
+                  <th className="table-header !px-4 text-right w-24 border-b border-brand-dark/10">Qtd Comprar</th>
+                  <th className="table-header !px-4 text-right border-b border-brand-dark/10">Subtotal</th>
                 </tr>
               </thead>
               <tbody>
@@ -921,13 +934,13 @@ export const SelfMeeting: React.FC = () => {
                             : 'hover:bg-slate-50'
                         }`}
                       >
-                        <td className={`px-4 py-3 font-mono text-[11px] border-b transition-all ${isActive ? 'text-blue-900 font-black border-blue-900/10' : 'text-slate-500 border-slate-200'}`}>
+                        <td className={`px-4 py-3 font-mono text-[11px] border-b transition-all ${isActive ? 'text-blue-900 font-black border-blue-900/10' : 'text-slate-500 border-brand-dark/20'}`}>
                           {item.sap}
                         </td>
-                        <td className={`px-4 py-3 font-mono text-[10px] border-b transition-all ${isActive ? 'text-blue-800 font-bold border-blue-900/10' : 'text-slate-400 border-slate-200'}`}>
+                        <td className={`px-4 py-3 font-mono text-[10px] border-b transition-all ${isActive ? 'text-blue-800 font-bold border-blue-900/10' : 'text-slate-400 border-brand-dark/20'}`}>
                           {item.codigoFornecedor || '-'}
                         </td>
-                        <td className={`px-4 py-3 border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                        <td className={`px-4 py-3 border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-brand-dark/20'}`}>
                           <p className={`font-bold text-[12px] leading-tight mb-0.5 ${isActive ? 'text-blue-950' : 'text-slate-800'}`}>{item.descricao}</p>
                           <div className="flex gap-2 items-center">
                             <p className={`text-[10px] font-bold uppercase tracking-tighter px-1 rounded-sm ${isActive ? 'bg-blue-900 text-white' : 'bg-slate-100 text-slate-400'}`}>{item.equipe}</p>
@@ -936,11 +949,11 @@ export const SelfMeeting: React.FC = () => {
                             )}
                           </div>
                         </td>
-                        <td className={`px-4 py-3 text-[11px] font-bold uppercase tracking-tighter text-center border-b transition-all ${isActive ? 'text-blue-900 border-blue-900/10' : 'text-slate-500 border-slate-200'}`}>
+                        <td className={`px-4 py-3 text-[11px] font-bold uppercase tracking-tighter text-center border-b transition-all ${isActive ? 'text-blue-900 border-blue-900/10' : 'text-slate-500 border-brand-dark/20'}`}>
                           {formatUnit(item.unidade)}
                         </td>
-                        <td className={`px-4 py-3 text-[11px] font-bold uppercase tracking-tighter text-right border-b transition-all ${isActive ? 'text-blue-900 border-blue-900/10' : 'text-slate-500 border-slate-200'}`}>{item.localizacao || '-'}</td>
-                        <td className={`px-4 py-3 text-[11px] font-medium text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                        <td className={`px-4 py-3 text-[11px] font-bold uppercase tracking-tighter text-right border-b transition-all ${isActive ? 'text-blue-900 border-blue-900/10' : 'text-slate-500 border-brand-dark/20'}`}>{item.localizacao || '-'}</td>
+                        <td className={`px-4 py-3 text-[11px] font-medium text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-brand-dark/20'}`}>
                         {editingStock?.id === item.id && editingStock?.field === 'atual' ? (
                           <input
                             autoFocus
@@ -975,7 +988,7 @@ export const SelfMeeting: React.FC = () => {
                           </span>
                         )}
                       </td>
-                        <td className={`px-4 py-3 text-[11px] font-medium text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                        <td className={`px-4 py-3 text-[11px] font-medium text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-brand-dark/20'}`}>
                         <div className="flex items-center gap-1.5 justify-end">
                           {editingStock?.id === item.id && editingStock?.field === 'min' ? (
                              <input
@@ -1034,14 +1047,14 @@ export const SelfMeeting: React.FC = () => {
                           )}
                         </div>
                       </td>
-                        <td className={`px-4 py-3 text-center border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                        <td className={`px-4 py-3 text-center border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-brand-dark/20'}`}>
                         <span className={`status-pill !text-[10px] !py-0 !px-2 !h-4 ${
                           item.status === 'Zerado' ? 'pill-crit' : 
                           item.status === 'Crítico' ? 'pill-warn' : 'pill-ok'}`}>
                           {item.status === 'OK' ? 'OK' : item.status === 'Crítico' ? 'BAIXO' : 'ZERADO'}
                         </span>
                       </td>
-                        <td className={`px-4 py-3 border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                        <td className={`px-4 py-3 border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-brand-dark/20'}`}>
                         <div className="flex justify-center">
                           <button 
                             ref={el => buttonRefs.current[item.id] = el}
@@ -1057,14 +1070,14 @@ export const SelfMeeting: React.FC = () => {
                             className={`text-[11px] font-black h-7 px-4 rounded-full border focus:outline-none transition-all flex items-center justify-center cursor-pointer select-none active:scale-95 touch-manipulation uppercase tracking-tighter w-16 hover:animate-intense-pulse focus:animate-intense-pulse hover:scale-110 focus:scale-110 hover:ring-4 focus:ring-4 ${
                               item.qtdComprar > 0 
                               ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200 hover:ring-blue-500/40 focus:ring-blue-500/50' 
-                              : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-700 hover:ring-slate-200 focus:ring-slate-300'
+                              : 'bg-white border-brand-dark/20 text-slate-400 hover:border-slate-300 hover:text-slate-700 hover:ring-slate-200 focus:ring-slate-300'
                             }`}
                           >
                             {item.qtdComprar > 0 ? 'SIM' : 'NÃO'}
                           </button>
                         </div>
                       </td>
-                        <td className={`px-4 py-3 text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                        <td className={`px-4 py-3 text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-brand-dark/20'}`}>
                           <div className="flex items-center justify-end gap-0 group">
                           <span className="text-[11px] text-slate-300 font-bold group-hover:text-green-500 transition-colors">R$</span>
                           <input 
@@ -1076,12 +1089,12 @@ export const SelfMeeting: React.FC = () => {
                           />
                         </div>
                       </td>
-                        <td className={`px-4 py-3 text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-slate-200'}`}>
+                        <td className={`px-4 py-3 text-right border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-brand-dark/20'}`}>
                           <input 
                             ref={el => inputRefs.current[item.id] = el}
                           onKeyDown={(e) => onInputKeyDown(e, index)}
                           type="number" 
-                          className={`input-field tabular-nums focus:bg-emerald-50/10 h-8 px-3 text-[12px] font-bold text-right border-slate-100 hover:border-slate-200 transition-all ${item.qtdComprar > 0 ? 'bg-emerald-50/30 border-emerald-200 ring-2 ring-emerald-500/5' : ''}`}
+                          className={`input-field tabular-nums focus:bg-emerald-50/10 h-8 px-3 text-[12px] font-bold text-right border-brand-dark/10 hover:border-brand-dark/20 transition-all ${item.qtdComprar > 0 ? 'bg-emerald-50/30 border-emerald-200 ring-2 ring-emerald-500/5' : ''}`}
                           value={item.qtdComprar || ''}
                           placeholder="0"
                           onChange={(e) => handleUpdateQtd(item.id, e.target.value)}
@@ -1089,7 +1102,7 @@ export const SelfMeeting: React.FC = () => {
                           style={{ minWidth: '60px' }}
                         />
                       </td>
-                        <td className={`px-4 py-3 text-right font-black tabular-nums text-[12px] border-b transition-all ${isActive ? 'text-blue-950 border-blue-900/10' : 'text-slate-900 border-slate-200'}`}>
+                        <td className={`px-4 py-3 text-right font-black tabular-nums text-[12px] border-b transition-all ${isActive ? 'text-blue-950 border-blue-900/10' : 'text-slate-900 border-brand-dark/20'}`}>
                         {item.subtotal > 0 ? `R$ ${item.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'}
                       </td>
                     </tr>
@@ -1121,7 +1134,7 @@ export const SelfMeeting: React.FC = () => {
                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
                         shareTeam === 'Todas' 
                         ? 'bg-slate-900 border-slate-900 text-white' 
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                        : 'bg-white border-brand-dark/20 text-slate-600 hover:border-slate-300'
                      }`}
                    >
                      TODAS
@@ -1133,7 +1146,7 @@ export const SelfMeeting: React.FC = () => {
                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
                           shareTeam === e.nome 
                           ? 'bg-blue-600 border-blue-600 text-white' 
-                          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                          : 'bg-white border-brand-dark/20 text-slate-600 hover:border-slate-300'
                        }`}
                      >
                        {e.nome.toUpperCase()}
@@ -1145,7 +1158,7 @@ export const SelfMeeting: React.FC = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
                 <button 
                   onClick={handleGlobalShare}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-blue-50 hover:border-blue-200 transition-all group"
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-blue-50 hover:border-blue-200 transition-all group"
                 >
                   <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-blue-200">
                     <Share2 className="w-5 h-5" />
@@ -1155,7 +1168,7 @@ export const SelfMeeting: React.FC = () => {
 
                 <button 
                   onClick={shareViaWhatsApp}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all group lg:min-w-[70px] cursor-pointer"
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-emerald-50 hover:border-emerald-200 transition-all group lg:min-w-[70px] cursor-pointer"
                 >
                   <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-emerald-200">
                     <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -1165,7 +1178,7 @@ export const SelfMeeting: React.FC = () => {
 
                 <button 
                   onClick={initiateEmailShare}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-amber-50 hover:border-amber-200 transition-all group lg:min-w-[70px] cursor-pointer"
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-amber-50 hover:border-amber-200 transition-all group lg:min-w-[70px] cursor-pointer"
                 >
                   <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-amber-200">
                     <Mail className="w-5 h-5" />
@@ -1178,7 +1191,7 @@ export const SelfMeeting: React.FC = () => {
                 
                 <button 
                   onClick={downloadSpreadsheet}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all group"
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-emerald-50 hover:border-emerald-200 transition-all group"
                 >
                   <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform relative shadow-lg shadow-emerald-200">
                     <Download className="w-5 h-5" />
@@ -1201,7 +1214,7 @@ export const SelfMeeting: React.FC = () => {
       {/* Save Meeting Name Modal */}
       {showSaveNameModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-slate-100">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-brand-dark/10">
             <div className="flex flex-col items-center text-center">
               <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-4">
                 <Save className="w-6 h-6 text-blue-600" />
@@ -1217,7 +1230,7 @@ export const SelfMeeting: React.FC = () => {
                   <input 
                     type="text"
                     placeholder="Ex: Reunião Semanal, Ajuste de Estoque..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 outline-none transition-all placeholder:font-normal"
+                    className="w-full px-3 py-2 bg-slate-50 border border-brand-dark/20 rounded-lg text-[11px] font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 outline-none transition-all placeholder:font-normal"
                     value={meetingName}
                     onChange={(e) => setMeetingName(e.target.value)}
                     onKeyDown={(e) => {
@@ -1235,7 +1248,7 @@ export const SelfMeeting: React.FC = () => {
                       setShowSaveNameModal(false);
                       setMeetingName('');
                     }}
-                    className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all cursor-pointer font-sans"
+                    className="flex-1 px-4 py-2.5 border border-brand-dark/20 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all cursor-pointer font-sans"
                   >
                     Cancelar
                   </button>
@@ -1256,7 +1269,7 @@ export const SelfMeeting: React.FC = () => {
       {/* Duplicate Meeting Warning Modal */}
       {showDuplicateModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-slate-100">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-brand-dark/10">
             <div className="flex flex-col items-center text-center">
               <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mb-4">
                 <AlertCircle className="w-6 h-6 text-amber-600" />
@@ -1273,7 +1286,7 @@ export const SelfMeeting: React.FC = () => {
                   <input 
                     type="text"
                     placeholder="Ex: Reunião Extra, Revisão Pintura..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 outline-none transition-all placeholder:font-normal"
+                    className="w-full px-3 py-2 bg-slate-50 border border-brand-dark/20 rounded-lg text-[11px] font-bold text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 outline-none transition-all placeholder:font-normal"
                     value={customAtaName}
                     onChange={(e) => setCustomAtaName(e.target.value)}
                     autoFocus
@@ -1286,7 +1299,7 @@ export const SelfMeeting: React.FC = () => {
                       setShowDuplicateModal(false);
                       setCustomAtaName('');
                     }}
-                    className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all cursor-pointer font-sans"
+                    className="flex-1 px-4 py-2.5 border border-brand-dark/20 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all cursor-pointer font-sans"
                   >
                     Não, cancelar
                   </button>
@@ -1306,7 +1319,7 @@ export const SelfMeeting: React.FC = () => {
       {/* Confirmation Modal to Save or Discard current unsaved choosing */}
       {showConfirmNewMeeting && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden border border-slate-100">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden border border-brand-dark/10">
             <div className="p-6 text-center">
               <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertCircle className="w-8 h-8 text-amber-600" />
@@ -1335,7 +1348,7 @@ export const SelfMeeting: React.FC = () => {
 
                 <button 
                   onClick={() => setShowConfirmNewMeeting(false)}
-                  className="w-full mt-2 bg-white hover:bg-slate-50 text-slate-500 border border-slate-200 font-bold text-xs py-2.5 rounded-xl transition-all active:scale-98 cursor-pointer"
+                  className="w-full mt-2 bg-white hover:bg-slate-50 text-slate-500 border border-brand-dark/20 font-bold text-xs py-2.5 rounded-xl transition-all active:scale-98 cursor-pointer"
                 >
                   Continuar Editando
                 </button>
@@ -1348,7 +1361,7 @@ export const SelfMeeting: React.FC = () => {
       {/* Confirmation Modal to Clear list items */}
       {showConfirmClear && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden border border-slate-100">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden border border-brand-dark/10">
             <div className="p-6 text-center">
               <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="w-7 h-7 text-red-600" />
@@ -1373,7 +1386,7 @@ export const SelfMeeting: React.FC = () => {
                 <button 
                   onClick={() => {
                     setCompras({});
-                    setSelectedTeam(null);
+                    setSelectedTeams([]);
                     setElapsed(0);
                     setIsTimerRunning(true);
                     setCustomAtaName('');
@@ -1387,7 +1400,7 @@ export const SelfMeeting: React.FC = () => {
 
                 <button 
                   onClick={() => setShowConfirmClear(false)}
-                  className="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-[10px] py-2.5 mt-1 rounded-xl transition-all active:scale-98 cursor-pointer uppercase tracking-wider"
+                  className="w-full bg-white hover:bg-slate-50 text-slate-700 border border-brand-dark/20 font-bold text-[10px] py-2.5 mt-1 rounded-xl transition-all active:scale-98 cursor-pointer uppercase tracking-wider"
                 >
                   Cancelar
                 </button>
@@ -1407,13 +1420,13 @@ export const SelfMeeting: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <button 
                 onClick={(e) => shareViaEmailChoice(e, 'gmail')}
-                className="p-4 rounded-xl border border-slate-200 hover:bg-red-50 hover:border-red-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
+                className="p-4 rounded-xl border border-brand-dark/20 hover:bg-red-50 hover:border-red-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
               >
                 Gmail
               </button>
               <button 
                 onClick={(e) => shareViaEmailChoice(e, 'outlook')}
-                className="p-4 rounded-xl border border-slate-200 hover:bg-blue-50 hover:border-blue-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
+                className="p-4 rounded-xl border border-brand-dark/20 hover:bg-blue-50 hover:border-blue-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
               >
                 Outlook
               </button>

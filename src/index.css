@@ -44,11 +44,15 @@
   }
   
   .table-row td {
-    @apply border-b border-slate-100 py-3;
+    @apply border-b border-brand-dark/10 py-3;
   }
   
   .input-field {
     @apply w-full h-10 px-3 text-[14px] bg-white border border-brand-border rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-accent transition-all;
+  }
+
+  .input-field-compact {
+    @apply w-full h-8 px-2 text-[12px] bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-accent transition-all;
   }
   
   .btn-primary {

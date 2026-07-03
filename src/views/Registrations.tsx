@@ -2,13 +2,128 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
 import { normalizeText } from '../lib/stringUtils';
-import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload, Package, Users, Truck, MapPin, FilterX, Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload, Package, Users, Truck, MapPin, FilterX, Cloud, CloudOff, RefreshCw, Copy, Check } from 'lucide-react';
 import { Material } from '../types';
 import { materialsToImport } from '../data/materials';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { playNotificationSound } from '../lib/audio';
 import { supabase } from '../lib/supabase';
+
+const playCopySound = () => {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+
+    gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.1);
+  } catch (e) {
+    // Silence errors if audio context is blocked
+  }
+};
+
+const CopyableInput: React.FC<{
+  value: string;
+  onChange?: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+  type?: string;
+  readOnly?: boolean;
+}> = ({ value, onChange, placeholder, className, type = "text", readOnly = false }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!value) return;
+    
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    playCopySound();
+    
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative group/copy">
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        placeholder={placeholder}
+        className={className}
+        readOnly={readOnly}
+      />
+      {value && (
+        <button
+          onClick={handleCopy}
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/copy:opacity-100 transition-all p-1 hover:bg-slate-100 rounded-md bg-white/80 backdrop-blur-sm shadow-sm border border-slate-200 z-10"
+          title="Copiar"
+        >
+          {copied ? (
+            <div className="flex items-center gap-1 px-1">
+              <Check className="w-2.5 h-2.5 text-emerald-600" />
+              <span className="text-[8px] font-bold text-emerald-600">Copiado!</span>
+            </div>
+          ) : (
+            <Copy className="w-2.5 h-2.5 text-slate-400" />
+          )}
+        </button>
+      )}
+    </div>
+  );
+};
+
+const CopyableText: React.FC<{ value: string; className?: string; truncate?: boolean; maxW?: string; title?: string }> = ({ value, className, truncate, maxW, title }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!value) return;
+    
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    playCopySound();
+    
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className={`relative group/copy-text flex items-center gap-1.5 ${maxW || ''}`}>
+      <span 
+        className={`${className || ''} ${truncate ? 'truncate' : ''}`} 
+        title={title || value}
+      >
+        {value || '-'}
+      </span>
+      {value && value !== '-' && (
+        <button
+          onClick={handleCopy}
+          className="opacity-0 group-hover/copy-text:opacity-100 transition-all p-0.5 hover:bg-slate-100 rounded bg-white/80 backdrop-blur-sm shadow-sm border border-slate-200 shrink-0 ml-auto"
+          title="Copiar"
+        >
+          {copied ? (
+            <Check className="w-2 h-2 text-emerald-600" />
+          ) : (
+            <Copy className="w-2 h-2 text-slate-400" />
+          )}
+        </button>
+      )}
+    </div>
+  );
+};
 
 export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'fornecedores' | 'colaboradores' | 'equipes' }> = ({ type }) => {
   const store = useApp();
@@ -63,7 +178,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
   const headers = useMemo(() => {
     switch(type) {
-      case 'materiais': return ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'NCM', 'DESCRIÇÃO COMPLETA', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO', 'AÇÕES'];
+      case 'materiais': return ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'NCM', 'DESC. SIMPLES SAP', 'DESC. COMPLETA SAP', 'DESCRIÇÃO', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO', 'AÇÕES'];
       case 'colaboradores': return ['Matrícula', 'Nome', 'Empresa', 'Cargo', 'Equipe', 'Ações'];
       case 'empresas': return ['Razão Social', 'CNPJ', 'Contrato', 'Ações'];
       case 'fornecedores': return ['Cód.', 'Nome Fantasia', 'CNPJ', 'Email', 'Ações'];
@@ -110,6 +225,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           item.localizacao,
           item.unidade,
           item.ncm,
+          item.descricaoSimplesSap,
+          item.descricaoCompletaSap,
           item.detalhes
         ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
       } else if (type === 'colaboradores') {
@@ -441,6 +558,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
             localizacao: formData.localizacao || '',
             detalhes: formData.detalhes || '',
             ncm: formData.ncm || '',
+            descricaoSimplesSap: formData.descricaoSimplesSap || '',
+            descricaoCompletaSap: formData.descricaoCompletaSap || '',
             ultimaMovimentacao: new Date().toLocaleDateString('pt-BR')
           });
 
@@ -559,7 +678,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   };
 
   const exportMaterialsCSV = () => {
-    const headers = ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'NCM', 'DESCRIÇÃO COMPLETA', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO'];
+    const headers = ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'NCM', 'DESCRIÇÃO', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO'];
     const csvHeaders = headers.map(h => `"${h}"`).join(';');
 
     const rows = store.materiais.map(item => {
@@ -1167,34 +1286,34 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   };
 
   const renderMateriaisForm = () => (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-2">
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block flex items-center gap-1">
           COD SAP
         </label>
-        <input 
+        <CopyableInput 
           type="text" 
-          className="input-field transition-all duration-300"
+          className="input-field-compact transition-all duration-300"
           placeholder="Ex: 50104266" 
           value={formData.sap || ''}
-          onChange={(e) => handleInputChange('sap', e.target.value)}
+          onChange={(val) => handleInputChange('sap', val)}
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">NCM</label>
-        <input 
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">NCM</label>
+        <CopyableInput 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="Ex: 8481.80.19"
           value={formData.ncm || ''}
-          onChange={(e) => handleInputChange('ncm', e.target.value)}
+          onChange={(val) => handleInputChange('ncm', val)}
         />
       </div>
 
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">FORNECEDOR</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block flex items-center gap-1">FORNECEDOR</label>
         <select 
-          className="input-field pr-8"
+          className="input-field-compact pr-8"
           value={formData.fornecedorId || ''}
           onChange={(e) => {
             const val = e.target.value;
@@ -1211,20 +1330,20 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         </select>
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">CÓD. FORNECEDOR</label>
-        <input 
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">CÓD. FORNECEDOR</label>
+        <CopyableInput 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="Ex: 75151212"
           value={formData.codigoFornecedor || ''}
-          onChange={(e) => handleInputChange('codigoFornecedor', e.target.value)}
+          onChange={(val) => handleInputChange('codigoFornecedor', val)}
         />
       </div>
 
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">EQUIPE</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block flex items-center gap-1">EQUIPE</label>
         <select
-          className="input-field pr-8"
+          className="input-field-compact pr-8"
           value={formData.equipe || ''}
           onChange={(e) => handleInputChange('equipe', e.target.value)}
         >
@@ -1233,9 +1352,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         </select>
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">UNIDADE</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block flex items-center gap-1">UNIDADE</label>
         <select 
-          className="input-field pr-8"
+          className="input-field-compact pr-8"
           value={formData.unidade || 'UNI'}
           onChange={(e) => handleInputChange('unidade', e.target.value)}
         >
@@ -1251,33 +1370,54 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       </div>
 
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
-          DESCRIÇÃO COMPLETA
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block flex items-center gap-1">
+          DESCRIÇÃO
         </label>
-        <input 
+        <CopyableInput 
           type="text" 
-          className="input-field transition-all duration-300"
+          className="input-field-compact transition-all duration-300"
           placeholder="Ex: TORNEIRA COMUM 1/2 BEBEDOURO" 
           value={formData.descricao || ''}
-          onChange={(e) => handleInputChange('descricao', e.target.value)}
+          onChange={(val) => handleInputChange('descricao', val)}
         />
       </div>
 
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ESTOQUE ATUAL</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">DESCRIÇÃO SIMPLES SAP</label>
+        <CopyableInput 
+          type="text" 
+          className="input-field-compact" 
+          placeholder="Descrição simplificada SAP"
+          value={formData.descricaoSimplesSap || ''}
+          onChange={(val) => handleInputChange('descricaoSimplesSap', val)}
+        />
+      </div>
+      <div className="col-span-2 md:col-span-1">
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">DESCRIÇÃO COMPLETA SAP</label>
+        <CopyableInput 
+          type="text" 
+          className="input-field-compact" 
+          placeholder="Descrição completa SAP"
+          value={formData.descricaoCompletaSap || ''}
+          onChange={(val) => handleInputChange('descricaoCompletaSap', val)}
+        />
+      </div>
+
+      <div className="col-span-2 md:col-span-1">
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">ESTOQUE ATUAL</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="0" 
           value={String(formData.estoqueAtual ?? '').replace('.', ',')}
           onChange={(e) => handleInputChange('estoqueAtual', e.target.value)}
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">PREÇO UNITÁRIO (R$)</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">PREÇO UNITÁRIO (R$)</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="0,00" 
           value={String(formData.precoUnitario ?? '').replace('.', ',')}
           onChange={(e) => handleInputChange('precoUnitario', e.target.value)}
@@ -1285,20 +1425,20 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       </div>
 
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ESTOQUE MIN.</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">ESTOQUE MIN.</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="5" 
           value={String(formData.estoqueMinimo ?? '').replace('.', ',')}
           onChange={(e) => handleInputChange('estoqueMinimo', e.target.value)}
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ESTOQUE IDEAL</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">ESTOQUE IDEAL</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="10" 
           value={String(formData.estoqueIdeal ?? '').replace('.', ',')}
           onChange={(e) => handleInputChange('estoqueIdeal', e.target.value)}
@@ -1306,19 +1446,19 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       </div>
 
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">LOCALIZAÇÃO</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">LOCALIZAÇÃO</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="Corredor A / Prateleira 2" 
           value={formData.localizacao || ''}
           onChange={(e) => handleInputChange('localizacao', e.target.value)}
         />
       </div>
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">DETALHES / OBSERVAÇÃO</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">DETALHES / OBSERVAÇÃO</label>
         <textarea 
-          className="input-field min-h-[60px] py-2" 
+          className="input-field-compact min-h-[60px] py-2" 
           placeholder="Observações adicionais..."
           value={formData.detalhes || ''}
           onChange={(e) => handleInputChange('detalhes', e.target.value)}
@@ -1328,20 +1468,20 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   );
 
   const renderColaboradoresForm = () => (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-2">
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Matrícula / ID</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Matrícula / ID</label>
         <input 
           type="text" 
-          className="input-field bg-slate-50 font-mono" 
+          className="input-field-compact bg-slate-50 font-mono" 
           value={formData.matricula || ''}
           readOnly
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Equipe Vinculada</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Equipe Vinculada</label>
         <select 
-          className="input-field pr-8"
+          className="input-field-compact pr-8"
           value={formData.equipe || ''}
           onChange={(e) => handleInputChange('equipe', e.target.value)}
         >
@@ -1351,20 +1491,20 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
       </div>
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block flex items-center gap-1">
           Nome Completo
         </label>
         <input 
           type="text" 
-          className="input-field transition-all duration-300"
+          className="input-field-compact transition-all duration-300"
           value={formData.nome || ''}
           onChange={(e) => handleInputChange('nome', e.target.value)}
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Empresa</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Empresa</label>
         <select 
-          className="input-field pr-10" 
+          className="input-field-compact pr-10" 
           value={formData.empresa || ''}
           onChange={(e) => handleInputChange('empresa', e.target.value)}
         >
@@ -1378,18 +1518,18 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Contato (Telefone)</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Contato (Telefone)</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           value={formData.contato || ''}
           onChange={(e) => handleInputChange('contato', e.target.value)}
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cargo / Função</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Cargo / Função</label>
         <select 
-          className="input-field pr-8"
+          className="input-field-compact pr-8"
           value={formData.cargo || ''}
           onChange={(e) => handleInputChange('cargo', e.target.value)}
         >
@@ -1400,9 +1540,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         </select>
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Status</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Status</label>
         <select 
-          className="input-field pr-8"
+          className="input-field-compact pr-8"
           value={formData.status || 'Ativo'}
           onChange={(e) => handleInputChange('status', e.target.value)}
         >
@@ -1414,32 +1554,32 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   );
 
   const renderEmpresasForm = () => (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-2">
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cód. Empresa</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Cód. Empresa</label>
         <input 
           type="text" 
-          className="input-field bg-slate-50 font-mono" 
+          className="input-field-compact bg-slate-50 font-mono" 
           value={formData.codigoEmpresa || ''}
           readOnly
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block flex items-center gap-1">
           Razão Social
         </label>
         <input 
           type="text" 
-          className="input-field transition-all duration-300"
+          className="input-field-compact transition-all duration-300"
           value={formData.razaoSocial || ''}
           onChange={(e) => handleInputChange('razaoSocial', e.target.value)}
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">CNPJ</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">CNPJ</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="00.000.000/0000-00" 
           value={formData.cnpj || ''}
           onChange={(e) => handleInputChange('cnpj', maskCNPJ(e.target.value))}
@@ -1447,38 +1587,38 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Nº Contrato</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Nº Contrato</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           value={formData.numContrato || ''}
           onChange={(e) => handleInputChange('numContrato', e.target.value)}
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Área de Atuação</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Área de Atuação</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="Ex: Elétrica, Logística..." 
           value={formData.areaAtuacao || ''}
           onChange={(e) => handleInputChange('areaAtuacao', e.target.value)}
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">E-mail Comercial</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">E-mail Comercial</label>
         <input 
           type="email" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="contato@empresa.com" 
           value={formData.emailComercial || ''}
           onChange={(e) => handleInputChange('emailComercial', e.target.value)}
         />
       </div>
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Detalhes Adicionais</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Detalhes Adicionais</label>
         <textarea 
-          className="input-field min-h-[60px] py-2" 
+          className="input-field-compact min-h-[60px] py-2" 
           placeholder="Observações complementares sobre a empresa..."
           value={formData.detalhes || ''}
           onChange={(e) => handleInputChange('detalhes', e.target.value)}
@@ -1488,21 +1628,21 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   );
 
   const renderFornecedoresForm = () => (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-2">
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cód. Fornecedor</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Cód. Fornecedor</label>
         <input 
           type="text" 
-          className="input-field bg-slate-50 font-mono" 
+          className="input-field-compact bg-slate-50 font-mono" 
           value={formData.codigoFornecedor || ''}
           readOnly
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">CNPJ / CPF</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">CNPJ / CPF</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="00.000.000/0000-00"
           value={formData.cnpj || ''}
           onChange={(e) => handleInputChange('cnpj', maskCNPJ(e.target.value))}
@@ -1510,48 +1650,48 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
         />
       </div>
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block flex items-center gap-1">
           Nome Fantasia
         </label>
         <input 
           type="text" 
-          className="input-field transition-all duration-300"
+          className="input-field-compact transition-all duration-300"
           value={formData.nomeFantasia || ''}
           onChange={(e) => handleInputChange('nomeFantasia', e.target.value)}
         />
       </div>
       <div>
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Telefone</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Telefone</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           value={formData.telefone || ''}
           onChange={(e) => handleInputChange('telefone', e.target.value)}
         />
       </div>
       <div>
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ÁREA COMERCIAL</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">ÁREA COMERCIAL</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           placeholder="Ex: Elétrica, Hidráulica..."
           value={formData.categoria || ''}
           onChange={(e) => handleInputChange('categoria', e.target.value)}
         />
       </div>
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">E-mail Comercial</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">E-mail Comercial</label>
         <input 
           type="email" 
-          className="input-field" 
+          className="input-field-compact" 
           value={formData.email || ''}
           onChange={(e) => handleInputChange('email', e.target.value)}
         />
       </div>
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Detalhes Adicionais</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Detalhes Adicionais</label>
         <textarea 
-          className="input-field min-h-[60px] py-2" 
+          className="input-field-compact min-h-[60px] py-2" 
           placeholder="Observações complementares sobre o fornecedor..."
           value={formData.detalhes || ''}
           onChange={(e) => handleInputChange('detalhes', e.target.value)}
@@ -1561,51 +1701,51 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   );
 
   const renderEquipesForm = () => (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-2">
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cód. Equipe</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Cód. Equipe</label>
         <input 
           type="text" 
-          className="input-field bg-slate-50 font-mono" 
+          className="input-field-compact bg-slate-50 font-mono" 
           value={formData.codigoEquipe || ''}
           readOnly
         />
       </div>
       <div className="col-span-2 md:col-span-1">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Centro de Custo</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Centro de Custo</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           value={formData.centroCusto || ''}
           onChange={(e) => handleInputChange('centroCusto', e.target.value)}
         />
       </div>
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block flex items-center gap-1">
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block flex items-center gap-1">
           Nome da Equipe <span className="text-red-500">*</span>
         </label>
         <input 
           type="text" 
-          className={`input-field transition-all duration-300 ${invalidFields.includes('nome') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`} 
+          className={`input-field-compact transition-all duration-300 ${invalidFields.includes('nome') ? 'ring-2 ring-red-500 border-red-500 animate-pulse bg-red-50' : ''}`} 
           value={formData.nome || ''}
           onChange={(e) => handleInputChange('nome', e.target.value)}
         />
       </div>
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Gestor Líder</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Gestor Líder</label>
         <input 
           type="text" 
-          className="input-field" 
+          className="input-field-compact" 
           value={formData.gestor || ''}
           onChange={(e) => handleInputChange('gestor', e.target.value)}
         />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2">
         <div className="col-span-2 md:col-span-1">
-          <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Verba Inicial (R$)</label>
+          <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Verba Inicial (R$)</label>
           <input 
             type="number" 
-            className="input-field" 
+            className="input-field-compact" 
             value={formData.verbaDestinada || ''}
             onChange={(e) => {
               const val = Number(e.target.value);
@@ -1616,20 +1756,20 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           />
         </div>
         <div className="col-span-2 md:col-span-1">
-          <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Saldo Atual (R$)</label>
+          <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Saldo Atual (R$)</label>
           <input 
             type="number" 
-            className="input-field bg-slate-50" 
+            className="input-field-compact bg-slate-50" 
             value={formData.saldoAtualizado || ''}
             readOnly
           />
         </div>
       </div>
       <div className="col-span-2">
-        <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cor de Ident.</label>
+        <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Cor de Ident.</label>
         <input 
           type="color" 
-          className="input-field p-1 h-8 w-24" 
+          className="input-field-compact p-1 h-8 w-24" 
           value={formData.cor || '#000000'}
           onChange={(e) => handleInputChange('cor', e.target.value)}
         />
@@ -1681,8 +1821,12 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
             </tr>
           ) : (
             sortedData.map((item, idx) => (
-                <tr key={item.id || `reg-${idx}`} className="table-row group hover:bg-slate-50/50 transition-colors">
-                  <td className="px-1 py-1 text-center border-b border-slate-100">
+                <tr 
+                  key={item.id || `reg-${idx}`} 
+                  className="table-row group hover:bg-slate-50/50 transition-colors cursor-pointer"
+                  onClick={() => handleEditClick(item)}
+                >
+                  <td className="px-1 py-1 text-center border-b border-brand-dark/10" onClick={(e) => e.stopPropagation()}>
                     <input 
                       type="checkbox"
                       className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
@@ -1695,31 +1839,37 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                   </td>
                   {type === 'materiais' && (
                       <>
-                        <td className="px-1 py-1 font-mono text-slate-500 text-[9px] border-b border-slate-100 whitespace-nowrap">
+                        <td className="px-1 py-1 font-mono text-slate-500 text-[9px] border-b border-brand-dark/10 whitespace-nowrap">
                           <div className="flex items-center gap-1">
                             {item.syncStatus === 'pending' && <CloudOff className="w-2.5 h-2.5 text-amber-500 animate-pulse" title="Pendente de sincronização" />}
-                            {item.sap}
+                            <CopyableText value={item.sap} className="font-mono" />
                           </div>
                         </td>
-                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-slate-100 uppercase overflow-hidden text-ellipsis whitespace-nowrap max-w-[80px]">
-                          {sortedFornecedoresList.find(f => f.id === item.fornecedorId)?.nomeFantasia || '-'}
+                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10 uppercase overflow-hidden text-ellipsis whitespace-nowrap max-w-[80px]">
+                          <CopyableText value={sortedFornecedoresList.find(f => f.id === item.fornecedorId)?.nomeFantasia || '-'} truncate />
                         </td>
 
-                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-slate-100">
-                          {item.codigoFornecedor || '-'}
+                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10">
+                          <CopyableText value={item.codigoFornecedor} />
                         </td>
-                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-slate-100">
-                          {item.ncm || '-'}
+                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10">
+                          <CopyableText value={item.ncm} />
                         </td>
-                        <td className="px-1 py-1 border-b border-slate-100 min-w-[100px] max-w-[140px]">
-                          <p className="font-bold text-slate-800 text-[10px] leading-tight mb-0.5 truncate" title={item.descricao}>{item.descricao}</p>
+                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10 max-w-[100px] truncate">
+                          <CopyableText value={item.descricaoSimplesSap} truncate title={item.descricaoSimplesSap} />
+                        </td>
+                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10 max-w-[120px] truncate">
+                          <CopyableText value={item.descricaoCompletaSap} truncate title={item.descricaoCompletaSap} />
+                        </td>
+                        <td className="px-1 py-1 border-b border-brand-dark/10 min-w-[100px] max-w-[140px]">
+                          <CopyableText value={item.descricao} className="font-bold text-slate-800 text-[10px] leading-tight mb-0.5" truncate title={item.descricao} />
                           {item.detalhes && <p className="text-[8px] text-slate-400 italic line-clamp-1">{item.detalhes}</p>}
                         </td>
-                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-slate-100">
+                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10">
                           {item.equipe || '-'}
                         </td>
 
-                        <td className="px-1 py-1 font-bold tabular-nums text-center border-b border-slate-100 w-10">
+                        <td className="px-1 py-1 font-bold tabular-nums text-center border-b border-brand-dark/10 w-10" onClick={(e) => e.stopPropagation()}>
                           <input
                             key={`${item.id}-estoqueAtual-${item.estoqueAtual}`}
                             type="text"
@@ -1740,7 +1890,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                             }}
                           />
                         </td>
-                        <td className="px-1 py-1 font-bold tabular-nums text-center border-b border-slate-100 w-10">
+                        <td className="px-1 py-1 font-bold tabular-nums text-center border-b border-brand-dark/10 w-10" onClick={(e) => e.stopPropagation()}>
                           <input
                             key={`${item.id}-estoqueMinimo-${item.estoqueMinimo}`}
                             type="text"
@@ -1755,7 +1905,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                             }}
                           />
                         </td>
-                        <td className="px-1 py-1 font-bold tabular-nums text-center border-b border-slate-100 w-10">
+                        <td className="px-1 py-1 font-bold tabular-nums text-center border-b border-brand-dark/10 w-10" onClick={(e) => e.stopPropagation()}>
                           <input
                             key={`${item.id}-estoqueIdeal-${item.estoqueIdeal}`}
                             type="text"
@@ -1770,7 +1920,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                             }}
                           />
                         </td>
-                        <td className="px-1 py-1 text-right border-b border-slate-100 w-12">
+                        <td className="px-1 py-1 text-right border-b border-brand-dark/10 w-12" onClick={(e) => e.stopPropagation()}>
                           <input
                             key={`${item.id}-precoUnitario-${item.precoUnitario}`}
                             type="text"
@@ -1785,34 +1935,34 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                             }}
                           />
                         </td>
-                        <td className="px-1 py-1 font-bold tabular-nums text-right text-slate-700 border-b border-slate-100 text-[9px] whitespace-nowrap">
+                        <td className="px-1 py-1 font-bold tabular-nums text-right text-slate-700 border-b border-brand-dark/10 text-[9px] whitespace-nowrap">
                           R${((item.estoqueAtual || 0) * (item.precoUnitario || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td className="px-1 py-1 text-center text-slate-500 text-[8px] uppercase border-b border-slate-100 w-8">{item.unidade}</td>
-                        <td className="px-1 py-1 text-slate-400 text-[8px] border-b border-slate-100 w-12 truncate min-w-[30px]">{item.localizacao || '-'}</td>
+                        <td className="px-1 py-1 text-center text-slate-500 text-[8px] uppercase border-b border-brand-dark/10 w-8">{item.unidade}</td>
+                        <td className="px-1 py-1 text-slate-400 text-[8px] border-b border-brand-dark/10 w-12 truncate min-w-[30px]">{item.localizacao || '-'}</td>
                       </>
                     )}
                     {type === 'equipes' && (
                       <>
-                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-slate-100">{item.nome}</td>
-                        <td className="px-1 py-1 text-slate-500 text-[9px] border-b border-slate-100">{item.centroCusto}</td>
-                        <td className="px-1 py-1 text-slate-500 text-[9px] border-b border-slate-100">{item.gestor}</td>
-                        <td className="px-1 py-1 font-bold tabular-nums text-slate-600 text-[9px] border-b border-slate-100 whitespace-nowrap">R$ {item.verbaDestinada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td className={`px-1 py-1 font-bold tabular-nums text-[9px] border-b border-slate-100 whitespace-nowrap ${item.saldoAtualizado < 0 ? 'text-red-600' : 'text-emerald-600'}`}>R$ {item.saldoAtualizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-brand-dark/10">{item.nome}</td>
+                        <td className="px-1 py-1 text-slate-500 text-[9px] border-b border-brand-dark/10">{item.centroCusto}</td>
+                        <td className="px-1 py-1 text-slate-500 text-[9px] border-b border-brand-dark/10">{item.gestor}</td>
+                        <td className="px-1 py-1 font-bold tabular-nums text-slate-600 text-[9px] border-b border-brand-dark/10 whitespace-nowrap">R$ {item.verbaDestinada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td className={`px-1 py-1 font-bold tabular-nums text-[9px] border-b border-brand-dark/10 whitespace-nowrap ${item.saldoAtualizado < 0 ? 'text-red-600' : 'text-emerald-600'}`}>R$ {item.saldoAtualizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                       </>
                     )}
                     {type === 'colaboradores' && (
                       <>
-                        <td className="px-1 py-1 font-mono text-[9px] text-slate-500 border-b border-slate-100">
+                        <td className="px-1 py-1 font-mono text-[9px] text-slate-500 border-b border-brand-dark/10">
                           <div className="flex items-center gap-1">
                             {item.syncStatus === 'pending' && <CloudOff className="w-2.5 h-2.5 text-amber-500 animate-pulse" title="Pendente de sincronização" />}
                             {item.matricula}
                           </div>
                         </td>
-                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-slate-100">{item.nome}</td>
-                        <td className="px-1 py-1 text-[9px] text-slate-500 border-b border-slate-100">{item.empresa}</td>
-                        <td className="px-1 py-1 text-[9px] text-slate-500 border-b border-slate-100">{item.cargo}</td>
-                        <td className="px-1 py-1 border-b border-slate-100">
+                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-brand-dark/10">{item.nome}</td>
+                        <td className="px-1 py-1 text-[9px] text-slate-500 border-b border-brand-dark/10">{item.empresa}</td>
+                        <td className="px-1 py-1 text-[9px] text-slate-500 border-b border-brand-dark/10">{item.cargo}</td>
+                        <td className="px-1 py-1 border-b border-brand-dark/10">
                           <span className="text-[8px] px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200">
                             {item.equipe}
                           </span>
@@ -1821,20 +1971,20 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     )}
                     {type === 'empresas' && (
                       <>
-                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-slate-100">{item.razaoSocial}</td>
-                        <td className="px-1 py-1 text-[9px] text-slate-500 font-mono italic border-b border-slate-100">{item.cnpj}</td>
-                        <td className="px-1 py-1 text-[9px] text-slate-500 border-b border-slate-100">{item.numContrato}</td>
+                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-brand-dark/10">{item.razaoSocial}</td>
+                        <td className="px-1 py-1 text-[9px] text-slate-500 font-mono italic border-b border-brand-dark/10">{item.cnpj}</td>
+                        <td className="px-1 py-1 text-[9px] text-slate-500 border-b border-brand-dark/10">{item.numContrato}</td>
                       </>
                     )}
                     {type === 'fornecedores' && (
                       <>
-                        <td className="px-1 py-1 font-mono text-[8.5px] text-slate-400 border-b border-slate-100">{item.codigoFornecedor}</td>
-                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-slate-100">{item.nomeFantasia}</td>
-                        <td className="px-1 py-1 text-[9px] text-slate-500 font-mono italic border-b border-slate-100">{item.cnpj}</td>
-                        <td className="px-1 py-1 text-blue-600 underline text-[9px] border-b border-slate-100">{item.email}</td>
+                        <td className="px-1 py-1 font-mono text-[8.5px] text-slate-400 border-b border-brand-dark/10">{item.codigoFornecedor}</td>
+                        <td className="px-1 py-1 font-semibold text-[10px] text-brand-dark border-b border-brand-dark/10">{item.nomeFantasia}</td>
+                        <td className="px-1 py-1 text-[9px] text-slate-500 font-mono italic border-b border-brand-dark/10">{item.cnpj}</td>
+                        <td className="px-1 py-1 text-blue-600 underline text-[9px] border-b border-brand-dark/10">{item.email}</td>
                       </>
                     )}
-                    <td className="px-1 py-1 text-right border-b border-slate-100">
+                    <td className="px-1 py-1 text-right border-b border-brand-dark/10" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         {type === 'materiais' && (
                           <button 
@@ -1950,7 +2100,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               <button 
                 type="submit"
                 disabled={isSaving}
-                className={`btn-primary w-full flex items-center justify-center gap-2 mt-4 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`btn-primary !h-8 text-[11px] w-full flex items-center justify-center gap-2 mt-4 ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {isSaving ? (
                   <>
@@ -2194,10 +2344,10 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               </p>
               
               <div className="w-full mt-6 text-left">
-                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
+                <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Sua Senha de Acesso</label>
                 <input 
                   type="password" 
-                  className="input-field" 
+                  className="input-field-compact" 
                   placeholder="Digite sua senha para autorizar"
                   value={deletionPasswordInput}
                   onChange={(e) => setDeletionPasswordInput(e.target.value)}
@@ -2212,13 +2362,13 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                   setIsBulkDeleteModalOpen(false);
                   setDeletionPasswordInput('');
                 }}
-                className="flex-1 btn-secondary"
+                className="flex-1 btn-secondary !h-8 text-[11px]"
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleConfirmBulkDelete}
-                className="flex-1 bg-red-600 text-white rounded-xl font-bold text-sm h-10 hover:bg-red-700 transition-all shadow-sm"
+                className="flex-1 bg-red-600 text-white rounded-xl font-bold text-[11px] h-8 hover:bg-red-700 transition-all shadow-sm"
               >
                 Excluir Todos
               </button>
@@ -2241,10 +2391,10 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               </p>
               
               <div className="w-full mt-6 text-left">
-                <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
+                <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Sua Senha de Acesso</label>
                 <input 
                   type="password" 
-                  className="input-field" 
+                  className="input-field-compact" 
                   placeholder="Digite sua senha para autorizar"
                   value={deletionPasswordInput}
                   onChange={(e) => setDeletionPasswordInput(e.target.value)}
@@ -2256,13 +2406,13 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
             <div className="flex gap-3 mt-6">
               <button 
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="flex-1 btn-secondary"
+                className="flex-1 btn-secondary !h-8 text-[11px]"
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleConfirmDelete}
-                className="flex-1 bg-red-600 text-white rounded-xl font-bold text-sm h-10 hover:bg-red-700 transition-all shadow-sm"
+                className="flex-1 bg-red-600 text-white rounded-xl font-bold text-[11px] h-8 hover:bg-red-700 transition-all shadow-sm"
               >
                 Excluir
               </button>
@@ -2280,7 +2430,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               handleUpdate();
             }}
           >
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+            <div className="p-4 border-b border-brand-dark/10 flex items-center justify-between bg-slate-50/50 shrink-0">
               <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Editar {type === 'materiais' ? 'Material' : type === 'empresas' ? 'Empresa' : type === 'fornecedores' ? 'Fornecedor' : type === 'colaboradores' ? 'Colaborador' : 'Equipe'}</h3>
               <button type="button" onClick={() => setIsEditModalOpen(false)} className="p-1 hover:bg-white rounded-full transition-all">
                 <X className="w-4 h-4 text-slate-400" />
@@ -2288,20 +2438,20 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
             </div>
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
               {type === 'materiais' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">COD SAP</label>
-                    <input 
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">COD SAP</label>
+                    <CopyableInput 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.sap || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, sap: e.target.value.toUpperCase() })}
+                      onChange={(val) => setEditFormData({ ...editFormData, sap: val.toUpperCase() })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">FORNECEDOR</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">FORNECEDOR</label>
                     <select 
-                      className="input-field pr-8"
+                      className="input-field-compact pr-8"
                       value={editFormData.fornecedorId || ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -2320,18 +2470,18 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     </select>
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">CÓD. FORNECEDOR</label>
-                    <input 
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">CÓD. FORNECEDOR</label>
+                    <CopyableInput 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.codigoFornecedor || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, codigoFornecedor: e.target.value.toUpperCase() })}
+                      onChange={(val) => setEditFormData({ ...editFormData, codigoFornecedor: val.toUpperCase() })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">UNIDADE</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">UNIDADE</label>
                     <select 
-                      className="input-field pr-8"
+                      className="input-field-compact pr-8"
                       value={editFormData.unidade || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, unidade: e.target.value })}
                     >
@@ -2346,9 +2496,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     </select>
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">EQUIPE</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">EQUIPE</label>
                     <select 
-                      className="input-field pr-8"
+                      className="input-field-compact pr-8"
                       value={editFormData.equipe || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, equipe: e.target.value })}
                     >
@@ -2356,72 +2506,92 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     </select>
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">NCM</label>
-                    <input 
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">NCM</label>
+                    <CopyableInput 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.ncm || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, ncm: e.target.value.toUpperCase() })}
+                      onChange={(val) => setEditFormData({ ...editFormData, ncm: val.toUpperCase() })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">ESTOQUE ATUAL</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">ESTOQUE ATUAL</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.estoqueAtual === undefined ? '' : String(editFormData.estoqueAtual).replace('.', ',')}
                       onChange={(e) => setEditFormData({ ...editFormData, estoqueAtual: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">DESCRIÇÃO COMPLETA</label>
-                    <input 
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">DESCRIÇÃO</label>
+                    <CopyableInput 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.descricao || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, descricao: e.target.value.toUpperCase() })}
+                      onChange={(val) => setEditFormData({ ...editFormData, descricao: val.toUpperCase() })}
+                    />
+                  </div>
+
+                  <div className="col-span-2 md:col-span-1">
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">DESCRIÇÃO SIMPLES SAP</label>
+                    <CopyableInput 
+                      type="text" 
+                      className="input-field-compact" 
+                      value={editFormData.descricaoSimplesSap || ''}
+                      onChange={(val) => setEditFormData({ ...editFormData, descricaoSimplesSap: val.toUpperCase() })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">ESTOQUE MIN.</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">DESCRIÇÃO COMPLETA SAP</label>
+                    <CopyableInput 
+                      type="text" 
+                      className="input-field-compact" 
+                      value={editFormData.descricaoCompletaSap || ''}
+                      onChange={(val) => setEditFormData({ ...editFormData, descricaoCompletaSap: val.toUpperCase() })}
+                    />
+                  </div>
+
+                  <div className="col-span-2 md:col-span-1">
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">ESTOQUE MIN.</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.estoqueMinimo === undefined ? '' : String(editFormData.estoqueMinimo).replace('.', ',')}
                       onChange={(e) => setEditFormData({ ...editFormData, estoqueMinimo: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">ESTOQUE IDEAL</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">ESTOQUE IDEAL</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.estoqueIdeal === undefined ? '' : String(editFormData.estoqueIdeal).replace('.', ',')}
                       onChange={(e) => setEditFormData({ ...editFormData, estoqueIdeal: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block text-left">PREÇO UNITÁRIO (R$)</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">PREÇO UNITÁRIO (R$)</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.precoUnitario === undefined ? '' : String(editFormData.precoUnitario).replace('.', ',')}
                       onChange={(e) => setEditFormData({ ...editFormData, precoUnitario: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Localização</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Localização</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.localizacao || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, localizacao: e.target.value.toUpperCase() })}
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Detalhes / Observação</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Detalhes / Observação</label>
                     <textarea 
-                      className="input-field min-h-[60px] py-2" 
+                      className="input-field-compact min-h-[60px] py-2" 
                       value={editFormData.detalhes || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, detalhes: e.target.value.toUpperCase() })}
                     ></textarea>
@@ -2430,21 +2600,21 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               )}
 
               {type === 'colaboradores' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Matrícula / ID</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Matrícula / ID</label>
                     <input 
                       type="text" 
-                      className={`input-field font-mono ${selectedItem?.syncStatus === 'pending' ? 'bg-white' : 'bg-slate-50 opacity-70'}`} 
+                      className={`input-field-compact font-mono ${selectedItem?.syncStatus === 'pending' ? 'bg-white' : 'bg-slate-50 opacity-70'}`} 
                       value={editFormData.matricula || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, matricula: e.target.value })}
                       readOnly={selectedItem?.syncStatus !== 'pending'}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Equipe Vinculada</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Equipe Vinculada</label>
                     <select 
-                      className="input-field pr-8"
+                      className="input-field-compact pr-8"
                       value={editFormData.equipe || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, equipe: e.target.value })}
                     >
@@ -2453,18 +2623,18 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Nome Completo</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Nome Completo</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.nome || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, nome: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Empresa</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Empresa</label>
                     <select 
-                      className="input-field pr-10" 
+                      className="input-field-compact pr-10" 
                       value={editFormData.empresa || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, empresa: e.target.value })}
                     >
@@ -2477,18 +2647,18 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     </select>
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Contato (Telefone)</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Contato (Telefone)</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.contato || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, contato: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cargo / Função</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Cargo / Função</label>
                     <select 
-                      className="input-field pr-8"
+                      className="input-field-compact pr-8"
                       value={editFormData.cargo || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, cargo: e.target.value })}
                     >
@@ -2499,9 +2669,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     </select>
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Status</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Status</label>
                     <select 
-                      className="input-field pr-8"
+                      className="input-field-compact pr-8"
                       value={editFormData.status || 'Ativo'}
                       onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
                     >
@@ -2513,21 +2683,21 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               )}
 
               {type === 'fornecedores' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cód. Fornecedor</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Cód. Fornecedor</label>
                     <input 
                       type="text" 
-                      className="input-field bg-slate-50 font-mono" 
+                      className="input-field-compact bg-slate-50 font-mono" 
                       value={editFormData.codigoFornecedor || ''}
                       readOnly
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">CNPJ / CPF</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">CNPJ / CPF</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       placeholder="00.000.000/0000-00"
                       value={editFormData.cnpj || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, cnpj: maskCNPJ(e.target.value) })}
@@ -2535,45 +2705,45 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Nome Fantasia</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Nome Fantasia</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.nomeFantasia || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, nomeFantasia: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Telefone</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Telefone</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.telefone || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, telefone: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">ÁREA COMERCIAL</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">ÁREA COMERCIAL</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.categoria || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, categoria: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">E-mail Comercial</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">E-mail Comercial</label>
                     <input 
                       type="email" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.email || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Detalhes Adicionais</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Detalhes Adicionais</label>
                     <textarea 
-                      className="input-field min-h-[60px] py-2" 
+                      className="input-field-compact min-h-[60px] py-2" 
                       value={editFormData.detalhes || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, detalhes: e.target.value })}
                     ></textarea>
@@ -2582,70 +2752,70 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               )}
 
               {type === 'equipes' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cód. Equipe</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Cód. Equipe</label>
                     <input 
                       type="text" 
-                      className="input-field bg-slate-50 font-mono" 
+                      className="input-field-compact bg-slate-50 font-mono" 
                       value={editFormData.codigoEquipe || ''}
                       readOnly
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Centro de Custo</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Centro de Custo</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.centroCusto || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, centroCusto: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Nome da Equipe</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Nome da Equipe</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.nome || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, nome: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Gestor Líder</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Gestor Líder</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.gestor || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, gestor: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Verba Inicial (R$)</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Verba Inicial (R$)</label>
                     <input 
                       type="number" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.verbaDestinada || 0}
                       onChange={(e) => setEditFormData({ ...editFormData, verbaDestinada: Number(e.target.value) })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Saldo Atual (R$)</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Saldo Atual (R$)</label>
                     <input 
                       type="number" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.saldoAtualizado || 0}
                       onChange={(e) => setEditFormData({ ...editFormData, saldoAtualizado: Number(e.target.value) })}
                     />
                   </div>
                   {type === 'equipes' && (
-                    <div className="col-span-2 mt-2 pt-2 border-t border-slate-100">
+                    <div className="col-span-2 mt-2 pt-2 border-t border-brand-dark/10">
                       <p className="text-[9px] font-bold text-amber-600 uppercase mb-2 flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3" /> Alteração de Verba requer senha de autorização
                       </p>
-                      <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Sua Senha de Acesso</label>
+                      <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Sua Senha de Acesso</label>
                       <input 
                         type="password" 
-                        className="input-field h-8" 
+                        className="input-field-compact h-8" 
                         placeholder="Senha necessária para salvar alterações de orçamento"
                         value={deletionPasswordInput}
                         onChange={(e) => setDeletionPasswordInput(e.target.value)}
@@ -2653,10 +2823,10 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     </div>
                   )}
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cor de Identificação</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Cor de Identificação</label>
                     <input 
                       type="color" 
-                      className="input-field p-1 h-8" 
+                      className="input-field-compact p-1 h-8" 
                       value={editFormData.cor || '#000000'}
                       onChange={(e) => setEditFormData({ ...editFormData, cor: e.target.value })}
                     />
@@ -2665,30 +2835,30 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               )}
 
               {type === 'empresas' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Cód. Empresa</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Cód. Empresa</label>
                     <input 
                       type="text" 
-                      className="input-field bg-slate-50 font-mono" 
+                      className="input-field-compact bg-slate-50 font-mono" 
                       value={editFormData.codigoEmpresa || ''}
                       readOnly
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Razão Social</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Razão Social</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.razaoSocial || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, razaoSocial: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">CNPJ</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">CNPJ</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       placeholder="00.000.000/0000-00"
                       value={editFormData.cnpj || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, cnpj: maskCNPJ(e.target.value) })}
@@ -2696,36 +2866,36 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Nº Contrato</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Nº Contrato</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.numContrato || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, numContrato: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Área de Atuação</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Área de Atuação</label>
                     <input 
                       type="text" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.areaAtuacao || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, areaAtuacao: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Email Comercial</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Email Comercial</label>
                     <input 
                       type="email" 
-                      className="input-field" 
+                      className="input-field-compact" 
                       value={editFormData.emailComercial || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, emailComercial: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Detalhes</label>
+                    <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">Detalhes</label>
                     <textarea 
-                      className="input-field min-h-[60px] py-2" 
+                      className="input-field-compact min-h-[60px] py-2" 
                       value={editFormData.detalhes || ''}
                       onChange={(e) => setEditFormData({ ...editFormData, detalhes: e.target.value })}
                     ></textarea>
@@ -2733,17 +2903,17 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                 </div>
               )}
             </div>
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
+            <div className="p-4 bg-slate-50 border-t border-brand-dark/10 flex justify-end gap-3 shrink-0">
               <button 
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
-                className="btn-secondary !h-9 text-[11px]"
+                className="btn-secondary !h-8 text-[11px]"
               >
                 Cancelar
               </button>
               <button 
                 type="submit"
-                className="btn-primary !h-9 text-[11px] flex items-center gap-2"
+                className="btn-primary !h-8 text-[11px] flex items-center gap-2"
               >
                 <Save className="w-3.5 h-3.5" />
                 Salvar Alterações
@@ -2780,7 +2950,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                 </div>
 
                 {shareType === 'single' && (
-                  <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-brand-dark/10">
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
                         <Eye className="w-6 h-6" />
@@ -2797,7 +2967,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <button 
                     onClick={shareViaWhatsApp}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all group"
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-emerald-50 hover:border-emerald-200 transition-all group"
                   >
                     <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-emerald-200">
                       <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -2807,7 +2977,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
                   <button 
                     onClick={handleGlobalShare}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-blue-50 hover:border-blue-200 transition-all group"
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-blue-50 hover:border-blue-200 transition-all group"
                   >
                     <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-blue-200">
                       <Share2 className="w-5 h-5" />
@@ -2819,7 +2989,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
                   <button 
                     onClick={downloadStockSpreadsheet}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 hover:border-slate-250 transition-all group"
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-slate-50 hover:border-slate-250 transition-all group"
                   >
                     <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-slate-200">
                       <Download className="w-5 h-5" />
@@ -2831,7 +3001,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
               
               <button 
                 onClick={() => setIsShareModalOpen(false)}
-                className="w-full py-4 bg-slate-50 text-slate-500 text-xs font-bold hover:bg-slate-100 transition-colors border-t border-slate-100"
+                className="w-full py-4 bg-slate-50 text-slate-500 text-xs font-bold hover:bg-slate-100 transition-colors border-t border-brand-dark/10"
               >
                 Agora não, obrigado
               </button>
@@ -2905,7 +3075,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-bold text-slate-800 mb-4">Escolha seu provedor</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2">
               <button 
                 onClick={(e) => shareViaEmailChoice(e, 'gmail')}
                 className="p-4 rounded-xl border border-slate-200 hover:bg-red-50 hover:border-red-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"

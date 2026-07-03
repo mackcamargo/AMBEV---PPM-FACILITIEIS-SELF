@@ -22,7 +22,9 @@ export const syncToSupabase = {
         equipe: m.equipe || 'Geral',
         localizacao: m.localizacao || null,
         detalhes: m.detalhes || null,
-        ncm: m.ncm || null
+        ncm: m.ncm || null,
+        descricao_simples_sap: m.descricaoSimplesSap || null,
+        descricao_completa_sap: m.descricaoCompletaSap || null
       }, { onConflict: 'id' });
       
       if (error) {
@@ -51,6 +53,8 @@ export const syncToSupabase = {
     if (m.fornecedorId !== undefined) payload.fornecedor_id = isUUID(m.fornecedorId || '') ? m.fornecedorId : null;
     if (m.detalhes !== undefined) payload.detalhes = m.detalhes;
     if (m.ncm !== undefined) payload.ncm = m.ncm;
+    if (m.descricaoSimplesSap !== undefined) payload.descricao_simples_sap = m.descricaoSimplesSap;
+    if (m.descricaoCompletaSap !== undefined) payload.descricao_completa_sap = m.descricaoCompletaSap;
 
     try {
       const { error } = await supabase.from('materiais').update(payload).eq('id', id);
@@ -420,6 +424,8 @@ export const syncToSupabase = {
         ultimaMovimentacao: m.ultima_movimentacao,
         detalhes: m.detalhes,
         ncm: m.ncm,
+        descricaoSimplesSap: m.descricao_simples_sap,
+        descricaoCompletaSap: m.descricao_completa_sap,
         createdAt: m.created_at
       })) || [],
       colaboradores: colaboradores || [],

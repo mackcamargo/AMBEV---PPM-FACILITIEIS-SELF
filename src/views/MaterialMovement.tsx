@@ -48,7 +48,7 @@ const MaterialSelect = React.forwardRef<HTMLButtonElement, {
         className={`w-full text-left bg-white border rounded-xl flex items-center justify-between px-3 h-10 transition-all ${
           invalid 
             ? 'ring-2 ring-red-600 border-red-600 bg-red-100 animate-error-pulse' 
-            : 'border-slate-200 hover:border-slate-300 focus:ring-2 focus:ring-blue-500/20'
+            : 'border-brand-dark/20 hover:border-slate-300 focus:ring-2 focus:ring-blue-500/20'
         }`}
       >
         <span className="truncate flex-1">
@@ -84,16 +84,16 @@ const MaterialSelect = React.forwardRef<HTMLButtonElement, {
             initial={{ opacity: 0, scale: 0.95, y: -5 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -5 }}
-            className="absolute z-[100] w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden max-h-[350px] flex flex-col"
+            className="absolute z-[100] w-full mt-2 bg-white border border-brand-dark/20 rounded-2xl shadow-2xl overflow-hidden max-h-[350px] flex flex-col"
           >
-            <div className="p-3 border-b border-slate-100 bg-slate-50/50">
+            <div className="p-3 border-b border-brand-dark/10 bg-slate-50/50">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <input
                   autoFocus
                   type="text"
                   placeholder="Pesquisar por nome ou código SAP..."
-                  className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400 bg-white"
+                  className="w-full pl-9 pr-4 py-2 text-xs border border-brand-dark/20 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 placeholder:text-slate-400 bg-white"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -113,7 +113,7 @@ const MaterialSelect = React.forwardRef<HTMLButtonElement, {
                       setIsOpen(false);
                       setSearch('');
                     }}
-                    className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100/50 last:border-0 transition-all flex flex-col gap-1 group"
+                    className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-brand-dark/10 last:border-0 transition-all flex flex-col gap-1 group"
                   >
                     <div className="flex justify-between items-start gap-3">
                        <span className="text-xs font-black text-slate-800 uppercase tracking-tight group-hover:text-blue-600 transition-colors">
@@ -611,7 +611,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                     localStorage.setItem('return_to_view', type === 'Entrada' ? 'entrada-materiais' : 'retirada-materiais');
                     setView('cad-materiais');
                   }}
-                  className="shrink-0 w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all shadow-sm active:scale-95"
+                  className="shrink-0 w-10 h-10 bg-white border border-brand-dark/20 rounded-xl flex items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all shadow-sm active:scale-95"
                   title="Cadastrar novo material"
                 >
                   <Plus className="w-5 h-5" />
@@ -672,9 +672,9 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                     <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">COD SAP</label>
                     <input 
                       type="text" 
-                      className="input-field bg-slate-50 text-slate-500 font-mono" 
+                      className="input-field font-mono" 
                       value={codSapAutomatico} 
-                      readOnly 
+                      onChange={(e) => setCodSapAutomatico(e.target.value)}
                       placeholder="-"
                     />
                   </div>
@@ -742,12 +742,12 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block italic">Cod SAP (Auto)</label>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">COD SAP</label>
                     <input 
                       type="text" 
-                      className="input-field bg-slate-50 text-slate-500 font-mono" 
+                      className="input-field font-mono" 
                       value={codSapAutomatico} 
-                      readOnly 
+                      onChange={(e) => setCodSapAutomatico(e.target.value)}
                       placeholder="-"
                     />
                   </div>
@@ -828,7 +828,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
           <div className="overflow-auto min-h-[300px] flex-1">
             <table className="w-full text-left border-separate border-spacing-0">
               <thead className="sticky top-0 z-10">
-                <tr className="bg-slate-50/95 backdrop-blur-sm shadow-sm">
+                <tr className="bg-slate-50/95 backdrop-blur-sm shadow-sm border-b border-brand-dark/10">
                   <th className="table-header">Material</th>
                   <th className="table-header">Qtd.</th>
                   <th className="table-header text-right">V. Unit</th>
@@ -950,14 +950,14 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                 <h2 className="text-xl font-black text-center text-slate-800 uppercase tracking-tight">Estoque Insuficiente</h2>
               </div>
               
-              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
+              <div className="bg-slate-50 rounded-2xl p-5 border border-brand-dark/20 space-y-3">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Material: <span className="text-slate-900">{insufficientStockModal.materialName}</span></p>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-white rounded-xl border border-slate-100">
+                  <div className="text-center p-3 bg-white rounded-xl border border-brand-dark/10">
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Solicitado</p>
                     <p className="text-lg font-black text-red-600">{insufficientStockModal.requested}</p>
                   </div>
-                  <div className="text-center p-3 bg-white rounded-xl border border-slate-100">
+                  <div className="text-center p-3 bg-white rounded-xl border border-brand-dark/10">
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Disponível</p>
                     <p className="text-lg font-black text-emerald-600">{insufficientStockModal.available}</p>
                   </div>

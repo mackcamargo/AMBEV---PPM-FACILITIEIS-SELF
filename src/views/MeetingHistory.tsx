@@ -459,7 +459,7 @@ export const MeetingHistory: React.FC = () => {
                 if (selectedIds.length === filteredAtas.length) setSelectedIds([]);
                 else setSelectedIds(filteredAtas.map(a => a.id));
               }}
-              className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all bg-white text-slate-500 hover:bg-slate-50 border border-slate-200 flex items-center gap-2"
+              className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all bg-white text-slate-500 hover:bg-slate-50 border border-brand-dark/20 flex items-center gap-2"
             >
               <Check className={`w-3.5 h-3.5 ${selectedIds.length > 0 ? 'text-blue-600' : 'text-slate-400'}`} />
               {selectedIds.length === filteredAtas.length && filteredAtas.length > 0 ? 'Desmarcar' : 'Selecionar Tudo'}
@@ -479,7 +479,7 @@ export const MeetingHistory: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[10px] uppercase font-extrabold text-slate-400">Filtrar por Mês:</span>
             <select
-              className="p-1 px-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 bg-white cursor-pointer hover:border-slate-350 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="p-1 px-2 border border-brand-dark/20 rounded-lg text-xs font-semibold text-slate-700 bg-white cursor-pointer hover:border-slate-350 focus:outline-none focus:ring-1 focus:ring-blue-500"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
             >
@@ -529,7 +529,7 @@ export const MeetingHistory: React.FC = () => {
                   {ata.orcamentosSnapshot?.map((snap, sIdx) => {
                     const isExceeded = (snap.saldoNovo || 0) < 0;
                     return (
-                      <div key={`${ata.id}-snap-${sIdx}`} className={`p-2 rounded-xl border transition-all ${isExceeded ? 'bg-red-50/50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
+                      <div key={`${ata.id}-snap-${sIdx}`} className={`p-2 rounded-xl border transition-all ${isExceeded ? 'bg-red-50/50 border-red-100' : 'bg-slate-50 border-brand-dark/10'}`}>
                         <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-tight truncate">{snap.equipe}</p>
                         <p className="text-[9px] text-slate-500 line-through">R$ {snap.saldoAnterior?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         <p className={`text-[10px] font-bold ${isExceeded ? 'text-red-600' : 'text-emerald-600'}`}>
@@ -574,7 +574,7 @@ export const MeetingHistory: React.FC = () => {
                      </button>
                      <button 
                        onClick={() => handleEditInit(ata)}
-                       className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 hover:bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-all uppercase tracking-tight active:scale-95 cursor-pointer select-none"
+                       className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 hover:bg-slate-100 px-2.5 py-1.5 rounded-lg border border-brand-dark/20 transition-all uppercase tracking-tight active:scale-95 cursor-pointer select-none"
                      >
                        <Edit3 className="w-3.5 h-3.5" />
                        Editar
@@ -608,8 +608,8 @@ export const MeetingHistory: React.FC = () => {
       {/* Details / Share / Edit Modal */}
       {selectedAta && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { if (!isEditing) setSelectedAta(null); }}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden max-h-[90vh] flex flex-col border border-slate-100" onClick={(e) => e.stopPropagation()}>
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden max-h-[90vh] flex flex-col border border-brand-dark/10" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-brand-dark/10 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-brand-blue" />
@@ -641,7 +641,7 @@ export const MeetingHistory: React.FC = () => {
                     <input 
                       type="text" 
                       placeholder="Ex: Reunião de Alinhamento Semanal..."
-                      className="w-full text-xs font-semibold text-slate-800 border border-slate-200 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-slate-50 focus:bg-white transition-all" 
+                      className="w-full text-xs font-semibold text-slate-800 border border-brand-dark/20 rounded-lg p-2.5 outline-none focus:border-blue-500 bg-slate-50 focus:bg-white transition-all" 
                       value={editedDesc} 
                       onChange={(e) => setEditedDesc(e.target.value)} 
                     />
@@ -649,14 +649,14 @@ export const MeetingHistory: React.FC = () => {
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase block">Data da Sessão</label>
-                    <span className="w-full text-xs font-bold text-slate-500 border border-slate-200 rounded-lg p-2.5 bg-slate-100 inline-block font-sans">
+                    <span className="w-full text-xs font-bold text-slate-500 border border-brand-dark/20 rounded-lg p-2.5 bg-slate-100 inline-block font-sans">
                       {new Date(selectedAta.data).toLocaleString('pt-BR')} (original)
                     </span>
                   </div>
 
                   {/* Materials list */}
                   <div className="flex flex-col pt-2">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-100 pb-1 mb-3">Materiais Incluídos na Reunião</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase border-b border-brand-dark/10 pb-1 mb-3">Materiais Incluídos na Reunião</p>
                     <div className="space-y-2 max-h-[170px] overflow-y-auto pr-1">
                       {Object.keys(editedItens).sort((a,b) => {
                         const idxA = itensOrder.indexOf(a);
@@ -671,14 +671,14 @@ export const MeetingHistory: React.FC = () => {
                         const mat = materiais.find(m => m.id === matId);
                         if (!mat) return null;
                         return (
-                          <div key={matId} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-150 transition-colors">
+                          <div key={matId} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-brand-dark/10 hover:border-slate-150 transition-colors">
                             <div className="flex flex-col min-w-0 flex-1 mr-4">
                               <span className="text-xs font-bold text-slate-700 truncate">{mat.descricao}</span>
                               <span className="text-[9.5px] font-mono text-slate-400 font-semibold">COD SAP: {mat.sap} • Equipe: {mat.equipe}</span>
                             </div>
                             
                             <div className="flex items-center gap-3 shrink-0">
-                              <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white">
+                              <div className="flex items-center border border-brand-dark/20 rounded-lg overflow-hidden bg-white">
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -692,7 +692,7 @@ export const MeetingHistory: React.FC = () => {
                                       return { ...prev, [matId]: current - 1 };
                                     });
                                   }}
-                                  className="p-0.5 px-2 bg-slate-50 hover:bg-slate-100 border-r border-slate-200 transition-colors text-slate-500 font-bold active:bg-slate-200 select-none cursor-pointer"
+                                  className="p-0.5 px-2 bg-slate-50 hover:bg-slate-100 border-r border-brand-dark/20 transition-colors text-slate-500 font-bold active:bg-slate-200 select-none cursor-pointer"
                                 >
                                   -
                                 </button>
@@ -717,7 +717,7 @@ export const MeetingHistory: React.FC = () => {
                                   onClick={() => {
                                     setEditedItens(prev => ({ ...prev, [matId]: (prev[matId] || 0) + 1 }));
                                   }}
-                                  className="p-0.5 px-2 bg-slate-50 hover:bg-slate-100 border-l border-slate-200 transition-colors text-slate-500 font-bold active:bg-slate-200 select-none cursor-pointer"
+                                  className="p-0.5 px-2 bg-slate-50 hover:bg-slate-100 border-l border-brand-dark/20 transition-colors text-slate-500 font-bold active:bg-slate-200 select-none cursor-pointer"
                                 >
                                   +
                                 </button>
@@ -761,7 +761,7 @@ export const MeetingHistory: React.FC = () => {
                         placeholder="Digite o COD SAP ou descrição para buscar..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 bg-slate-50 focus:bg-white transition-all"
+                        className="w-full pl-9 pr-4 py-2 border border-brand-dark/20 rounded-lg text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 bg-slate-50 focus:bg-white transition-all"
                       />
                     </div>
 
@@ -855,7 +855,7 @@ export const MeetingHistory: React.FC = () => {
                                 ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/30' 
                                 : isExceeded 
                                   ? 'bg-red-50/60 border-red-100 hover:border-red-200' 
-                                  : 'bg-slate-50 border-slate-150 hover:border-slate-200'
+                                  : 'bg-slate-50 border-slate-150 hover:border-brand-dark/20'
                             }`}
                           >
                             <div className="flex justify-between items-start">
@@ -892,7 +892,7 @@ export const MeetingHistory: React.FC = () => {
                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border cursor-pointer select-none ${
                             shareTeam === 'Todas' 
                             ? 'bg-slate-900 border-slate-900 text-white' 
-                            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
+                            : 'bg-white border-brand-dark/20 text-slate-600 hover:border-slate-350'
                          }`}
                        >
                          TODAS
@@ -904,7 +904,7 @@ export const MeetingHistory: React.FC = () => {
                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border cursor-pointer select-none ${
                               shareTeam === e.nome 
                               ? 'bg-blue-600 border-blue-600 text-white' 
-                              : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
+                              : 'bg-white border-brand-dark/20 text-slate-600 hover:border-slate-350'
                            }`}
                          >
                            {e.nome.toUpperCase()}
@@ -916,7 +916,7 @@ export const MeetingHistory: React.FC = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <button 
                       onClick={() => handleGlobalShare(selectedAta)}
-                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-blue-50 hover:border-blue-200 transition-all group cursor-pointer"
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-blue-50 hover:border-blue-200 transition-all group cursor-pointer"
                     >
                       <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-blue-200">
                         <Share2 className="w-5 h-5" />
@@ -926,7 +926,7 @@ export const MeetingHistory: React.FC = () => {
 
                     <button 
                       onClick={() => shareViaWhatsApp(selectedAta)}
-                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all group cursor-pointer"
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-emerald-50 hover:border-emerald-200 transition-all group cursor-pointer"
                     >
                       <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-emerald-200">
                         <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -936,7 +936,7 @@ export const MeetingHistory: React.FC = () => {
 
                     <button 
                       onClick={() => initiateEmailShare(selectedAta)}
-                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-amber-50 hover:border-amber-200 transition-all group cursor-pointer"
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-amber-50 hover:border-amber-200 transition-all group cursor-pointer"
                     >
                       <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-amber-200">
                         <Mail className="w-5 h-5" />
@@ -948,7 +948,7 @@ export const MeetingHistory: React.FC = () => {
                     
                     <button 
                       onClick={() => downloadSpreadsheet(selectedAta)}
-                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all group cursor-pointer"
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-emerald-50 hover:border-emerald-200 transition-all group cursor-pointer"
                     >
                       <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform relative shadow-lg shadow-emerald-200">
                         <Download className="w-5 h-5" />
@@ -967,12 +967,12 @@ export const MeetingHistory: React.FC = () => {
               ) : (
                 <>
                   <div className="mb-4">
-                     <p className="text-[10px] font-bold text-slate-400 border-b border-slate-100 pb-1 mb-2 uppercase font-mono tracking-wider">Materiais Aprovados</p>
+                     <p className="text-[10px] font-bold text-slate-400 border-b border-brand-dark/10 pb-1 mb-2 uppercase font-mono tracking-wider">Materiais Aprovados</p>
                      <div className="space-y-2">
                         {selectedAta.itensComprados?.map((item, idx) => {
                           const m = materiais.find(mat => mat.id === item.materialId);
                           return (
-                            <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                            <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-brand-dark/10">
                                <div className="flex flex-col min-w-0">
                                  <span className="text-xs font-bold text-slate-700 truncate">{m?.descricao || 'Material não encontrado'}</span>
                                  <span className="text-[10px] font-mono text-slate-400 font-semibold font-sans">COD SAP: {m?.sap || 'N/A'}</span>
@@ -1004,7 +1004,7 @@ export const MeetingHistory: React.FC = () => {
               )}
             </div>
             
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <div className="p-4 bg-slate-50 border-t border-brand-dark/10 flex items-center justify-between">
               {isEditing ? (
                 <>
                   <button 
@@ -1012,7 +1012,7 @@ export const MeetingHistory: React.FC = () => {
                       setIsEditing(false);
                       setEditedItens({});
                     }}
-                    className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-extrabold transition-all uppercase tracking-tight cursor-pointer"
+                    className="px-4 py-2 border border-brand-dark/20 hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-extrabold transition-all uppercase tracking-tight cursor-pointer"
                   >
                     Voltar para Detalhes
                   </button>
@@ -1033,7 +1033,7 @@ export const MeetingHistory: React.FC = () => {
                 <>
                   <button 
                     onClick={() => handleEditInit(selectedAta)}
-                    className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-extrabold transition-all uppercase tracking-tight flex items-center gap-1.5 cursor-pointer select-none active:scale-95"
+                    className="px-4 py-2 border border-brand-dark/20 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-extrabold transition-all uppercase tracking-tight flex items-center gap-1.5 cursor-pointer select-none active:scale-95"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                     Editar Reunião
@@ -1091,7 +1091,7 @@ export const MeetingHistory: React.FC = () => {
                   setDeleteError('');
                   setDeletionPasswordInput('');
                 }}
-                className="flex-1 btn-secondary cursor-pointer h-10 text-[11px] font-bold uppercase tracking-wider rounded-xl border border-slate-200"
+                className="flex-1 btn-secondary cursor-pointer h-10 text-[11px] font-bold uppercase tracking-wider rounded-xl border border-brand-dark/20"
               >
                 Cancelar
               </button>
@@ -1109,7 +1109,7 @@ export const MeetingHistory: React.FC = () => {
       {/* Delete Confirmation Modal */}
       {ataToDelete && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { setAtaToDelete(null); setDeletionPasswordInput(''); setDeleteError(''); }}>
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden border border-slate-100 flex flex-col p-6 space-y-5" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden border border-brand-dark/10 flex flex-col p-6 space-y-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 text-red-600">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
                 <AlertCircle className="w-5 h-5 text-red-600" />
@@ -1149,7 +1149,7 @@ export const MeetingHistory: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setAtaToDelete(null); setDeletionPasswordInput(''); setDeleteError(''); }}
-                className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer hover:border-slate-350"
+                className="px-4 py-2 border border-brand-dark/20 text-slate-600 hover:bg-slate-100 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer hover:border-slate-350"
               >
                 Cancelar
               </button>
@@ -1178,13 +1178,13 @@ export const MeetingHistory: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <button 
                   onClick={(e) => shareViaEmailChoice(e, selectedAta, 'gmail')}
-                  className="p-4 rounded-xl border border-slate-200 hover:bg-red-50 hover:border-red-200 text-center font-bold text-sm text-slate-700"
+                  className="p-4 rounded-xl border border-brand-dark/20 hover:bg-red-50 hover:border-red-200 text-center font-bold text-sm text-slate-700"
                 >
                   Gmail
                 </button>
                 <button 
                   onClick={(e) => shareViaEmailChoice(e, selectedAta, 'outlook')}
-                  className="p-4 rounded-xl border border-slate-200 hover:bg-blue-50 hover:border-blue-200 text-center font-bold text-sm text-slate-700"
+                  className="p-4 rounded-xl border border-brand-dark/20 hover:bg-blue-50 hover:border-blue-200 text-center font-bold text-sm text-slate-700"
                 >
                   Outlook
                 </button>
