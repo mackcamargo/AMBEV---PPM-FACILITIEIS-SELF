@@ -2242,7 +2242,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     exit={{ height: 0, opacity: 0 }}
                     className="bg-slate-50/80 border-t border-slate-200"
                   >
-                    <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-1.5">
                           <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest pl-1 flex items-center gap-1.5">
                             <Users className="w-3 h-3 text-brand-accent" />
@@ -2273,30 +2273,6 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                             <option value="">Todos os Fornecedores</option>
                             {sortedFornecedoresList.map(f => <option key={f.id} value={f.id}>{f.nomeFantasia}</option>)}
                           </select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest pl-1 flex items-center gap-1.5">
-                            <MapPin className="w-3 h-3 text-brand-accent" />
-                            Localização de Estoque
-                          </label>
-                          <div className="relative">
-                            <input 
-                              type="text" 
-                              placeholder="FILTRAR POR LOCAL..."
-                              className="w-full h-9 bg-white border border-slate-200 rounded-lg px-3 text-[11px] font-bold text-slate-700 placeholder:text-slate-300 outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/5 transition-all"
-                              value={activeFilters.localizacao}
-                              onChange={(e) => setActiveFilters({ ...activeFilters, localizacao: e.target.value.toUpperCase() })}
-                            />
-                            {activeFilters.localizacao && (
-                              <button 
-                                onClick={() => setActiveFilters({ ...activeFilters, localizacao: '' })}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
                         </div>
 
                         <div className="space-y-1.5">

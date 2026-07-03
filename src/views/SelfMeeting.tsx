@@ -3,7 +3,65 @@ import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
 import { normalizeText } from '../lib/stringUtils';
 import { Material, Equipe, AtaReuniao, Movimentacao, formatUnit } from '../types';
-import { Save, AlertCircle, ShoppingCart, Plus, Trash2, Download, Mail, Share2, Search } from 'lucide-react';
+import { Save, AlertCircle, ShoppingCart, Plus, Trash2, Download, Mail, Share2, Search, Copy, Check } from 'lucide-react';
+
+const CopyableText: React.FC<{ value: string; className?: string; truncate?: boolean; maxW?: string; title?: string; copyValue?: string }> = ({ value, className, truncate, maxW, title, copyValue }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const textToCopy = copyValue || value;
+    if (!textToCopy) return;
+    
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    
+    // Play subtle sound if available
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.1);
+    } catch (e) {}
+    
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className={`relative group/copy-text flex items-center gap-1.5 ${maxW || ''}`}>
+      <div className="flex-1 min-w-0">
+        <span 
+          className={`${className || ''} ${truncate ? 'truncate block' : ''}`} 
+          title={title || value}
+        >
+          {value || '-'}
+        </span>
+      </div>
+      {(copyValue || (value && value !== '-')) && (
+        <button
+          onClick={handleCopy}
+          className="opacity-0 group-hover/copy-text:opacity-100 transition-all p-1 hover:bg-slate-100 rounded bg-white/80 backdrop-blur-sm shadow-sm border border-slate-200 shrink-0 ml-auto"
+          title="Copiar Descrição Completa"
+        >
+          {copied ? (
+            <Check className="w-2.5 h-2.5 text-emerald-600" />
+          ) : (
+            <Copy className="w-2.5 h-2.5 text-slate-400" />
+          )}
+        </button>
+      )}
+    </div>
+  );
+};
 
 export const SelfMeeting: React.FC = () => {
   const { materiais, equipes, setEquipes, atas, addAta, addMovimentacao, colaboradores, updateMaterial, updateEquipe } = useApp();
@@ -81,6 +139,9 @@ export const SelfMeeting: React.FC = () => {
   const [customAtaName, setCustomAtaName] = useState(() => {
     return localStorage.getItem('selfMeeting_customAtaName') || '';
   });
+
+  const [showShareOptionsModal, setShowShareOptionsModal] = useState(false);
+  const [pendingShareMethod, setPendingShareMethod] = useState<'csv' | 'whatsapp' | 'email' | 'native' | null>(null);
 
   useEffect(() => {
     localStorage.setItem('selfMeeting_customAtaName', customAtaName);
@@ -288,15 +349,42 @@ export const SelfMeeting: React.FC = () => {
     }
   };
 
-  const shareViaWhatsApp = () => {
-    const text = generateShareMessage();
+  const handleShareChoice = (method: 'csv' | 'whatsapp' | 'email' | 'native') => {
+    setPendingShareMethod(method);
+    setShowShareOptionsModal(true);
+  };
+
+  const executeShare = (includeValues: boolean) => {
+    if (!pendingShareMethod) return;
+
+    switch (pendingShareMethod) {
+      case 'csv':
+        downloadSpreadsheet(includeValues);
+        break;
+      case 'whatsapp':
+        shareViaWhatsApp(includeValues);
+        break;
+      case 'email':
+        initiateEmailShare(includeValues);
+        break;
+      case 'native':
+        handleGlobalShare(includeValues);
+        break;
+    }
+
+    setShowShareOptionsModal(false);
+    setPendingShareMethod(null);
+  };
+
+  const shareViaWhatsApp = (includeValues: boolean) => {
+    const text = generateShareMessage(includeValues);
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const shareViaEmailChoice = (e: React.MouseEvent, provider: 'gmail' | 'outlook') => {
+  const shareViaEmailChoice = (e: React.MouseEvent, provider: 'gmail' | 'outlook', includeValues: boolean) => {
     e.stopPropagation();
     const subject = `Solicitação de Orçamento - Ata de Reunião de Self - ${new Date().toLocaleDateString()}`;
-    const text = generateShareMessage();
+    const text = generateShareMessage(includeValues);
     let formattedBody = text.replace(/\n/g, '\r\n');
     
     // Truncate to avoid 404 / URL too long errors
@@ -313,7 +401,7 @@ export const SelfMeeting: React.FC = () => {
     }
     
     // Auto download spreadsheet
-    downloadSpreadsheet();
+    downloadSpreadsheet(includeValues);
     
     window.open(url, '_blank');
     setIsEmailChoiceModalOpen(false);
@@ -323,22 +411,23 @@ export const SelfMeeting: React.FC = () => {
     }, 500);
   };
 
-  const initiateEmailShare = () => {
+  const initiateEmailShare = (includeValues: boolean) => {
     const isMobile = window.innerWidth < 768;
     if (isMobile) {
-      shareViaEmail();
+      shareViaEmail(includeValues);
     } else {
       setIsEmailChoiceModalOpen(true);
+      (window as any)._pendingIncludeValues = includeValues;
     }
   };
 
-  const shareViaEmail = () => {
+  const shareViaEmail = (includeValues: boolean) => {
     const subject = `Solicitação de Orçamento - Ata de Reunião de Self - ${new Date().toLocaleDateString()}`;
-    const text = generateShareMessage();
+    const text = generateShareMessage(includeValues);
     const formattedBody = text.replace(/\n/g, '\r\n');
     
     // Auto download spreadsheet
-    downloadSpreadsheet();
+    downloadSpreadsheet(includeValues);
     
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(formattedBody)}`;
 
@@ -347,9 +436,9 @@ export const SelfMeeting: React.FC = () => {
     }, 500);
   };
 
-  const handleGlobalShare = async () => {
+  const handleGlobalShare = async (includeValues: boolean) => {
     const subject = `Solicitação de Orçamento - Ata de Reunião de Self - ${new Date().toLocaleDateString()}`;
-    const text = generateShareMessage();
+    const text = generateShareMessage(includeValues);
     
     // Prepare items to generate the CSV rows
     let totalValue = 0;
@@ -365,37 +454,54 @@ export const SelfMeeting: React.FC = () => {
         const m = materiais.find(mat => mat.id === id);
         const subtotal = (q as number) * (m?.precoUnitario || 0);
         totalValue += subtotal;
-        return {
+        
+        const row: any = {
           COD_SAP: m?.sap,
           Equipe: m?.equipe,
           Descricao: m?.descricao,
           DescricaoSimples: m?.descricaoSimplesSap || '-',
           DescricaoCompleta: m?.descricaoCompletaSap || '-',
           Quantidade: q,
-          Unidade: formatUnit(m?.unidade),
-          PrecoUnit: (m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-          Subtotal: subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+          Unidade: formatUnit(m?.unidade)
         };
+
+        if (includeValues) {
+          row.PrecoUnit = (m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+          row.Subtotal = subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        }
+
+        return row;
       });
 
-    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Descrição Simples SAP', 'Descrição Completa SAP', 'Quantidade', 'Unidade', 'Valor Unitário', 'Valor Total'];
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Descrição Simples SAP', 'Descrição Completa SAP', 'Quantidade', 'Unidade'];
+    if (includeValues) {
+      headers.push('Valor Unitário', 'Valor Total');
+    }
+
     const csvRows = [
       headers.join(';'),
-      ...items.map(row => 
-        [
+      ...items.map(row => {
+        const line = [
           row.COD_SAP,
           row.Equipe,
           `"${row.Descricao}"`,
           `"${row.DescricaoSimples}"`,
           `"${row.DescricaoCompleta}"`,
           row.Quantidade,
-          row.Unidade,
-          row.PrecoUnit,
-          row.Subtotal
-        ].join(';')
-      ),
-      ['', '', '', '', 'TOTAL GERAL', '', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
+          row.Unidade
+        ];
+        if (includeValues) {
+          line.push(row.PrecoUnit, row.Subtotal);
+        }
+        return line.join(';');
+      })
     ];
+
+    if (includeValues) {
+      const emptyCols = headers.length - 2;
+      const totalLine = Array(emptyCols).fill('').concat(['TOTAL GERAL', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })]);
+      csvRows.push(totalLine.join(';'));
+    }
 
     const csvContent = "\uFEFF" + csvRows.join('\n');
     const fileName = `Orcamento_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
@@ -418,12 +524,12 @@ export const SelfMeeting: React.FC = () => {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        shareViaEmail();
+        shareViaEmail(includeValues);
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.warn('Share API fallback:', err?.message || err);
-        shareViaEmail();
+        shareViaEmail(includeValues);
       }
     }
   };
@@ -462,7 +568,7 @@ export const SelfMeeting: React.FC = () => {
     }
   };
 
-  const generateShareMessage = () => {
+  const generateShareMessage = (includeValues: boolean) => {
     let totalValue = 0;
     const items = Object.entries(compras)
       .filter(([id, q]) => {
@@ -476,15 +582,22 @@ export const SelfMeeting: React.FC = () => {
         const m = materiais.find(mat => mat.id === id);
         const subtotal = (q as number) * (m?.precoUnitario || 0);
         totalValue += subtotal;
-        return `• ${m?.descricao}\n  - COD SAP: ${m?.sap}\n  - DESC. SIMPLES SAP: ${m?.descricaoSimplesSap || '-'}\n  - DESC. COMPLETA SAP: ${m?.descricaoCompletaSap || '-'}\n  - Qtd: ${q} ${formatUnit(m?.unidade)}\n  - Valor Unit: R$ ${(m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n  - Valor Total: R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        
+        let msg = `• ${m?.descricao}\n  - COD SAP: ${m?.sap}\n  - DESC. SIMPLES SAP: ${m?.descricaoSimplesSap || '-'}\n  - DESC. COMPLETA SAP: ${m?.descricaoCompletaSap || '-'}\n  - Qtd: ${q} ${formatUnit(m?.unidade)}`;
+        
+        if (includeValues) {
+          msg += `\n  - Valor Unit: R$ ${(m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n  - Valor Total: R$ ${subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        }
+        
+        return msg;
       });
     
-    const footer = items.length > 0 ? `\n\nVALOR TOTAL DA SOLICITAÇÃO: R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '';
+    const footer = (items.length > 0 && includeValues) ? `\n\nVALOR TOTAL DA SOLICITAÇÃO: R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '';
     
     return `Ola Espero que esteja Tudo Bem!\n\nSolicitamos o orçamento para os materiais e peças listados abaixo, referentes à nossa Reunião de Self.\nPedimos que o retorno com valores, disponibilidade e condições comerciais seja enviado em até 48 horas após o recebimento deste e-mail ou WhatsApp.\nÉ imprescindível que a proposta contemple o prazo de entrega após a geração do pedido de compra, para que possamos avaliar e dar prosseguimento ao processo de aquisição.\nSegue lista abaixo!\n\n${items.length > 0 ? items.join('\n\n') : 'Nenhum material selecionado para esta equipe.'}${footer}`;
   };
 
-  const downloadSpreadsheet = () => {
+  const downloadSpreadsheet = (includeValues: boolean) => {
     let totalValue = 0;
     const items = Object.entries(compras)
       .filter(([id, q]) => {
@@ -498,37 +611,54 @@ export const SelfMeeting: React.FC = () => {
         const m = materiais.find(mat => mat.id === id);
         const subtotal = (q as number) * (m?.precoUnitario || 0);
         totalValue += subtotal;
-        return {
+        
+        const row: any = {
           COD_SAP: m?.sap,
           Equipe: m?.equipe,
           Descricao: m?.descricao,
           DescricaoSimples: m?.descricaoSimplesSap || '-',
           DescricaoCompleta: m?.descricaoCompletaSap || '-',
           Quantidade: q,
-          Unidade: formatUnit(m?.unidade),
-          PrecoUnit: (m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-          Subtotal: subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+          Unidade: formatUnit(m?.unidade)
         };
+
+        if (includeValues) {
+          row.PrecoUnit = (m?.precoUnitario || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+          row.Subtotal = subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        }
+
+        return row;
       });
 
-    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Descrição Simples SAP', 'Descrição Completa SAP', 'Quantidade', 'Unidade', 'Valor Unitário', 'Valor Total'];
+    const headers = ['COD SAP', 'Equipe', 'Descrição', 'Descrição Simples SAP', 'Descrição Completa SAP', 'Quantidade', 'Unidade'];
+    if (includeValues) {
+      headers.push('Valor Unitário', 'Valor Total');
+    }
+
     const csvRows = [
       headers.join(';'),
-      ...items.map(row => 
-        [
+      ...items.map(row => {
+        const line = [
           row.COD_SAP,
           row.Equipe,
           `"${row.Descricao}"`,
           `"${row.DescricaoSimples}"`,
           `"${row.DescricaoCompleta}"`,
           row.Quantidade,
-          row.Unidade,
-          row.PrecoUnit,
-          row.Subtotal
-        ].join(';')
-      ),
-      ['', '', '', '', 'TOTAL GERAL', '', '', '', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })].join(';')
+          row.Unidade
+        ];
+        if (includeValues) {
+          line.push(row.PrecoUnit, row.Subtotal);
+        }
+        return line.join(';');
+      })
     ];
+
+    if (includeValues) {
+      const emptyCols = headers.length - 2;
+      const totalLine = Array(emptyCols).fill('').concat(['TOTAL GERAL', totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })]);
+      csvRows.push(totalLine.join(';'));
+    }
 
     const csvContent = "\uFEFF" + csvRows.join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -940,8 +1070,15 @@ export const SelfMeeting: React.FC = () => {
                         <td className={`px-4 py-3 font-mono text-[10px] border-b transition-all ${isActive ? 'text-blue-800 font-bold border-blue-900/10' : 'text-slate-400 border-brand-dark/20'}`}>
                           {item.codigoFornecedor || '-'}
                         </td>
-                        <td className={`px-4 py-3 border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-brand-dark/20'}`}>
-                          <p className={`font-bold text-[12px] leading-tight mb-0.5 ${isActive ? 'text-blue-950' : 'text-slate-800'}`}>{item.descricao}</p>
+                        <td 
+                          title={item.descricaoCompletaSap || item.descricao}
+                          className={`px-4 py-3 border-b transition-all ${isActive ? 'border-blue-900/10' : 'border-brand-dark/20'}`}
+                        >
+                          <CopyableText 
+                            value={item.descricao} 
+                            copyValue={item.descricaoCompletaSap || item.descricao}
+                            className={`font-bold text-[12px] leading-tight mb-0.5 ${isActive ? 'text-blue-950' : 'text-slate-800'}`}
+                          />
                           <div className="flex gap-2 items-center">
                             <p className={`text-[10px] font-bold uppercase tracking-tighter px-1 rounded-sm ${isActive ? 'bg-blue-900 text-white' : 'bg-slate-100 text-slate-400'}`}>{item.equipe}</p>
                             {item.ultimaMovimentacao && (
@@ -1157,7 +1294,7 @@ export const SelfMeeting: React.FC = () => {
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
                 <button 
-                  onClick={handleGlobalShare}
+                  onClick={() => handleShareChoice('native')}
                   className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-blue-50 hover:border-blue-200 transition-all group"
                 >
                   <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-blue-200">
@@ -1167,7 +1304,7 @@ export const SelfMeeting: React.FC = () => {
                 </button>
 
                 <button 
-                  onClick={shareViaWhatsApp}
+                  onClick={() => handleShareChoice('whatsapp')}
                   className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-emerald-50 hover:border-emerald-200 transition-all group lg:min-w-[70px] cursor-pointer"
                 >
                   <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-emerald-200">
@@ -1177,7 +1314,7 @@ export const SelfMeeting: React.FC = () => {
                 </button>
 
                 <button 
-                  onClick={initiateEmailShare}
+                  onClick={() => handleShareChoice('email')}
                   className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-amber-50 hover:border-amber-200 transition-all group lg:min-w-[70px] cursor-pointer"
                 >
                   <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg shadow-amber-200">
@@ -1186,11 +1323,8 @@ export const SelfMeeting: React.FC = () => {
                   <span className="text-[9px] font-bold text-slate-700">Email</span>
                 </button>
                 
-
-
-                
                 <button 
-                  onClick={downloadSpreadsheet}
+                  onClick={() => handleShareChoice('csv')}
                   className="flex flex-col items-center gap-2 p-3 rounded-xl border border-brand-dark/10 hover:bg-emerald-50 hover:border-emerald-200 transition-all group"
                 >
                   <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform relative shadow-lg shadow-emerald-200">
@@ -1316,6 +1450,60 @@ export const SelfMeeting: React.FC = () => {
         </div>
       )}
 
+      {/* Share Options Modal (With/Without Values) */}
+      {showShareOptionsModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 animate-in zoom-in-95 duration-200 border border-brand-dark/10">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="relative">
+                  <Share2 className="w-8 h-8 text-blue-600" />
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">?</div>
+                </div>
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Opções de Compartilhamento</h3>
+              <p className="text-sm text-slate-500 mb-8 px-4">
+                Deseja incluir os <strong>valores financeiros</strong> (preços unitários e totais) no compartilhamento?
+              </p>
+
+              <div className="space-y-3">
+                <button 
+                  onClick={() => executeShare(true)}
+                  className="w-full py-4 px-6 rounded-2xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 flex items-center justify-between group"
+                >
+                  <div className="flex flex-col items-start">
+                    <span>Compartilhar COM Valores</span>
+                    <span className="text-[10px] opacity-70 font-normal italic">Inclui preços e totais</span>
+                  </div>
+                  <Check className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+
+                <button 
+                  onClick={() => executeShare(false)}
+                  className="w-full py-4 px-6 rounded-2xl bg-slate-100 text-slate-700 font-bold text-sm hover:bg-slate-200 transition-all flex items-center justify-between group"
+                >
+                  <div className="flex flex-col items-start">
+                    <span>Compartilhar SEM Valores</span>
+                    <span className="text-[10px] text-slate-500 font-normal italic">Apenas materiais e quantidades</span>
+                  </div>
+                  <AlertCircle className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+
+                <button 
+                  onClick={() => {
+                    setShowShareOptionsModal(false);
+                    setPendingShareMethod(null);
+                  }}
+                  className="w-full py-3 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  VOLTAR
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Confirmation Modal to Save or Discard current unsaved choosing */}
       {showConfirmNewMeeting && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1419,13 +1607,13 @@ export const SelfMeeting: React.FC = () => {
             <h3 className="text-lg font-bold text-slate-800 mb-4">Escolha seu provedor</h3>
             <div className="grid grid-cols-2 gap-4">
               <button 
-                onClick={(e) => shareViaEmailChoice(e, 'gmail')}
+                onClick={(e) => shareViaEmailChoice(e, 'gmail', (window as any)._pendingIncludeValues)}
                 className="p-4 rounded-xl border border-brand-dark/20 hover:bg-red-50 hover:border-red-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
               >
                 Gmail
               </button>
               <button 
-                onClick={(e) => shareViaEmailChoice(e, 'outlook')}
+                onClick={(e) => shareViaEmailChoice(e, 'outlook', (window as any)._pendingIncludeValues)}
                 className="p-4 rounded-xl border border-brand-dark/20 hover:bg-blue-50 hover:border-blue-200 text-center font-bold text-sm text-slate-700 transition-colors cursor-pointer"
               >
                 Outlook
