@@ -674,7 +674,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                       type="text" 
                       className="input-field font-mono" 
                       value={codSapAutomatico} 
-                      onChange={(e) => setCodSapAutomatico(e.target.value)}
+                      onChange={(e) => setCodSapAutomatico(e.target.value.replace(/^"|"$/g, '').trim())}
                       placeholder="-"
                     />
                   </div>
@@ -688,7 +688,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                       className={`input-field transition-all duration-300 ${invalidFields.includes('os') ? 'ring-2 ring-red-600 border-red-600 bg-red-100 animate-error-pulse' : ''}`} 
                       value={os} 
                       onChange={(e) => {
-                        const val = e.target.value;
+                        const val = e.target.value.replace(/^"|"$/g, '').trim();
                         setOs(val);
                         if (val.trim()) clearInvalidField('os');
                       }}
@@ -747,18 +747,18 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                       type="text" 
                       className="input-field font-mono" 
                       value={codSapAutomatico} 
-                      onChange={(e) => setCodSapAutomatico(e.target.value)}
+                      onChange={(e) => setCodSapAutomatico(e.target.value.replace(/^"|"$/g, '').trim())}
                       placeholder="-"
                     />
                   </div>
                   <div>
                     <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Nº Nota Fiscal (NF)</label>
-                    <input type="text" className="input-field" value={numNotaFiscal} onChange={(e) => setNumNotaFiscal(e.target.value)} />
+                    <input type="text" className="input-field" value={numNotaFiscal} onChange={(e) => setNumNotaFiscal(e.target.value.replace(/^"|"$/g, '').trim())} />
                   </div>
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Nº PEDIDO COD SAP</label>
-                  <input type="text" className="input-field" value={pedidoSap} onChange={(e) => setPedidoSap(e.target.value)} placeholder="Ex: COD SAP-1234" />
+                  <input type="text" className="input-field" value={pedidoSap} onChange={(e) => setPedidoSap(e.target.value.replace(/^"|"$/g, '').trim())} placeholder="Ex: COD SAP-1234" />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Fornecedor</label>

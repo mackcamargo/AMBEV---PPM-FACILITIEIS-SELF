@@ -60,7 +60,11 @@ const CopyableInput: React.FC<{
       <input
         type={type}
         value={value}
-        onChange={(e) => onChange?.(e.target.value)}
+        onChange={(e) => {
+          const val = e.target.value;
+          const sanitized = typeof val === 'string' ? val.replace(/^"|"$/g, '').trim() : val;
+          onChange?.(sanitized);
+        }}
         placeholder={placeholder}
         className={className}
         readOnly={readOnly}
@@ -178,7 +182,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
   const headers = useMemo(() => {
     switch(type) {
-      case 'materiais': return ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'NCM', 'DESC. SIMPLES SAP', 'DESC. COMPLETA SAP', 'DESCRIÇÃO', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO', 'AÇÕES'];
+      case 'materiais': return ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'NCM', 'DESCRIÇÃO', 'DESC. SIMPLES SAP', 'DESC. COMPLETA SAP', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO', 'AÇÕES'];
       case 'colaboradores': return ['Matrícula', 'Nome', 'Empresa', 'Cargo', 'Equipe', 'Ações'];
       case 'empresas': return ['Razão Social', 'CNPJ', 'Contrato', 'Ações'];
       case 'fornecedores': return ['Cód.', 'Nome Fantasia', 'CNPJ', 'Email', 'Ações'];
@@ -495,7 +499,14 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   }, [type, formData.matricula, formData.codigoFornecedor, formData.codigoEquipe, formData.codigoEmpresa, store.colaboradores.length, store.fornecedores.length, store.equipes.length, store.empresas.length]);
 
   const handleInputChange = (field: string, value: any) => {
-    const finalValue = (type === 'materiais' && typeof value === 'string') ? value.toUpperCase() : value;
+    let finalValue = value;
+    if (typeof value === 'string') {
+      // Remove surrounding quotes and trim
+      finalValue = value.replace(/^"|"$/g, '').trim();
+      if (type === 'materiais') {
+        finalValue = finalValue.toUpperCase();
+      }
+    }
     setFormData(prev => ({ ...prev, [field]: finalValue }));
   };
 
@@ -723,10 +734,17 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
   const handleUpdate = async () => {
     if (selectedItem) {
+      // Sanitize all string fields to remove surrounding quotes
+      const sanitizedEditData = Object.keys(editFormData).reduce((acc, key) => {
+        const val = editFormData[key];
+        acc[key] = typeof val === 'string' ? val.replace(/^"|"$/g, '').trim() : val;
+        return acc;
+      }, {} as any);
+
       // Security check for budget (Verba) changes if applicable
       if (type === 'equipes') {
-        const isBudgetChanged = editFormData.verbaDestinada !== selectedItem.verbaDestinada || 
-                               editFormData.saldoAtualizado !== selectedItem.saldoAtualizado;
+        const isBudgetChanged = sanitizedEditData.verbaDestinada !== selectedItem.verbaDestinada || 
+                               sanitizedEditData.saldoAtualizado !== selectedItem.saldoAtualizado;
         
         if (isBudgetChanged && store.isDeletionPasswordEnabled) {
            if (deletionPasswordInput !== store.deletionPassword) {
@@ -739,10 +757,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       // Validation for updates too
       if (type === 'materiais') {
         const missing = [];
-        if (!editFormData.sap) missing.push('COD SAP');
-        if (!editFormData.descricao) missing.push('Descrição');
+        if (!sanitizedEditData.descricao) missing.push('Descrição');
         
-        if (false) {
+        if (missing.length > 0) {
           addToast('Campos Pendentes', `Não foi possível salvar. Faltam: ${missing.join(', ')}`, 'error');
           return;
         }
@@ -759,31 +776,31 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
           };
 
           const parsedData = { 
-            ...editFormData,
-            estoqueAtual: parseNumeric(editFormData.estoqueAtual),
-            estoqueMinimo: parseNumeric(editFormData.estoqueMinimo),
-            estoqueIdeal: parseNumeric(editFormData.estoqueIdeal),
-            precoUnitario: parseNumeric(editFormData.precoUnitario),
+            ...sanitizedEditData,
+            estoqueAtual: parseNumeric(sanitizedEditData.estoqueAtual),
+            estoqueMinimo: parseNumeric(sanitizedEditData.estoqueMinimo),
+            estoqueIdeal: parseNumeric(sanitizedEditData.estoqueIdeal),
+            precoUnitario: parseNumeric(sanitizedEditData.precoUnitario),
           };
           result = await store.updateMaterial(selectedItem.id, parsedData); 
-          label = editFormData.descricao || 'Material';
+          label = sanitizedEditData.descricao || 'Material';
           break;
         }
         case 'colaboradores': 
-          result = await store.updateColaborador(selectedItem.id, editFormData); 
-          label = editFormData.nome || 'Colaborador';
+          result = await store.updateColaborador(selectedItem.id, sanitizedEditData); 
+          label = sanitizedEditData.nome || 'Colaborador';
           break;
         case 'equipes': 
-          result = await store.updateEquipe(selectedItem.id, editFormData); 
-          label = editFormData.nome || 'Equipe';
+          result = await store.updateEquipe(selectedItem.id, sanitizedEditData); 
+          label = sanitizedEditData.nome || 'Equipe';
           break;
         case 'fornecedores': 
-          result = await store.updateFornecedor(selectedItem.id, editFormData); 
-          label = editFormData.nomeFantasia || 'Fornecedor';
+          result = await store.updateFornecedor(selectedItem.id, sanitizedEditData); 
+          label = sanitizedEditData.nomeFantasia || 'Fornecedor';
           break;
         case 'empresas': 
-          result = await store.updateEmpresa(selectedItem.id, editFormData); 
-          label = editFormData.razaoSocial || 'Empresa';
+          result = await store.updateEmpresa(selectedItem.id, sanitizedEditData); 
+          label = sanitizedEditData.razaoSocial || 'Empresa';
           break;
       }
 
@@ -1855,15 +1872,15 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                         <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10">
                           <CopyableText value={item.ncm} />
                         </td>
+                        <td className="px-1 py-1 border-b border-brand-dark/10 min-w-[100px] max-w-[140px]">
+                          <CopyableText value={item.descricao} className="font-bold text-slate-800 text-[10px] leading-tight mb-0.5" truncate title={item.descricao} />
+                          {item.detalhes && <p className="text-[8px] text-slate-400 italic line-clamp-1">{item.detalhes}</p>}
+                        </td>
                         <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10 max-w-[100px] truncate">
                           <CopyableText value={item.descricaoSimplesSap} truncate title={item.descricaoSimplesSap} />
                         </td>
                         <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10 max-w-[120px] truncate">
                           <CopyableText value={item.descricaoCompletaSap} truncate title={item.descricaoCompletaSap} />
-                        </td>
-                        <td className="px-1 py-1 border-b border-brand-dark/10 min-w-[100px] max-w-[140px]">
-                          <CopyableText value={item.descricao} className="font-bold text-slate-800 text-[10px] leading-tight mb-0.5" truncate title={item.descricao} />
-                          {item.detalhes && <p className="text-[8px] text-slate-400 italic line-clamp-1">{item.detalhes}</p>}
                         </td>
                         <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10">
                           {item.equipe || '-'}
