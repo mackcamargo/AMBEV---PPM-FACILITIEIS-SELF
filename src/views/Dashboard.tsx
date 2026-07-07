@@ -158,7 +158,16 @@ export const Dashboard: React.FC = () => {
     const current = activeTeamTimeline[activeTeamTimeline.length - 1].value;
     const prev = activeTeamTimeline[activeTeamTimeline.length - 2].value;
     const diff = current - prev;
-    const percent = prev > 0 ? (diff / prev) * 100 : 0;
+    
+    let percent = 0;
+    if (prev >= 100) {
+      percent = (diff / prev) * 100;
+    } else if (current >= 100) {
+      percent = 100; // Representa um aumento de 100% ao sair de uma base insignificante ou nula (evita distorções de base muito baixas)
+    } else {
+      percent = 0;
+    }
+    
     return { current, prev, diff, percent };
   }, [activeTeamTimeline]);
 
