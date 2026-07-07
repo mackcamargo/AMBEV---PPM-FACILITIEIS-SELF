@@ -110,7 +110,7 @@ export const Dashboard: React.FC = () => {
     });
   }, [movimentacoes, filterType, startDate, endDate, searchQuery, materiais]);
 
-  // Timline de Gastos da Equipe Ativa (6 meses)
+  // Timeline de Investimentos da Equipe Ativa (6 meses) - Independente do filtro de data do topo
   const activeTeamTimeline = useMemo(() => {
     if (!activeTeam) return [];
     const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -128,16 +128,22 @@ export const Dashboard: React.FC = () => {
       };
     }
 
-    filteredMovimentacoes.forEach(m => {
+    // Usamos 'movimentacoes' (base total) em vez de 'filteredMovimentacoes' para mostrar a evolução temporal real
+    movimentacoes.forEach(m => {
+      // Retornamos para 'Retirada' (Gastos), conforme solicitado
       if (m.tipo !== 'Retirada') return;
-      const mat = materiais.find(mat => mat.id === m.materialId);
-      if (mat?.equipe !== activeTeam.nome && m.equipe !== activeTeam.nome) return;
+      
+      const mat = materiais.find(mat => mat.id === m.materialId || mat.sap === m.materialId);
+      if (mat?.equipe !== activeTeam.nome) return;
 
       if (!m.data) return;
       const d = new Date(m.data);
       if (isNaN(d.getTime())) return;
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const val = (Number(m.quantidade) || 0) * (Number(m.precoUnitario) || 0);
+      
+      // FALLBACK: Se o preçoUnitário não estiver na movimentação (legado ou não salvo), usa o do cadastro do material
+      const unitPrice = Number(m.precoUnitario) || Number(mat?.precoUnitario) || 0;
+      const val = (Number(m.quantidade) || 0) * unitPrice;
 
       if (tracker[key]) {
         tracker[key].value += val;
@@ -145,7 +151,7 @@ export const Dashboard: React.FC = () => {
     });
 
     return Object.values(tracker).sort((a, b) => a.index - b.index);
-  }, [activeTeam, filteredMovimentacoes, materiais]);
+  }, [activeTeam, movimentacoes, materiais]);
 
   const currentVsPrev = useMemo(() => {
     if (activeTeamTimeline.length < 2) return { current: 0, prev: 0, diff: 0, percent: 0 };
@@ -188,7 +194,11 @@ export const Dashboard: React.FC = () => {
       
       const withdrawals = teamMovs
         .filter(m => m.tipo === 'Retirada')
-        .reduce((acc, m) => acc + (Number(m.quantidade) * (Number(m.precoUnitario) || 0)), 0);
+        .reduce((acc, m) => {
+          const mat = materiais.find(mat => mat.id === m.materialId || mat.sap === m.materialId);
+          const price = Number(m.precoUnitario) || Number(mat?.precoUnitario) || 0;
+          return acc + (Number(m.quantidade) * price);
+        }, 0);
 
       return {
         name: equipe.nome,
@@ -220,8 +230,16 @@ export const Dashboard: React.FC = () => {
   const stats = [
     { label: 'Tipos de Materiais', value: totalMaterialTypes, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
     { label: 'Total Itens em Estoque', value: totalEstoqueUnits, icon: Coins, color: 'text-amber-500', bg: 'bg-amber-50' },
-    { label: 'Entradas (Valor)', value: `R$ ${filteredMovimentacoes.filter(m => m.tipo === 'Entrada').reduce((acc, m) => acc + (Number(m.quantidade) * (Number(m.precoUnitario) || 0)), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: ArrowUpRight, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    { label: 'Saídas (Valor)', value: `R$ ${filteredMovimentacoes.filter(m => m.tipo === 'Retirada').reduce((acc, m) => acc + (Number(m.quantidade) * (Number(m.precoUnitario) || 0)), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: ArrowDownLeft, color: 'text-red-500', bg: 'bg-red-50' },
+    { label: 'Entradas (Valor)', value: `R$ ${filteredMovimentacoes.filter(m => m.tipo === 'Entrada').reduce((acc, m) => {
+      const mat = materiais.find(mat => mat.id === m.materialId || mat.sap === m.materialId);
+      const price = Number(m.precoUnitario) || Number(mat?.precoUnitario) || 0;
+      return acc + (Number(m.quantidade) * price);
+    }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: ArrowUpRight, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { label: 'Saídas (Valor)', value: `R$ ${filteredMovimentacoes.filter(m => m.tipo === 'Retirada').reduce((acc, m) => {
+      const mat = materiais.find(mat => mat.id === m.materialId || mat.sap === m.materialId);
+      const price = Number(m.precoUnitario) || Number(mat?.precoUnitario) || 0;
+      return acc + (Number(m.quantidade) * price);
+    }, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: ArrowDownLeft, color: 'text-red-500', bg: 'bg-red-50' },
     { label: 'Movimentações', value: filteredMovimentacoes.length, icon: History, color: 'text-brand-accent', bg: 'bg-slate-50' },
   ];
 
@@ -333,13 +351,13 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* GRÁFICO ROTATIVO: Gastos por Equipe (Linha do Tempo) */}
+          {/* GRÁFICO ROTATIVO: Investimentos por Equipe (Linha do Tempo) */}
           <div className="card !p-4 flex flex-col relative overflow-hidden group/moving bg-white border border-brand-dark/10 shadow-sm">
             {/* Progress Indicator line */}
             <div className="absolute bottom-0 left-0 w-full h-[2px] bg-slate-50 overflow-hidden z-20">
               <div 
                 key={activeTeamIndex}
-                className="h-full bg-blue-600 animate-in slide-in-from-left duration-[6000ms] ease-linear repeat-infinite fill-mode-forwards"
+                className="h-full bg-red-600 animate-in slide-in-from-left duration-[6000ms] ease-linear repeat-infinite fill-mode-forwards"
                 style={{ width: '100%' }}
               ></div>
             </div>
@@ -347,8 +365,8 @@ export const Dashboard: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <RefreshCw className="w-3 h-3 text-blue-600 animate-spin-slow" />
-                  <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">FLUXO DE GASTOS: <span className="animate-blink-red">{activeTeam?.nome}</span></h3>
+                  <RefreshCw className="w-3 h-3 text-red-600 animate-spin-slow" />
+                  <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-widest">FLUXO DE GASTOS: <span className="text-red-600 animate-pulse">{activeTeam?.nome}</span></h3>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col">
@@ -358,8 +376,8 @@ export const Dashboard: React.FC = () => {
                   <div className="h-5 w-px bg-slate-100 mx-1"></div>
                   <div className="flex flex-col">
                     <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tight">VARIAÇÃO</span>
-                    <div className={`flex items-center gap-1 text-[10px] font-black ${currentVsPrev.diff >= 0 ? 'text-blue-600' : 'text-emerald-600'}`}>
-                      {currentVsPrev.diff >= 0 ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownLeft className="w-2.5 h-2.5" />}
+                    <div className={`flex items-center gap-1 text-[10px] font-black ${currentVsPrev.diff <= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {currentVsPrev.diff <= 0 ? <ArrowDownLeft className="w-2.5 h-2.5" /> : <ArrowUpRight className="w-2.5 h-2.5" />}
                       {Math.abs(currentVsPrev.percent).toFixed(1)}%
                     </div>
                   </div>
@@ -371,7 +389,7 @@ export const Dashboard: React.FC = () => {
                   {sortedEquipesForCarousel.slice(0, 5).map((eq, idx) => (
                     <div 
                       key={eq.id}
-                      className={`w-1.5 h-1.5 rounded-full transition-all ${idx === (activeTeamIndex % sortedEquipesForCarousel.length) ? 'bg-blue-600 scale-125' : 'bg-slate-200'}`}
+                      className={`w-1.5 h-1.5 rounded-full transition-all ${idx === (activeTeamIndex % sortedEquipesForCarousel.length) ? 'bg-red-600 scale-125' : 'bg-slate-200'}`}
                     />
                   ))}
                 </div>
@@ -380,11 +398,11 @@ export const Dashboard: React.FC = () => {
 
             <div className="h-48 sm:h-56">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={activeTeamTimeline} margin={{ top: 20, right: 40, left: 0, bottom: 20 }}>
+                <AreaChart data={activeTeamTimeline} margin={{ top: 25, right: 40, left: 0, bottom: 20 }}>
                   <defs>
-                    <linearGradient id="colorGasto" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                    <linearGradient id="colorInvestDash" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -403,28 +421,28 @@ export const Dashboard: React.FC = () => {
                     width={35}
                   />
                   <Tooltip 
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
-                    formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Valor']}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+                    formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Gasto']}
                   />
                   <Area 
                     type="monotone" 
                     dataKey="value" 
-                    stroke="#2563eb" 
-                    strokeWidth={2} 
+                    stroke="#ef4444" 
+                    strokeWidth={3} 
                     fillOpacity={1} 
-                    fill="url(#colorGasto)"
-                    dot={{ fill: '#2563eb', strokeWidth: 1, r: 3 }}
-                    activeDot={{ r: 4, strokeWidth: 0 }}
+                    fill="url(#colorInvestDash)"
+                    dot={{ r: 4, strokeWidth: 2, fill: '#fff', stroke: '#ef4444' }}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: '#ef4444' }}
                   >
                     <LabelList 
                       dataKey="value" 
                       position="top" 
-                      offset={10} 
+                      offset={12} 
                       content={(props: any) => {
                         const { x, y, value } = props;
                         if (!value || value === 0) return null;
                         return (
-                          <text x={x} y={y - 8} fill="#1e293b" fontSize={8} fontWeight={900} textAnchor="middle">
+                          <text x={x} y={y - 10} fill="#991b1b" fontSize={8} fontWeight={900} textAnchor="middle">
                             R${value >= 1000 ? (value/1000).toFixed(1)+'k' : Math.round(value)}
                           </text>
                         );

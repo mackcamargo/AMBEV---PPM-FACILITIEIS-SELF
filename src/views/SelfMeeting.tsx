@@ -568,7 +568,7 @@ export const SelfMeeting: React.FC = () => {
     }
   };
 
-  const generateShareMessage = (includeValues: boolean) => {
+  const generateShareMessage = (includeValues: boolean = true) => {
     let totalValue = 0;
     const items = Object.entries(compras)
       .filter(([id, q]) => {
