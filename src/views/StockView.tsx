@@ -3,6 +3,7 @@ import { Search, Filter, ArrowUpDown, Edit2, Trash2, X, Save, AlertTriangle, Sha
 import { useApp } from '../lib/store';
 import { Material, formatUnit } from '../types';
 import { normalizeText } from '../lib/stringUtils';
+import { matchSearchTerm } from '../lib/searchUtils';
 import { motion, AnimatePresence } from 'motion/react';
 import { playNotificationSound } from '../lib/audio';
 import { supabase } from '../lib/supabase';
@@ -120,12 +121,16 @@ export const StockView: React.FC = () => {
   const filtered = useMemo(() => {
     return materiais.filter(m => {
       // Search term match
-      const searchLower = normalizeText(searchTerm);
-      const matchesSearch = 
-        normalizeText(m.descricao).includes(searchLower) ||
-        normalizeText(m.sap).includes(searchLower) ||
-        normalizeText(m.codigoFornecedor || '').includes(searchLower) ||
-        normalizeText(m.ncm || '').includes(searchLower);
+      const matchesSearch = matchSearchTerm(m, searchTerm, (item) => {
+        return [
+          item.descricao,
+          item.descricaoCompletaSap || '',
+          item.descricaoSimplesSap || '',
+          item.sap,
+          item.codigoFornecedor || '',
+          item.ncm || ''
+        ].filter(Boolean).join(' ');
+      });
       
       if (!matchesSearch) return false;
 

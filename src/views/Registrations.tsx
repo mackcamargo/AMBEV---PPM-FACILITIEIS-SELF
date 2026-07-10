@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
 import { normalizeText } from '../lib/stringUtils';
+import { matchSearchTerm } from '../lib/searchUtils';
 import { Save, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2, Info, AlertCircle, Sparkles, Database, Share2, Printer, Download, Mail, Eye, FileUp, Upload, Package, Users, Truck, MapPin, FilterX, Cloud, CloudOff, RefreshCw, Copy, Check } from 'lucide-react';
 import { Material } from '../types';
 import { materialsToImport } from '../data/materials';
@@ -182,7 +183,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
   const headers = useMemo(() => {
     switch(type) {
-      case 'materiais': return ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'NCM', 'DESCRIÇÃO', 'DESC. SIMPLES SAP', 'DESC. COMPLETA SAP', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO', 'AÇÕES'];
+      case 'materiais': return ['COD SAP', 'FORNECEDOR', 'NCM', 'DESCRIÇÃO', 'DESC. SIMPLES SAP', 'DESC. COMPLETA SAP', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO', 'AÇÕES'];
       case 'colaboradores': return ['Matrícula', 'Nome', 'Empresa', 'Cargo', 'Equipe', 'Ações'];
       case 'empresas': return ['Razão Social', 'CNPJ', 'Contrato', 'Ações'];
       case 'fornecedores': return ['Cód.', 'Nome Fantasia', 'CNPJ', 'Email', 'Ações'];
@@ -212,66 +213,64 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
 
     if (!s) return result;
     
-    const searchTerms = s.split(/\s+/).map(t => normalizeText(t)).filter(t => t);
-
     return result.filter(item => {
-      // Create a unified string of searchable text for this item
-      let searchContent = '';
-      
-      if (type === 'materiais') {
-        const forn = store.fornecedores.find(f => f.id === item.fornecedorId)?.nomeFantasia || '';
-        searchContent = [
-          item.sap,
-          item.descricao,
-          item.equipe,
-          forn,
-          item.codigoFornecedor,
-          item.localizacao,
-          item.unidade,
-          item.ncm,
-          item.descricaoSimplesSap,
-          item.descricaoCompletaSap,
-          item.detalhes
-        ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
-      } else if (type === 'colaboradores') {
-        searchContent = [
-          item.nome,
-          item.matricula,
-          item.equipe,
-          item.empresa,
-          item.cargo,
-          item.contato,
-          item.status
-        ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
-      } else if (type === 'equipes') {
-        searchContent = [
-          item.nome,
-          item.centroCusto,
-          item.gestor,
-          item.codigoEquipe
-        ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
-      } else if (type === 'fornecedores') {
-        searchContent = [
-          item.nomeFantasia,
-          item.cnpj,
-          item.codigoFornecedor,
-          item.email,
-          item.telefone,
-          item.categoria,
-          item.detalhes
-        ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
-      } else if (type === 'empresas') {
-        searchContent = [
-          item.razaoSocial,
-          item.cnpj,
-          item.numContrato,
-          item.areaAtuacao,
-          item.codigoEmpresa
-        ].filter(Boolean).map(val => normalizeText(val.toString())).join(' ');
-      }
+      return matchSearchTerm(item, searchTerm, (currentItem) => {
+        let searchContent = '';
+        
+        if (type === 'materiais') {
+          const forn = store.fornecedores.find(f => f.id === currentItem.fornecedorId)?.nomeFantasia || '';
+          searchContent = [
+            currentItem.sap,
+            currentItem.descricao,
+            currentItem.equipe,
+            forn,
+            currentItem.codigoFornecedor,
+            currentItem.localizacao,
+            currentItem.unidade,
+            currentItem.ncm,
+            currentItem.descricaoSimplesSap,
+            currentItem.descricaoCompletaSap,
+            currentItem.detalhes
+          ].filter(Boolean).join(' ');
+        } else if (type === 'colaboradores') {
+          searchContent = [
+            currentItem.nome,
+            currentItem.matricula,
+            currentItem.equipe,
+            currentItem.empresa,
+            currentItem.cargo,
+            currentItem.contato,
+            currentItem.status
+          ].filter(Boolean).join(' ');
+        } else if (type === 'equipes') {
+          searchContent = [
+            currentItem.nome,
+            currentItem.centroCusto,
+            currentItem.gestor,
+            currentItem.codigoEquipe
+          ].filter(Boolean).join(' ');
+        } else if (type === 'fornecedores') {
+          searchContent = [
+            currentItem.nomeFantasia,
+            currentItem.cnpj,
+            currentItem.codigoFornecedor,
+            currentItem.email,
+            currentItem.telefone,
+            currentItem.categoria,
+            currentItem.detalhes
+          ].filter(Boolean).join(' ');
+        } else if (type === 'empresas') {
+          searchContent = [
+            currentItem.razaoSocial,
+            currentItem.cnpj,
+            currentItem.numContrato,
+            currentItem.areaAtuacao,
+            currentItem.codigoEmpresa
+          ].filter(Boolean).join(' ');
+        }
 
-      // Every search term must be found in the search content (AND logic)
-      return searchTerms.every(term => searchContent.includes(term));
+        return searchContent;
+      });
     });
   }, [data, searchTerm, type, store.fornecedores, activeFilters]);
 
@@ -1867,14 +1866,11 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                         </td>
 
                         <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10">
-                          <CopyableText value={item.codigoFornecedor} />
-                        </td>
-                        <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10">
                           <CopyableText value={item.ncm} />
                         </td>
-                        <td className="px-1 py-1 border-b border-brand-dark/10 min-w-[100px] max-w-[140px]">
-                          <CopyableText value={item.descricao} className="font-bold text-slate-800 text-[10px] leading-tight mb-0.5" truncate title={item.descricao} />
-                          {item.detalhes && <p className="text-[8px] text-slate-400 italic line-clamp-1">{item.detalhes}</p>}
+                        <td className="px-1 py-1 border-b border-brand-dark/10 min-w-[200px] md:min-w-[260px] max-w-[380px]">
+                          <CopyableText value={item.descricao} className="font-bold text-slate-800 text-[10px] leading-relaxed break-words whitespace-normal mb-0.5" title={item.descricao} />
+                          {item.detalhes && <p className="text-[8px] text-slate-400 italic break-words whitespace-normal">{item.detalhes}</p>}
                         </td>
                         <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10 max-w-[100px] truncate">
                           <CopyableText value={item.descricaoSimplesSap} truncate title={item.descricaoSimplesSap} />
