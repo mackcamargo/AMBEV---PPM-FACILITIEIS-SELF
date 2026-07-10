@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../lib/store';
 import { generateId } from '../lib/idUtils';
 import { normalizeText } from '../lib/stringUtils';
+import { matchSearchTerm } from '../lib/searchUtils';
 import { Material, Equipe, AtaReuniao, Movimentacao, formatUnit } from '../types';
 import { Save, AlertCircle, ShoppingCart, Plus, Trash2, Download, Mail, Share2, Search, Copy, Check } from 'lucide-react';
 
@@ -177,15 +178,18 @@ export const SelfMeeting: React.FC = () => {
   const tableData = materiais
     .filter(m => selectedTeams.length === 0 || selectedTeams.includes(m.equipe))
     .filter(m => {
-      const search = normalizeText(searchTerm);
-      const matchesSearch = !searchTerm || (
-        normalizeText(m.sap).includes(search) ||
-        normalizeText(m.descricao).includes(search) ||
-        normalizeText(m.equipe).includes(search) ||
-        normalizeText(m.codigoFornecedor || '').includes(search) ||
-        normalizeText(m.localizacao || '').includes(search) ||
-        normalizeText(m.detalhes || '').includes(search)
-      );
+      const matchesSearch = matchSearchTerm(m, searchTerm, (item) => {
+        return [
+          item.sap,
+          item.descricao,
+          item.descricaoCompletaSap || '',
+          item.descricaoSimplesSap || '',
+          item.equipe,
+          item.codigoFornecedor || '',
+          item.localizacao || '',
+          item.detalhes || ''
+        ].filter(Boolean).join(' ');
+      });
 
       const isZerado = m.estoqueAtual === 0;
       const isCritico = m.estoqueAtual < m.estoqueMinimo && m.estoqueAtual > 0;
