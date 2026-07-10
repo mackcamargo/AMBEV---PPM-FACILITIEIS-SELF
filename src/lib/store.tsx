@@ -388,7 +388,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       } catch (err: any) {
         console.error("Failed to load initial data from Supabase:", err);
-        setSyncError(err.message || "Erro de conexão com o servidor");
+        const errMsg = err?.message || '';
+        if (errMsg.includes('Failed to fetch') || errMsg.includes('fetch') || err instanceof TypeError) {
+          setSyncError("Conexão com o banco de dados indisponível. Operando localmente em Modo Offline (dados salvos com segurança no navegador).");
+        } else {
+          setSyncError(err.message || "Erro de conexão com o servidor");
+        }
       } finally {
         setIsSyncing(false);
       }
@@ -1058,7 +1063,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       mergeWithSupabase(data.atas, setAtas);
     } catch (err: any) {
       console.error("Manual refresh failed:", err);
-      setSyncError(err.message || "Erro ao atualizar dados");
+      const errMsg = err?.message || '';
+      if (errMsg.includes('Failed to fetch') || errMsg.includes('fetch') || err instanceof TypeError) {
+        setSyncError("Conexão com o banco de dados indisponível. Operando localmente em Modo Offline (dados salvos com segurança no navegador).");
+      } else {
+        setSyncError(err.message || "Erro ao atualizar dados");
+      }
     } finally {
       setIsSyncing(false);
     }
