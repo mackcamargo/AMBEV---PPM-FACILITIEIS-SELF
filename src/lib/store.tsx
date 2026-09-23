@@ -240,41 +240,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const retrySync = () => setRetryCount(prev => prev + 1);
 
-  // Background sync for pending items
+  // Background sync para itens pendentes — paralelo e intervalo de 5 minutos
   useEffect(() => {
     const syncPending = async () => {
       if (!navigator.onLine) return;
-      // 1. Colaboradores
+
+      // Colaboradores pendentes — todas em paralelo
       const pendingColabs = colaboradores.filter(c => c.syncStatus === 'pending');
-      for (const c of pendingColabs) {
-        try {
-          const res = await syncToSupabase.insertColaborador(c);
-          if (res.success) {
-            setColaboradores(prev => prev.map(item => item.id === c.id ? { ...item, syncStatus: 'synced' } : item));
+      if (pendingColabs.length > 0) {
+        const results = await Promise.allSettled(pendingColabs.map(c => syncToSupabase.insertColaborador(c)));
+        results.forEach((r, i) => {
+          if (r.status === 'fulfilled' && r.value.success) {
+            setColaboradores(prev => prev.map(item => item.id === pendingColabs[i].id ? { ...item, syncStatus: 'synced' } : item));
           }
-        } catch (e) {
-          console.error("Auto-sync error (colaborador):", e);
-        }
+        });
       }
 
-      // 2. Materiais
+      // Materiais pendentes — todos em paralelo
       const pendingMateriais = materiais.filter(m => m.syncStatus === 'pending');
-      for (const m of pendingMateriais) {
-        try {
-          const res = await syncToSupabase.insertMaterial(m);
-          if (res.success) {
-            setMateriais(prev => prev.map(item => item.id === m.id ? { ...item, syncStatus: 'synced' } : item));
+      if (pendingMateriais.length > 0) {
+        const results = await Promise.allSettled(pendingMateriais.map(m => syncToSupabase.insertMaterial(m)));
+        results.forEach((r, i) => {
+          if (r.status === 'fulfilled' && r.value.success) {
+            setMateriais(prev => prev.map(item => item.id === pendingMateriais[i].id ? { ...item, syncStatus: 'synced' } : item));
           }
-        } catch (e) {
-          console.error("Auto-sync error (material):", e);
-        }
+        });
       }
     };
 
-    // Try sync every 60 seconds
-    const interval = setInterval(syncPending, 60000);
-    
-    // Also sync when coming back online
+    // Intervalo de 5 minutos (era 60s) para não sobrecarregar
+    const interval = setInterval(syncPending, 300000);
     window.addEventListener('online', syncPending);
 
     return () => {
@@ -283,61 +278,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [colaboradores, materiais]);
 
-  // LocalStorage Synchronization Effects
+  // LocalStorage Synchronization — debounced 2s para evitar travamentos
   useEffect(() => {
-    try {
-      localStorage.setItem('ppm_materiais', JSON.stringify(materiais));
-    } catch (e) {
-      console.error("LocalStorage error (materiais):", e);
-    }
+    const t = setTimeout(() => {
+      try { localStorage.setItem('ppm_materiais', JSON.stringify(materiais)); } catch {}
+    }, 2000);
+    return () => clearTimeout(t);
   }, [materiais]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('ppm_colaboradores', JSON.stringify(colaboradores));
-    } catch (e) {
-      console.error("LocalStorage error (colaboradores):", e);
-    }
+    const t = setTimeout(() => {
+      try { localStorage.setItem('ppm_colaboradores', JSON.stringify(colaboradores)); } catch {}
+    }, 2000);
+    return () => clearTimeout(t);
   }, [colaboradores]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('ppm_empresas', JSON.stringify(empresas));
-    } catch (e) {
-      console.error("LocalStorage error (empresas):", e);
-    }
+    const t = setTimeout(() => {
+      try { localStorage.setItem('ppm_empresas', JSON.stringify(empresas)); } catch {}
+    }, 2000);
+    return () => clearTimeout(t);
   }, [empresas]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('ppm_equipes', JSON.stringify(equipes));
-    } catch (e) {
-      console.error("LocalStorage error (equipes):", e);
-    }
+    const t = setTimeout(() => {
+      try { localStorage.setItem('ppm_equipes', JSON.stringify(equipes)); } catch {}
+    }, 2000);
+    return () => clearTimeout(t);
   }, [equipes]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('ppm_fornecedores', JSON.stringify(fornecedores));
-    } catch (e) {
-      console.error("LocalStorage error (fornecedores):", e);
-    }
+    const t = setTimeout(() => {
+      try { localStorage.setItem('ppm_fornecedores', JSON.stringify(fornecedores)); } catch {}
+    }, 2000);
+    return () => clearTimeout(t);
   }, [fornecedores]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('ppm_movimentacoes', JSON.stringify(movimentacoes));
-    } catch (e) {
-      console.error("LocalStorage error (movimentacoes):", e);
-    }
+    const t = setTimeout(() => {
+      try { localStorage.setItem('ppm_movimentacoes', JSON.stringify(movimentacoes)); } catch {}
+    }, 2000);
+    return () => clearTimeout(t);
   }, [movimentacoes]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('ppm_atas', JSON.stringify(atas));
-    } catch (e) {
-      console.error("LocalStorage error (atas):", e);
-    }
+    const t = setTimeout(() => {
+      try { localStorage.setItem('ppm_atas', JSON.stringify(atas)); } catch {}
+    }, 2000);
+    return () => clearTimeout(t);
   }, [atas]);
 
   useEffect(() => {
@@ -590,17 +578,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (newPrice !== oldPrice && updatedFields.precoUnitario !== undefined) {
       const mat = materiais.find(m => m.id === original.materialId);
       if (mat) {
-        // Automatically sync this new price back to the Material definition
+        // Atualizar preço no cadastro do material
         syncToSupabase.updateMaterial(mat.id, { precoUnitario: newPrice }).catch(console.error);
         setMateriais(prev => prev.map(m => m.id === mat.id ? { ...m, precoUnitario: newPrice } : m));
 
-        // And automatically sync this new price backwards to all OTHER movements of this same material!
-        const movsToUpdate = movimentacoes.filter(mov => mov.materialId === mat.id && mov.id !== id);
+        // Propagar preço apenas nas últimas 20 movimentações do mesmo material
+        // (evita centenas de requisições ao Supabase de uma vez)
+        const movsToUpdate = movimentacoes
+          .filter(mov => mov.materialId === mat.id && mov.id !== id)
+          .slice(0, 20);
         if (movsToUpdate.length > 0) {
           setMovimentacoes(prev => prev.map(mov => 
             mov.materialId === mat.id && mov.id !== id ? { ...mov, precoUnitario: newPrice } : mov
           ));
-          Promise.all(movsToUpdate.map(mov => 
+          Promise.allSettled(movsToUpdate.map(mov => 
             syncToSupabase.updateMovimentacao(mov.id, { precoUnitario: newPrice })
           )).catch(console.error);
         }
@@ -693,14 +684,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (result.success && hasPriceChange) {
       const newPrice = Number(m.precoUnitario);
-      const movsToUpdate = movimentacoes.filter(mov => mov.materialId === id);
+      // Limitar propagação às últimas 20 movimentações do material
+      const movsToUpdate = movimentacoes
+        .filter(mov => mov.materialId === id)
+        .slice(0, 20);
       
       if (movsToUpdate.length > 0) {
         setMovimentacoes(prev => prev.map(mov => 
           mov.materialId === id ? { ...mov, precoUnitario: newPrice } : mov
         ));
         
-        Promise.all(movsToUpdate.map(mov => 
+        Promise.allSettled(movsToUpdate.map(mov => 
           syncToSupabase.updateMovimentacao(mov.id, { precoUnitario: newPrice })
         )).catch(console.error);
       }

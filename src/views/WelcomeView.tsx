@@ -17,13 +17,14 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onEnter }) => {
         className="absolute inset-0 opacity-20 pointer-events-none"
         style={{
           backgroundImage: `url('https://www.transparenttextures.com/patterns/carbon-fibre.png')`,
-          backgroundSize: '200px'
+          backgroundSize: '200px',
+          willChange: 'transform'
         }}
       />
       
       {/* Abstract Tech Glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px]" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-[120px]" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-[60px]" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-[60px]" />
 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
