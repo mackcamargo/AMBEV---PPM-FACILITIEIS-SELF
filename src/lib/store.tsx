@@ -83,6 +83,11 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 
+// Chaves do localStorage prefixadas com user.id para isolar dados por usuário
+// Resolve o problema de múltiplos usuários sobrescrevendo dados uns dos outros
+const lsKey = (userId: string | undefined, name: string) =>
+  userId ? `ppm_${userId}_${name}` : `ppm_${name}`;
+
 const INITIAL_MATERIALS: Material[] = [];
 
 const INITIAL_COLABORADORES: Colaborador[] = [
@@ -139,8 +144,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (event === 'SIGNED_OUT') {
         setHasEntered(false);
-        localStorage.setItem('ppm_has_entered', 'false');
-        localStorage.removeItem('ppm_current_view');
+        localStorage.setItem(lsKey(user?.id, 'has_entered'), 'false');
+        localStorage.removeItem(lsKey(user?.id, 'current_view'));
       }
     });
 
@@ -150,70 +155,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const signOut = async () => {
     await supabase.auth.signOut();
     setHasEntered(false);
-    localStorage.setItem('ppm_has_entered', 'false');
+    localStorage.setItem(lsKey(user?.id, 'has_entered'), 'false');
   };
 
   const [view, setView] = useState<ViewState>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('ppm_current_view') as ViewState) || 'dashboard';
+      return (localStorage.getItem(lsKey(undefined, 'current_view')) as ViewState) || 'dashboard';
     }
     return 'dashboard';
   });
 
   const [hasEntered, setHasEntered] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('ppm_has_entered') === 'true';
+      return localStorage.getItem(lsKey(undefined, 'has_entered')) === 'true';
     }
     return false;
   });
 
   useEffect(() => {
-    localStorage.setItem('ppm_has_entered', hasEntered.toString());
+    localStorage.setItem(lsKey(user?.id, 'has_entered'), hasEntered.toString());
   }, [hasEntered]);
 
   useEffect(() => {
-    localStorage.setItem('ppm_current_view', view);
+    localStorage.setItem(lsKey(user?.id, 'current_view'), view);
   }, [view]);
 
   // Synchronous State Initializers with LocalStorage Support
   const [materiais, setMateriais] = useState<Material[]>(() => {
     try {
-      const saved = localStorage.getItem('ppm_materiais');
+      const saved = localStorage.getItem(lsKey(undefined, 'materiais'));
       const parsed = saved ? JSON.parse(saved) : null;
       return Array.isArray(parsed) ? parsed : INITIAL_MATERIALS;
     } catch { return INITIAL_MATERIALS; }
   });
   const [colaboradores, setColaboradores] = useState<Colaborador[]>(() => {
     try {
-      const saved = localStorage.getItem('ppm_colaboradores');
+      const saved = localStorage.getItem(lsKey(undefined, 'colaboradores'));
       const parsed = saved ? JSON.parse(saved) : null;
       return Array.isArray(parsed) ? parsed : INITIAL_COLABORADORES;
     } catch { return INITIAL_COLABORADORES; }
   });
   const [empresas, setEmpresas] = useState<Empresa[]>(() => {
     try {
-      const saved = localStorage.getItem('ppm_empresas');
+      const saved = localStorage.getItem(lsKey(undefined, 'empresas'));
       const parsed = saved ? JSON.parse(saved) : null;
       return Array.isArray(parsed) ? parsed : [];
     } catch { return []; }
   });
   const [equipes, setEquipes] = useState<Equipe[]>(() => {
     try {
-      const saved = localStorage.getItem('ppm_equipes');
+      const saved = localStorage.getItem(lsKey(undefined, 'equipes'));
       const parsed = saved ? JSON.parse(saved) : null;
       return Array.isArray(parsed) ? parsed : INITIAL_EQUIPES;
     } catch { return INITIAL_EQUIPES; }
   });
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>(() => {
     try {
-      const saved = localStorage.getItem('ppm_fornecedores');
+      const saved = localStorage.getItem(lsKey(undefined, 'fornecedores'));
       const parsed = saved ? JSON.parse(saved) : null;
       return Array.isArray(parsed) ? parsed : [];
     } catch { return []; }
   });
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>(() => {
     try {
-      const saved = localStorage.getItem('ppm_movimentacoes');
+      const saved = localStorage.getItem(lsKey(undefined, 'movimentacoes'));
       const parsed = saved ? JSON.parse(saved) : null;
       return Array.isArray(parsed) ? parsed : INITIAL_MOVIMENTACOES;
     } catch { return INITIAL_MOVIMENTACOES; }
@@ -221,17 +226,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [batchState, setBatchState] = useState<ItemLote[]>([]);
   const [atas, setAtas] = useState<AtaReuniao[]>(() => {
     try {
-      const saved = localStorage.getItem('ppm_atas');
+      const saved = localStorage.getItem(lsKey(undefined, 'atas'));
       const parsed = saved ? JSON.parse(saved) : null;
       return Array.isArray(parsed) ? parsed : INITIAL_ATAS;
     } catch { return INITIAL_ATAS; }
   });
   const [deletionPassword, setDeletionPassword] = useState<string>(() => {
-    return localStorage.getItem('ppm_deletion_password') || '';
+    return localStorage.getItem(lsKey(undefined, 'deletion_password')) || '';
   });
   
   const [isDeletionPasswordEnabled, setIsDeletionPasswordEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('ppm_deletion_password_enabled') !== 'false'; // Defaults to true
+    return localStorage.getItem(lsKey(undefined, 'deletion_password_enabled')) !== 'false'; // Defaults to true
   });
 
   const [isSyncing, setIsSyncing] = useState(false);
@@ -281,59 +286,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // LocalStorage Synchronization — debounced 2s para evitar travamentos
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem('ppm_materiais', JSON.stringify(materiais)); } catch {}
+      try { localStorage.setItem(lsKey(user?.id, 'materiais'), JSON.stringify(materiais)); } catch {}
     }, 2000);
     return () => clearTimeout(t);
   }, [materiais]);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem('ppm_colaboradores', JSON.stringify(colaboradores)); } catch {}
+      try { localStorage.setItem(lsKey(user?.id, 'colaboradores'), JSON.stringify(colaboradores)); } catch {}
     }, 2000);
     return () => clearTimeout(t);
   }, [colaboradores]);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem('ppm_empresas', JSON.stringify(empresas)); } catch {}
+      try { localStorage.setItem(lsKey(user?.id, 'empresas'), JSON.stringify(empresas)); } catch {}
     }, 2000);
     return () => clearTimeout(t);
   }, [empresas]);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem('ppm_equipes', JSON.stringify(equipes)); } catch {}
+      try { localStorage.setItem(lsKey(user?.id, 'equipes'), JSON.stringify(equipes)); } catch {}
     }, 2000);
     return () => clearTimeout(t);
   }, [equipes]);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem('ppm_fornecedores', JSON.stringify(fornecedores)); } catch {}
+      try { localStorage.setItem(lsKey(user?.id, 'fornecedores'), JSON.stringify(fornecedores)); } catch {}
     }, 2000);
     return () => clearTimeout(t);
   }, [fornecedores]);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem('ppm_movimentacoes', JSON.stringify(movimentacoes)); } catch {}
+      try { localStorage.setItem(lsKey(user?.id, 'movimentacoes'), JSON.stringify(movimentacoes)); } catch {}
     }, 2000);
     return () => clearTimeout(t);
   }, [movimentacoes]);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      try { localStorage.setItem('ppm_atas', JSON.stringify(atas)); } catch {}
+      try { localStorage.setItem(lsKey(user?.id, 'atas'), JSON.stringify(atas)); } catch {}
     }, 2000);
     return () => clearTimeout(t);
   }, [atas]);
 
   useEffect(() => {
-    localStorage.setItem('ppm_deletion_password', deletionPassword);
+    localStorage.setItem(lsKey(user?.id, 'deletion_password'), deletionPassword);
   }, [deletionPassword]);
 
   useEffect(() => {
-    localStorage.setItem('ppm_deletion_password_enabled', isDeletionPasswordEnabled.toString());
+    localStorage.setItem(lsKey(user?.id, 'deletion_password_enabled'), isDeletionPasswordEnabled.toString());
   }, [isDeletionPasswordEnabled]);
 
   // Supabase Multi-Fetch with user dependency to ensure data loads after login
@@ -1084,18 +1089,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setView('dashboard');
 
     // 3. Gravar arrays vazios no LocalStorage sincronamente
-    localStorage.setItem('ppm_materiais', '[]');
-    localStorage.setItem('ppm_colaboradores', '[]');
-    localStorage.setItem('ppm_empresas', '[]');
-    localStorage.setItem('ppm_equipes', '[]');
-    localStorage.setItem('ppm_fornecedores', '[]');
-    localStorage.setItem('ppm_movimentacoes', '[]');
-    localStorage.setItem('ppm_atas', '[]');
+    const uid = user?.id;
+    localStorage.setItem(lsKey(uid, 'materiais'), '[]');
+    localStorage.setItem(lsKey(uid, 'colaboradores'), '[]');
+    localStorage.setItem(lsKey(uid, 'empresas'), '[]');
+    localStorage.setItem(lsKey(uid, 'equipes'), '[]');
+    localStorage.setItem(lsKey(uid, 'fornecedores'), '[]');
+    localStorage.setItem(lsKey(uid, 'movimentacoes'), '[]');
+    localStorage.setItem(lsKey(uid, 'atas'), '[]');
     
     localStorage.removeItem('selfMeeting_compras');
     localStorage.removeItem('selfMeeting_selectedTeam');
-    localStorage.removeItem('ppm_current_view');
-    localStorage.removeItem('ppm_has_entered');
+    localStorage.removeItem(lsKey(uid, 'current_view'));
+    localStorage.removeItem(lsKey(uid, 'has_entered'));
 
     // 4. Force a reload to clean any potential cached states
     window.location.reload();
