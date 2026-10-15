@@ -24,6 +24,7 @@ export interface Material {
   descricaoCompletaSap?: string;
   createdAt?: string;
   syncStatus?: 'synced' | 'pending';
+  precoAtualizado?: boolean;
 }
 
 export interface Colaborador {

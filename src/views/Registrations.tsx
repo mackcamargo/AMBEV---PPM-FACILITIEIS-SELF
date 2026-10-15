@@ -1869,7 +1869,12 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                           <CopyableText value={item.ncm} />
                         </td>
                         <td className="px-1 py-1 border-b border-brand-dark/10 min-w-[200px] md:min-w-[260px] max-w-[380px]">
-                          <CopyableText value={item.descricao} className="font-bold text-slate-800 text-[10px] leading-relaxed break-words whitespace-normal mb-0.5" title={item.descricao} />
+                          <div className="flex items-start gap-1">
+                            <CopyableText value={item.descricao} className={`font-bold text-[10px] leading-relaxed break-words whitespace-normal mb-0.5 ${item.precoAtualizado ? 'text-emerald-600' : 'text-slate-800'}`} title={item.descricao} />
+                            {item.precoAtualizado && (
+                              <span className="shrink-0 mt-0.5 inline-flex items-center px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 border border-emerald-200">✓</span>
+                            )}
+                          </div>
                           {item.detalhes && <p className="text-[8px] text-slate-400 italic break-words whitespace-normal">{item.detalhes}</p>}
                         </td>
                         <td className="px-1 py-1 text-slate-400 font-medium text-[9px] border-b border-brand-dark/10 max-w-[100px] truncate">
@@ -2420,7 +2425,24 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
             }}
           >
             <div className="p-4 border-b border-brand-dark/10 flex items-center justify-between bg-slate-50/50 shrink-0">
-              <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Editar {type === 'materiais' ? 'Material' : type === 'empresas' ? 'Empresa' : type === 'fornecedores' ? 'Fornecedor' : type === 'colaboradores' ? 'Colaborador' : 'Equipe'}</h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">Editar {type === 'materiais' ? 'Material' : type === 'empresas' ? 'Empresa' : type === 'fornecedores' ? 'Fornecedor' : type === 'colaboradores' ? 'Colaborador' : 'Equipe'}</h3>
+                {type === 'materiais' && (
+                  <button
+                    type="button"
+                    onClick={() => setEditFormData({ ...editFormData, precoAtualizado: !editFormData.precoAtualizado })}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider transition-all select-none cursor-pointer ${
+                      editFormData.precoAtualizado
+                        ? 'bg-emerald-500 border-emerald-400 text-white shadow-md shadow-emerald-500/30'
+                        : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                    }`}
+                    title="Marcar preço como atualizado"
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full border transition-all ${editFormData.precoAtualizado ? 'bg-white border-white' : 'bg-slate-200 border-slate-300'}`} />
+                    {editFormData.precoAtualizado ? 'Atualizado ✓' : 'Atualizado'}
+                  </button>
+                )}
+              </div>
               <button type="button" onClick={() => setIsEditModalOpen(false)} className="p-1 hover:bg-white rounded-full transition-all">
                 <X className="w-4 h-4 text-slate-400" />
               </button>

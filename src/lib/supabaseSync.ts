@@ -55,6 +55,7 @@ export const syncToSupabase = {
     if (m.ncm !== undefined) payload.ncm = m.ncm;
     if (m.descricaoSimplesSap !== undefined) payload.descricao_simples_sap = m.descricaoSimplesSap;
     if (m.descricaoCompletaSap !== undefined) payload.descricao_completa_sap = m.descricaoCompletaSap;
+    if (m.precoAtualizado !== undefined) payload.preco_atualizado = m.precoAtualizado;
 
     try {
       const { error } = await supabase.from('materiais').update(payload).eq('id', id);
@@ -426,7 +427,8 @@ export const syncToSupabase = {
         ncm: m.ncm,
         descricaoSimplesSap: m.descricao_simples_sap,
         descricaoCompletaSap: m.descricao_completa_sap,
-        createdAt: m.created_at
+        createdAt: m.created_at,
+        precoAtualizado: m.preco_atualizado || false
       })) || [],
       colaboradores: colaboradores || [],
       empresas: empresas?.map(e => ({
