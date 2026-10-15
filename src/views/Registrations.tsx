@@ -63,7 +63,7 @@ const CopyableInput: React.FC<{
         value={value}
         onChange={(e) => {
           const val = e.target.value;
-          const sanitized = typeof val === 'string' ? val.replace(/^"|"$/g, '').trim() : val;
+          const sanitized = typeof val === 'string' ? val.replace(/^"|"$/g, '') : val;
           onChange?.(sanitized);
         }}
         placeholder={placeholder}
