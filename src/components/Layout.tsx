@@ -129,7 +129,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </button>
 
         <div className="p-5 flex items-center gap-3 border-b border-white/10 mb-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-md shadow-blue-500/20">
+          <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 shadow-md shadow-blue-500/20">
             <img src={logoImg} alt="PPM Logo" className="w-full h-full object-cover" />
           </div>
           <div>

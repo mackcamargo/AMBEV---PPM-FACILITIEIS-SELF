@@ -108,7 +108,7 @@ export const Login: React.FC = () => {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg shadow-blue-500/20 overflow-hidden">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl mb-4 shadow-lg shadow-blue-500/20 overflow-hidden">
             <img src={logoImg} alt="PPM Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight uppercase">AMBEV — PPM Facilities</h1>
