@@ -7,6 +7,7 @@ import { Material, ItemLote, Movimentacao, formatUnit, Fornecedor } from '../typ
 import { motion, AnimatePresence } from 'motion/react';
 import { playNotificationSound } from '../lib/audio';
 import { ColaboradorSelect } from '../components/ColaboradorSelect';
+import { maskCurrencyBR, parseCurrencyBR, numberToMaskBR } from '../lib/currencyUtils';
 
 const MaterialSelect = React.forwardRef<HTMLButtonElement, {
   materials: Material[];
@@ -190,7 +191,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       setSelectedMaterialId(preselectId);
       const mat = materiais.find(m => m.id === preselectId);
       if (mat) {
-        setPrecoUnitario(mat.precoUnitario || '');
+        setPrecoUnitario(mat.precoUnitario ? numberToMaskBR(mat.precoUnitario) : '');
         setCodSapAutomatico(mat.sap || '');
         if (type === 'Retirada' && mat.equipe) {
           setEquipe(mat.equipe);
@@ -304,7 +305,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       if (type === 'Retirada' && mat.estoqueAtual === 0) {
         setShowStockWarning(true);
       }
-      setPrecoUnitario(mat.precoUnitario);
+      setPrecoUnitario(mat.precoUnitario ? numberToMaskBR(mat.precoUnitario) : '');
       setCodSapAutomatico(mat.sap || '');
       // ALWAYS set quantity back to 1 for every new selection
       setQuantidade('1');
@@ -381,7 +382,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       materialId: selectedMaterialId,
       materialDesc: selectedMaterial?.descricao || '',
       quantidade: finalQuantidade,
-      precoUnitario: precoUnitario !== '' ? Number(precoUnitario) : undefined,
+      precoUnitario: precoUnitario !== '' ? parseCurrencyBR(precoUnitario) : undefined,
       ...(type === 'Retirada' ? { os, colaborador, empresa, equipe, liberador, observacoes } : { nf: numNotaFiscal, pedidoCompra, pedidoSap, fornecedor, conferente, equipe: selectedMaterial?.equipe })
     };
 
@@ -389,7 +390,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
 
     // Update material price if it's an Entrada
     if (type === 'Entrada' && precoUnitario !== '') {
-      updateMaterial(selectedMaterialId, { precoUnitario: Number(precoUnitario) });
+      updateMaterial(selectedMaterialId, { precoUnitario: parseCurrencyBR(precoUnitario) });
     }
 
     // Show custom Toast notification instead of general alert
@@ -500,7 +501,7 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
       materialId: selectedMaterialId,
       materialDesc: selectedMaterial?.descricao || '',
       quantidade: finalQuantidade,
-      precoUnitario: precoUnitario !== '' ? Number(precoUnitario) : undefined,
+      precoUnitario: precoUnitario !== '' ? parseCurrencyBR(precoUnitario) : undefined,
       detalhesAdicionais: type === 'Retirada' ? { os, colaborador, empresa, equipe, liberador, observacoes } : { nf: numNotaFiscal, pedidoCompra, pedidoSap, fornecedor, conferente, equipe: selectedMaterial?.equipe },
       data: itemDate
     };
@@ -648,19 +649,19 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Valor Unitário (R$)</label>
-                <input 
-                  type="number" 
-                  step="0.01"
-                  className="input-field" 
-                  value={precoUnitario}
-                  onChange={(e) => setPrecoUnitario(e.target.value)}
-                  placeholder="0.00"
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className="input-field"
+                  value={typeof precoUnitario === 'number' ? numberToMaskBR(precoUnitario) : precoUnitario}
+                  onChange={(e) => setPrecoUnitario(maskCurrencyBR(e.target.value))}
+                  placeholder="0,00"
                 />
               </div>
               <div>
                 <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Valor Total (R$)</label>
                 <div className={`input-field h-8 flex items-center font-bold ${type === 'Retirada' ? 'bg-red-100 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                  {type === 'Retirada' ? '- ' : ''}R${((Number(quantidade) || 0) * (Number(precoUnitario) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {type === 'Retirada' ? '- ' : ''}R${((Number(quantidade) || 0) * parseCurrencyBR(precoUnitario)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </div>
               </div>
             </div>

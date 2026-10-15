@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { playNotificationSound } from '../lib/audio';
 import { supabase } from '../lib/supabase';
+import { maskCurrencyBR, displayCurrencyBR } from '../lib/currencyUtils';
 
 const playCopySound = () => {
   try {
@@ -1431,12 +1432,13 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
       </div>
       <div className="col-span-2 md:col-span-1">
         <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block">PREÇO UNITÁRIO (R$)</label>
-        <input 
-          type="text" 
-          className="input-field-compact" 
-          placeholder="0,00" 
-          value={String(formData.precoUnitario ?? '').replace('.', ',')}
-          onChange={(e) => handleInputChange('precoUnitario', e.target.value)}
+        <input
+          type="text"
+          inputMode="numeric"
+          className="input-field-compact"
+          placeholder="0,00"
+          value={displayCurrencyBR(formData.precoUnitario)}
+          onChange={(e) => setFormData(prev => ({ ...prev, precoUnitario: maskCurrencyBR(e.target.value) }))}
         />
       </div>
 
@@ -1942,8 +1944,10 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                           <input
                             key={`${item.id}-precoUnitario-${item.precoUnitario}`}
                             type="text"
+                            inputMode="numeric"
                             className="w-full h-6 text-right border border-slate-200 rounded font-bold tabular-nums text-slate-700 text-[9.5px] focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                            defaultValue={String(item.precoUnitario ?? '').replace('.', ',')}
+                            defaultValue={displayCurrencyBR(item.precoUnitario)}
+                            onChange={(e) => { e.target.value = maskCurrencyBR(e.target.value); }}
                             onBlur={(e) => {
                               const cleaned = e.target.value.replace(/\./g, '').replace(',', '.');
                               const val = cleaned === '' ? 0 : Number(cleaned);
@@ -2583,11 +2587,12 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                   </div>
                   <div className="col-span-2 md:col-span-1">
                     <label className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 block text-left">PREÇO UNITÁRIO (R$)</label>
-                    <input 
-                      type="text" 
-                      className="input-field-compact" 
-                      value={editFormData.precoUnitario === undefined ? '' : String(editFormData.precoUnitario).replace('.', ',')}
-                      onChange={(e) => setEditFormData({ ...editFormData, precoUnitario: e.target.value })}
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="input-field-compact"
+                      value={displayCurrencyBR(editFormData.precoUnitario)}
+                      onChange={(e) => setEditFormData({ ...editFormData, precoUnitario: maskCurrencyBR(e.target.value) })}
                     />
                   </div>
                   <div className="col-span-2 md:col-span-1">
