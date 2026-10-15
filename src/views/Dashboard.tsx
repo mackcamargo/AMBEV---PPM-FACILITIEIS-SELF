@@ -173,6 +173,7 @@ export const Dashboard: React.FC = () => {
 
   const totalEstoqueUnits = useMemo(() => materiais.reduce((acc, m) => acc + Number(m?.estoqueAtual || 0), 0), [materiais]);
   const totalMaterialTypes = materiais.length;
+  const totalMateriaisAtualizados = useMemo(() => materiais.filter(m => m?.precoAtualizado === true).length, [materiais]);
 
   // Ranking de Retirantes
   const withdrawerRanking = useMemo(() => {
@@ -237,7 +238,7 @@ export const Dashboard: React.FC = () => {
   }, [filteredMovimentacoes, materiais, equipes]);
 
   const stats = [
-    { label: 'Tipos de Materiais', value: totalMaterialTypes, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Tipos de Materiais', value: totalMaterialTypes, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50', extra: `${totalMateriaisAtualizados} atualizados` },
     { label: 'Total Itens em Estoque', value: totalEstoqueUnits, icon: Coins, color: 'text-amber-500', bg: 'bg-amber-50' },
     { label: 'Entradas (Valor)', value: `R$ ${filteredMovimentacoes.filter(m => m.tipo === 'Entrada').reduce((acc, m) => {
       const mat = materiais.find(mat => mat.id === m.materialId || mat.sap === m.materialId);
@@ -354,6 +355,12 @@ export const Dashboard: React.FC = () => {
               <div>
                 <p className="text-[9px] uppercase font-black text-slate-400 tracking-wider mb-0">{stat.label}</p>
                 <p className="text-lg font-bold text-slate-800 tracking-tight">{stat.value}</p>
+                {(stat as any).extra && (
+                  <p className="text-[9px] font-bold text-emerald-600 tracking-tight leading-none mt-0.5 flex items-center gap-0.5">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    {(stat as any).extra}
+                  </p>
+                )}
               </div>
             </div>
           ))}
