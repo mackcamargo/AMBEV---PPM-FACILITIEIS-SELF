@@ -585,10 +585,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
             ncm: formData.ncm || '',
             descricaoSimplesSap: formData.descricaoSimplesSap || '',
             descricaoCompletaSap: formData.descricaoCompletaSap || '',
-            ultimaMovimentacao: new Date().toLocaleDateString('pt-BR'),
-            // Regra: todo cadastro novo ja entra como "atualizado" com a data de hoje
-            precoAtualizado: true,
-            precoAtualizadoEm: new Date().toISOString()
+            ultimaMovimentacao: new Date().toLocaleDateString('pt-BR')
           });
 
           label = materialName;
