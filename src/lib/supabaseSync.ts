@@ -24,7 +24,9 @@ export const syncToSupabase = {
         detalhes: m.detalhes || null,
         ncm: m.ncm || null,
         descricao_simples_sap: m.descricaoSimplesSap || null,
-        descricao_completa_sap: m.descricaoCompletaSap || null
+        descricao_completa_sap: m.descricaoCompletaSap || null,
+        preco_atualizado: m.precoAtualizado ?? false,
+        preco_atualizado_em: m.precoAtualizadoEm || null
       }, { onConflict: 'id' });
       
       if (error) {
