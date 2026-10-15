@@ -56,6 +56,7 @@ export const syncToSupabase = {
     if (m.descricaoSimplesSap !== undefined) payload.descricao_simples_sap = m.descricaoSimplesSap;
     if (m.descricaoCompletaSap !== undefined) payload.descricao_completa_sap = m.descricaoCompletaSap;
     if (m.precoAtualizado !== undefined) payload.preco_atualizado = m.precoAtualizado;
+    if (m.precoAtualizadoEm !== undefined) payload.preco_atualizado_em = m.precoAtualizadoEm;
 
     try {
       const { error } = await supabase.from('materiais').update(payload).eq('id', id);
@@ -428,7 +429,8 @@ export const syncToSupabase = {
         descricaoSimplesSap: m.descricao_simples_sap,
         descricaoCompletaSap: m.descricao_completa_sap,
         createdAt: m.created_at,
-        precoAtualizado: m.preco_atualizado || false
+        precoAtualizado: m.preco_atualizado || false,
+        precoAtualizadoEm: m.preco_atualizado_em || undefined
       })) || [],
       colaboradores: colaboradores || [],
       empresas: empresas?.map(e => ({

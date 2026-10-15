@@ -2448,7 +2448,10 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                 {type === 'materiais' && (
                   <button
                     type="button"
-                    onClick={() => setEditFormData({ ...editFormData, precoAtualizado: !editFormData.precoAtualizado })}
+                    onClick={() => {
+                      const novo = !editFormData.precoAtualizado;
+                      setEditFormData({ ...editFormData, precoAtualizado: novo, precoAtualizadoEm: novo ? new Date().toISOString() : null });
+                    }}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider transition-all select-none cursor-pointer ${
                       editFormData.precoAtualizado
                         ? 'bg-emerald-500 border-emerald-400 text-white shadow-md shadow-emerald-500/30'
@@ -2457,7 +2460,9 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
                     title="Marcar preço como atualizado"
                   >
                     <span className={`w-2.5 h-2.5 rounded-full border transition-all ${editFormData.precoAtualizado ? 'bg-white border-white' : 'bg-slate-200 border-slate-300'}`} />
-                    {editFormData.precoAtualizado ? 'Atualizado ✓' : 'Atualizado'}
+                    {editFormData.precoAtualizado
+                      ? `Atualizado ✓${editFormData.precoAtualizadoEm ? ' ' + new Date(editFormData.precoAtualizadoEm).toLocaleDateString('pt-BR') : ''}`
+                      : 'Atualizado'}
                   </button>
                 )}
               </div>
