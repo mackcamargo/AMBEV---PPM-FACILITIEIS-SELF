@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { useApp } from '../lib/store';
 import { LogOut } from 'lucide-react';
+import logoImg from '../../assets/logo_ppm.png';
 
 interface WelcomeViewProps {
   onEnter: (targetView: 'dashboard' | 'retirada-materiais' | 'reuniao-self' | 'entrada-materiais') => void;
@@ -37,8 +38,8 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onEnter }) => {
         <div className="flex items-center gap-3 mb-12">
           <div className="flex items-center gap-2">
             <span className="text-2xl font-black tracking-tighter text-white">AMBEV</span>
-            <div className="w-8 h-8 border-2 border-white rounded-full flex items-center justify-center p-1">
-               <div className="w-full h-full border border-white rounded-sm" />
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-blue-500/30">
+              <img src={logoImg} alt="PPM Logo" className="w-full h-full object-cover" />
             </div>
           </div>
           <div className="h-6 w-[1px] bg-white/20 mx-1" />

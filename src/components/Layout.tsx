@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logoImg from '../../assets/logo_ppm.png';
 import { 
   LayoutDashboard, 
   ArrowDownLeft, 
@@ -128,8 +129,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </button>
 
         <div className="p-5 flex items-center gap-3 border-b border-white/10 mb-2">
-          <div className="w-8 h-8 bg-brand-accent rounded flex items-center justify-center shrink-0">
-            <span className="text-white text-xs font-bold">PPM</span>
+          <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 shadow-md shadow-blue-500/20">
+            <img src={logoImg} alt="PPM Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="text-white text-[13px] font-semibold leading-tight">Centro de Inteligência</h1>
