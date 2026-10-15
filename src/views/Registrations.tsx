@@ -137,6 +137,12 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   
   // Controlled form state
   const [formData, setFormData] = useState<any>(() => {
+    // Ao abrir via "+" (novo material), força tela limpa ignorando rascunho
+    if (type === 'materiais' && localStorage.getItem('force_new_material') === '1') {
+      localStorage.removeItem('force_new_material');
+      localStorage.removeItem('registration_draft_materiais');
+      return { unidade: 'UNI' };
+    }
     const saved = localStorage.getItem(`registration_draft_${type}`);
     if (saved) {
       try {
@@ -391,6 +397,14 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   // Reset form when type changes to avoid data persistence between different views, loading type-specific drafts
   React.useEffect(() => {
     setInvalidFields([]);
+    // Ao abrir via "+" (novo material), força tela limpa ignorando rascunho
+    if (type === 'materiais' && localStorage.getItem('force_new_material') === '1') {
+      localStorage.removeItem('force_new_material');
+      localStorage.removeItem('registration_draft_materiais');
+      setFormData({ unidade: 'UNI' });
+      lastTypeRef.current = type;
+      return;
+    }
     const saved = localStorage.getItem(`registration_draft_${type}`);
     if (saved) {
       try {

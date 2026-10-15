@@ -609,7 +609,10 @@ export const MaterialMovement: React.FC<{ type: 'Entrada' | 'Retirada' }> = ({ t
                 <button
                   type="button"
                   onClick={() => {
+                    // "+" = novo material: descarta qualquer rascunho pendente e abre a tela limpa
+                    localStorage.removeItem('registration_draft_materiais');
                     localStorage.setItem('return_to_view', type === 'Entrada' ? 'entrada-materiais' : 'retirada-materiais');
+                    localStorage.setItem('force_new_material', '1');
                     setView('cad-materiais');
                   }}
                   className="shrink-0 w-10 h-10 bg-white border border-brand-dark/20 rounded-xl flex items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all shadow-sm active:scale-95"
