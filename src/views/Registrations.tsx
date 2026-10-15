@@ -500,8 +500,8 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
   const handleInputChange = (field: string, value: any) => {
     let finalValue = value;
     if (typeof value === 'string') {
-      // Remove surrounding quotes and trim
-      finalValue = value.replace(/^"|"$/g, '').trim();
+      // Remove surrounding quotes (trim only at save time, to allow typing spaces)
+      finalValue = value.replace(/^"|"$/g, '');
       if (type === 'materiais') {
         finalValue = finalValue.toUpperCase();
       }
