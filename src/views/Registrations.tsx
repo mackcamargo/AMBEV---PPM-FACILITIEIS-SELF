@@ -706,7 +706,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     const headers = ['COD SAP', 'FORNECEDOR', 'CÓD. FORN.', 'NCM', 'DESCRIÇÃO', 'EQUIPE', 'EST. ATUAL', 'EST. MÍN.', 'EST. IDEAL', 'PREÇO UNIT.', 'VALOR TOTAL', 'UNID.', 'LOCALIZAÇÃO'];
     const csvHeaders = headers.map(h => `"${h}"`).join(';');
 
-    const rows = store.materiais.map(item => {
+    const rows = sortedData.map(item => {
       const fornecedorName = store.fornecedores.find(f => f.id === item.fornecedorId)?.nomeFantasia || item.codigoFornecedor || '-';
       return [
         item.sap,
@@ -726,7 +726,7 @@ export const RegistrationView: React.FC<{ type: 'materiais' | 'empresas' | 'forn
     });
     
     const csvContent = [csvHeaders, ...rows].join("\r\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement("a");
